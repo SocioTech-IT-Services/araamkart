@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}My Cart — AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container">
+    <h1 class="page-title">🛒 My Cart</h1>
+
+    {% if items %}
+    <div class="cart-layout">
+      <!-- ── CART ITEMS ── -->
+      <div class="cart-items" id="cart-items">
+        {% for item in items %}
+        <div class="cart-item" id="cart-item-{{ item.pk }}">
+          <div class="cart-item-img">
+            {% if item.product.image %}
+            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" />
+            {% else %}
+            <div class="product-img-placeholder">{{ item.product.category.icon }}</div>
+            {% endif %}
+          </div>
+
+          <div class="cart-item-details">
+            <p class="cart-item-brand">{{ item.product.brand }}</p>
+            <h3 class="cart-item-name">
+              <a href="{% url 'product_detail' item.product.pk %}">{{ item.product.name }}</a>
+            </h3>
+            <p class="cart-item-moq">MOQ: {{ item.product.moq }} {{ item.product.unit }}</p>
+
+            <!-- Tier pricing display -->
+            {% if item.product.pricing_tiers.count > 1 %}
+            <div class="tier-hints">
+              {% for tier in item.product.pricing_tiers.all %}
+              <span class="tier-hint">{{ tier.min_qty }}{% if tier.max_qty %}-{{ tier.max_qty }}{% else %}+{% endif %}: ₹{{ tier.unit_price }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="cart-item-qty">
+            <div class="qty-controls">
+              <button class="qty-btn" onclick="updateCartItem({{ item.pk }}, {{ item.quantity }} - 1)" id="minus-{{ item.pk }}">−</button>
+              <input type="number" class="qty-input" id="qty-{{ item.pk }}"
+                     value="{{ item.quantity }}" min="{{ item.product.moq }}" max="{{ item.product.stock }}"
+                     onchange="updateCartItem({{ item.pk }}, this.value)" />
+              <button class="qty-btn" onclick="updateCartItem({{ item.pk }}, {{ item.quantity }} + 1)" id="plus-{{ item.pk }}">+</button>
+            </div>
+            <small>{{ item.product.unit }}</small>
+          </div>
+
+          <div class="cart-item-price">
+            <p class="unit-price" id="unit-price-{{ item.pk }}">₹{{ item.unit_price }} / {{ item.product.unit }}</p>
+            <p class="line-total" id="line-total-{{ item.pk }}">₹{{ item.line_total }}</p>
+          </div>
+
+          <button class="cart-item-remove" id="remove-{{ item.pk }}"
+                  onclick="removeCartItem({{ item.pk }})" title="Remove item">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- ── ORDER SUMMARY ── -->
+      <div class="cart-summary" id="cart-summary">
+        <h3>Order Summary</h3>
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="cart-total">₹{{ total }}</span>
+        </div>
+        <div class="summary-row">
+          <span>Delivery</span>
+          <span class="free-delivery">FREE</span>
+        </div>
+        <div class="summary-row">
+          <span>Payment</span>
+          <span>Cash on Delivery</span>
+        </div>
+        <hr class="summary-divider" />
+        <div class="summary-row total-row">
+          <strong>Total</strong>
+          <strong id="grand-total">₹{{ total }}</strong>
+        </div>
+        <a href="{% url 'checkout' %}" class="btn btn-primary btn-full btn-lg" id="checkout-btn">
+          Proceed to Checkout →
+        </a>
+        <a href="{% url 'home' %}" class="btn btn-ghost btn-full" style="margin-top:.5rem;">
+          ← Continue Shopping
+        </a>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🛒</div>
+      <h3>Your cart is empty</h3>
+      <p>Browse our wholesale categories and add products to get started.</p>
+      <a href="{% url 'home' %}" class="btn btn-primary">Browse Categories</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/cart.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Order #{{ order.order_number }} — AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container narrow">
+    <nav class="breadcrumb">
+      <a href="{% url 'order_history' %}">My Orders</a> / <span>#{{ order.order_number }}</span>
+    </nav>
+
+    <div class="order-detail-card">
+      <div class="order-detail-header">
+        <div>
+          <h1>Order #{{ order.order_number }}</h1>
+          <p class="order-date">Placed on {{ order.created_at|date:"d M Y, H:i" }}</p>
+        </div>
+        <span class="status-pill status-{{ order.status }} status-lg">{{ order.get_status_display }}</span>
+      </div>
+
+      <!-- Status Timeline -->
+      <div class="status-timeline">
+        {% for s, label in order.STATUS_CHOICES %}
+        <div class="timeline-step {% if order.status == s %}active{% elif order.status == 'cancelled' %}cancelled{% endif %}">
+          <div class="timeline-dot"></div>
+          <span>{{ label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="order-detail-grid">
+        <div class="order-detail-section">
+          <h3>Customer Details</h3>
+          <table class="detail-table">
+            <tr><th>Name</th><td>{{ order.customer_name }}</td></tr>
+            <tr><th>Business</th><td>{{ order.business_name|default:"—" }}</td></tr>
+            <tr><th>Phone</th><td>{{ order.phone }}</td></tr>
+            {% if order.email %}<tr><th>Email</th><td>{{ order.email }}</td></tr>{% endif %}
+          </table>
+        </div>
+        <div class="order-detail-section">
+          <h3>Delivery Address</h3>
+          <p>{{ order.address }}</p>
+          {% if order.city %}<p>{{ order.city }}{% if order.pincode %} — {{ order.pincode }}{% endif %}</p>{% endif %}
+          <p><strong>Payment:</strong> Cash on Delivery</p>
+        </div>
+      </div>
+
+      <h3>Items Ordered</h3>
+      <table class="items-table">
+        <thead>
+          <tr><th>Product</th><th>Brand</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {% for item in order.items.all %}
+          <tr>
+            <td>{{ item.product_name }}</td>
+            <td>{{ item.brand }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>₹{{ item.unit_price }}</td>
+            <td>₹{{ item.line_total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="4"><strong>Order Total</strong></td>
+            <td><strong>₹{{ order.total_amount }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      {% if order.notes %}
+      <div class="order-notes">
+        <strong>Notes:</strong> {{ order.notes }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

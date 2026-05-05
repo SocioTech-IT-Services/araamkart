@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" width="200" height="48" role="img" aria-label="AaramKart">
+  <text x="0" y="34" font-family="Outfit, system-ui, sans-serif" font-size="28" font-weight="800" fill="#02254a">Aaram</text>
+  <text x="98" y="34" font-family="Outfit, system-ui, sans-serif" font-size="28" font-weight="800" fill="#1f8a3e">Kart</text>
+  <rect x="0" y="40" width="180" height="3" fill="#c9a227" opacity="0.55" rx="1"/>
+</svg>

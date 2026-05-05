@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }} — AaramKart Admin{% endblock %}
+
+{% block content %}
+<section class="page-section admin-section">
+  <div class="section-container admin-form-container">
+    <div class="admin-header">
+      <div>
+        <h1>{{ title }}</h1>
+        <p class="admin-sub">{% if product %}Update images, price, stock, and availability.{% else %}Add photos (required for best results), price, and stock.{% endif %}</p>
+      </div>
+      <div class="admin-nav-pills">
+        <a href="{% url 'admin_dashboard' %}" class="pill">Dashboard</a>
+        <a href="{% url 'admin_products' %}" class="pill active">Inventory</a>
+        <a href="{% url 'admin_orders' %}" class="pill">Orders</a>
+      </div>
+    </div>
+
+    <div class="admin-section-card admin-form-card">
+      <form method="post" enctype="multipart/form-data" class="admin-product-form" id="admin-product-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="admin-form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <fieldset class="admin-fieldset">
+          <legend>Photos</legend>
+          <div class="admin-form-grid">
+            <div class="form-group form-group-image">
+              <label for="id_image">{{ form.image.label }}</label>
+              <p class="form-hint-inline">Shown on category listings and as the default hero on the product page. JPG, PNG, WebP or GIF.</p>
+              {{ form.image }}
+              <div id="primary-image-preview" class="admin-preview-slot{% if product and product.image %} has-img{% endif %}">
+                {% if product and product.image %}
+                <img src="{{ product.image.url }}" alt="" width="160" height="160" class="admin-product-thumb" id="primary-preview-img" />
+                {% else %}
+                <span class="admin-preview-placeholder" id="primary-preview-placeholder">No image selected</span>
+                {% endif %}
+              </div>
+              {% if form.image.errors %}<span class="field-error">{{ form.image.errors.0 }}</span>{% endif %}
+            </div>
+
+            <div class="form-group form-group-wide">
+              <label for="id_gallery_images">Additional images</label>
+              <p class="form-hint-inline">Optional gallery — customers can browse these on the product page. Hold Ctrl/Cmd to pick several files.</p>
+              <input type="file"
+                     name="gallery_images"
+                     id="id_gallery_images"
+                     class="form-control file-input"
+                     accept="image/jpeg,image/png,image/webp,image/gif"
+                     multiple />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="admin-fieldset">
+          <legend>Product details</legend>
+          <div class="admin-form-grid">
+          <div class="form-group">
+            <label for="id_category">Category</label>
+            {{ form.category }}
+            {% if form.category.errors %}<span class="field-error">{{ form.category.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_name">Product name</label>
+            {{ form.name }}
+            {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_brand">Brand</label>
+            {{ form.brand }}
+            {% if form.brand.errors %}<span class="field-error">{{ form.brand.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group form-group-wide">
+            <label for="id_description">Description</label>
+            {{ form.description }}
+          </div>
+          <div class="form-group">
+            <label for="id_unit_price">Unit price (₹)</label>
+            {{ form.unit_price }}
+            <small class="form-hint-inline">{{ form.unit_price.help_text }}</small>
+            {% if form.unit_price.errors %}<span class="field-error">{{ form.unit_price.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_stock">Stock</label>
+            {{ form.stock }}
+            {% if form.stock.errors %}<span class="field-error">{{ form.stock.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_moq">Minimum order qty (MOQ)</label>
+            {{ form.moq }}
+          </div>
+          <div class="form-group">
+            <label for="id_unit">Unit</label>
+            {{ form.unit }}
+          </div>
+          <div class="form-group form-group-check">
+            <label class="check-label">
+              {{ form.is_active }} <span>Active (visible on storefront)</span>
+            </label>
+          </div>
+          </div>
+        </fieldset>
+
+        <div class="admin-form-actions">
+          <a href="{% url 'admin_products' %}" class="btn btn-outline">Cancel</a>
+          <button type="submit" class="btn btn-primary">Save product</button>
+        </div>
+      </form>
+
+      {% if product and gallery_images %}
+      <div class="admin-gallery-existing admin-gallery-existing--below-form">
+        <p class="admin-gallery-existing__title">Current extra photos</p>
+        <ul class="admin-gallery-list">
+          {% for gi in gallery_images %}
+          <li class="admin-gallery-item">
+            <img src="{{ gi.image.url }}" alt="" width="72" height="72" class="admin-gallery-thumb" />
+            <form method="post" action="{% url 'admin_gallery_image_delete' gi.pk %}" class="admin-gallery-remove-form"
+                  onsubmit="return confirm('Remove this extra image?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline btn-xs btn-danger-outline">Remove</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var inp = document.querySelector('.admin-primary-image-input');
+  var previewWrap = document.getElementById('primary-image-preview');
+  if (!inp || !previewWrap) return;
+  inp.addEventListener('change', function () {
+    var f = inp.files && inp.files[0];
+    if (!f || !f.type.match(/^image\//)) return;
+    var url = URL.createObjectURL(f);
+    previewWrap.classList.add('has-img');
+    var existing = document.getElementById('primary-preview-img');
+    var ph = document.getElementById('primary-preview-placeholder');
+    if (ph) ph.remove();
+    if (existing) {
+      existing.src = url;
+      existing.alt = '';
+    } else {
+      var img = document.createElement('img');
+      img.id = 'primary-preview-img';
+      img.className = 'admin-product-thumb';
+      img.width = 160;
+      img.height = 160;
+      img.alt = '';
+      img.src = url;
+      previewWrap.appendChild(img);
+    }
+  });
+})();
+</script>
+{% endblock %}

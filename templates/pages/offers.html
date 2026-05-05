@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Best Offers &amp; Bulk Deals — AaramKart{% endblock %}
+
+{% block content %}
+<section class="static-hero static-hero--offers">
+  <div class="nav-container static-hero-inner">
+    <p class="static-kicker">Wholesale savings</p>
+    <h1 class="static-title">Best offers for shopkeepers</h1>
+    <p class="static-lead">Extra discounts on bulk packs, grocery, and daily essentials — updated regularly for Shillong retailers.</p>
+    <p class="offer-banner-note">Flash tip: stack category deals with bulk MOQs for the best landed price.</p>
+  </div>
+</section>
+
+<section class="static-section">
+  <div class="nav-container">
+    <h2 class="static-h2">Shop offers by category</h2>
+    <p class="static-prose">Jump into a category to see live products, tiers, and bulk pricing.</p>
+    <div class="offers-cat-grid">
+      {% for category in categories %}
+      <a href="{% url 'category_detail' category.slug %}" class="offers-cat-card">
+        <span class="offers-cat-card__name">{{ category.name }}</span>
+        <span class="offers-cat-card__cta">View products →</span>
+      </a>
+      {% empty %}
+      <p class="static-prose">Categories will appear here once added in the catalog.</p>
+      {% endfor %}
+    </div>
+    <div class="static-cta-row">
+      <a href="{% url 'search' %}?q=bulk" class="btn btn-premium">Search bulk deals</a>
+      <a href="{% url 'home' %}" class="btn btn-white">Back to home</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

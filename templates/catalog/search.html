@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Search: {{ query }} — AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container">
+    <div class="search-header">
+      <h1>Search Results {% if query %}for "<em>{{ query }}</em>"{% endif %}</h1>
+      <p class="result-count">{{ products|length }} result{{ products|length|pluralize }} found</p>
+    </div>
+
+    {% if products %}
+    <div class="products-grid">
+      {% for product in products %}
+      <a href="{% url 'product_detail' product.pk %}" class="product-card" id="sr-{{ product.pk }}">
+        <div class="product-img-wrap">
+          {% if product.image %}<img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy" />
+          {% else %}<div class="product-img-placeholder">{{ product.category.icon }}</div>{% endif %}
+        </div>
+        <div class="product-info">
+          <p class="product-brand">{{ product.brand }}</p>
+          <h3 class="product-name">{{ product.name }}</h3>
+          <p class="product-cat-tag">{{ product.category.name }}</p>
+          <div class="product-pricing">
+            {% with product.base_price as bp %}
+            {% if bp %}<span class="price-from">from</span><span class="price-main">₹{{ bp }}</span>{% endif %}
+            {% endwith %}
+          </div>
+          <span class="moq-tag">MOQ: {{ product.moq }} {{ product.unit }}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <h3>No products found{% if query %} for "{{ query }}"{% endif %}</h3>
+      <p>Try a different keyword or <a href="{% url 'home' %}">browse categories</a>.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

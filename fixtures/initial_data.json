@@ -1,0 +1,264 @@
+[
+  {
+    "model": "catalog.category",
+    "pk": 1,
+    "fields": {
+      "name": "Personal Care & Hygiene",
+      "slug": "personal-care-hygiene",
+      "icon": "🧴",
+      "description": "Soaps, Shampoos, Handwash, Sanitizers",
+      "is_active": true,
+      "order": 1
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 2,
+    "fields": {
+      "name": "Grocery & Bulk Items",
+      "slug": "grocery-bulk-items",
+      "icon": "🌾",
+      "description": "Rice, Flour, Pulses, Spices",
+      "is_active": true,
+      "order": 2
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 3,
+    "fields": {
+      "name": "Household Essentials",
+      "slug": "household-essentials",
+      "icon": "🧹",
+      "description": "Cleaning supplies, Detergents, Paper goods",
+      "is_active": true,
+      "order": 3
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 4,
+    "fields": {
+      "name": "Stationery",
+      "slug": "stationery",
+      "icon": "✏️",
+      "description": "Pens, Notebooks, Office supplies",
+      "is_active": true,
+      "order": 4
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 5,
+    "fields": {
+      "name": "Baby Care",
+      "slug": "baby-care",
+      "icon": "👶",
+      "description": "Diapers, Baby food, Skincare",
+      "is_active": true,
+      "order": 5
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 6,
+    "fields": {
+      "name": "Electronics & Utility",
+      "slug": "electronics-utility",
+      "icon": "🔌",
+      "description": "Batteries, Bulbs, Small appliances",
+      "is_active": true,
+      "order": 6
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 1,
+    "fields": {
+      "category": 1,
+      "name": "Premium Hand Sanitizer (500ml)",
+      "brand": "Hygienix",
+      "description": "70% Alcohol based sanitizer for bulk use.",
+      "stock": 100,
+      "moq": 10,
+      "unit": "bottles",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 1,
+    "fields": {
+      "product": 1,
+      "min_qty": 10,
+      "max_qty": 49,
+      "unit_price": "180.00",
+      "label": "Wholesale"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 2,
+    "fields": {
+      "product": 1,
+      "min_qty": 50,
+      "max_qty": null,
+      "unit_price": "150.00",
+      "label": "Bulk Deal"
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 2,
+    "fields": {
+      "category": 2,
+      "name": "Premium Basmati Rice (25kg Bag)",
+      "brand": "Royal Grains",
+      "description": "Long grain aromatic basmati rice.",
+      "stock": 50,
+      "moq": 2,
+      "unit": "bags",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 3,
+    "fields": {
+      "product": 2,
+      "min_qty": 2,
+      "max_qty": 9,
+      "unit_price": "2200.00",
+      "label": "Retailer Price"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 4,
+    "fields": {
+      "product": 2,
+      "min_qty": 10,
+      "max_qty": null,
+      "unit_price": "2000.00",
+      "label": "Distributor Price"
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 3,
+    "fields": {
+      "category": 3,
+      "name": "Industrial Floor Cleaner (5L)",
+      "brand": "Sparkle",
+      "description": "Concentrated floor cleaner for large areas.",
+      "stock": 40,
+      "moq": 4,
+      "unit": "cans",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 5,
+    "fields": {
+      "product": 3,
+      "min_qty": 4,
+      "max_qty": 9,
+      "unit_price": "450.00",
+      "label": "Standard"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 6,
+    "fields": {
+      "product": 3,
+      "min_qty": 10,
+      "max_qty": null,
+      "unit_price": "400.00",
+      "label": "Wholesale"
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 4,
+    "fields": {
+      "category": 5,
+      "name": "Wholesale Baby Diapers (Pack of 72)",
+      "brand": "SoftCare",
+      "description": "High absorption diapers for retail stores.",
+      "stock": 150,
+      "moq": 10,
+      "unit": "packs",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 7,
+    "fields": {
+      "product": 4,
+      "min_qty": 10,
+      "max_qty": 29,
+      "unit_price": "650.00",
+      "label": "Retailer"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 8,
+    "fields": {
+      "product": 4,
+      "min_qty": 30,
+      "max_qty": null,
+      "unit_price": "600.00",
+      "label": "Bulk"
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 5,
+    "fields": {
+      "category": 6,
+      "name": "LED Bulb 9W (Box of 10)",
+      "brand": "Lumina",
+      "description": "Energy efficient LED bulbs for resale.",
+      "stock": 200,
+      "moq": 5,
+      "unit": "boxes",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 9,
+    "fields": {
+      "product": 5,
+      "min_qty": 5,
+      "max_qty": 19,
+      "unit_price": "750.00",
+      "label": "Dealer"
+    }
+  },
+  {
+    "model": "catalog.pricingtier",
+    "pk": 10,
+    "fields": {
+      "product": 5,
+      "min_qty": 20,
+      "max_qty": null,
+      "unit_price": "680.00",
+      "label": "Distributor"
+    }
+  }
+]

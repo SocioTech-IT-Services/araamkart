@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Sign In — AaramKart{% endblock %}
+{% block meta_description %}Sign in is available from the site header.{% endblock %}
+{% block content %}
+{# GET /auth/login/ redirects in the view; this is only a fallback if someone hits POST errors without redirect. #}
+<section class="page-section" style="padding: 2rem 1rem;">
+  <div class="section-container narrow" style="text-align: center; max-width: 36rem; margin: 0 auto;">
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">Sign in opens in a popup. Use <strong>Sign in</strong> in the top bar, or open it here:</p>
+    <p><button type="button" class="btn btn-primary nav-login-trigger">Open sign in</button></p>
+    <p style="margin-top: 1.25rem;"><a href="{% url 'home' %}">← Back to home</a></p>
+  </div>
+</section>
+{% endblock %}

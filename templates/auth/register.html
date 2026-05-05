@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Register Business — AaramKart{% endblock %}
+
+{% block content %}
+<section class="auth-page auth-page--wide">
+  <div class="auth-container">
+    <div class="auth-card auth-card-wide">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="auth-logo-img" width="200" height="80" />
+        </div>
+        <h1>Register Your Business</h1>
+        <p>Join thousands of shopkeepers on AaramKart</p>
+      </div>
+
+      <form class="auth-form" method="POST" action="{% url 'register' %}" id="register-form">
+        {% csrf_token %}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="full-name">Full Name *</label>
+            <input type="text" id="full-name" name="full_name" placeholder="Rajesh Kumar"
+                   required autocomplete="name" />
+          </div>
+          <div class="form-group">
+            <label for="business-name">Business Name</label>
+            <input type="text" id="business-name" name="business_name" placeholder="Kumar General Store"
+                   autocomplete="organization" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-phone">Phone Number *</label>
+            <div class="input-with-prefix">
+              <span class="input-prefix">+91</span>
+              <input type="tel" id="reg-phone" name="phone" placeholder="9876543210"
+                     maxlength="10" pattern="[0-9]{10}" inputmode="numeric" required
+                     autocomplete="tel" title="10-digit mobile number" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="reg-email">Email Address *</label>
+            <input type="email" id="reg-email" name="email" placeholder="you@business.com"
+                   required autocomplete="email" />
+          </div>
+        </div>
+
+        <p class="form-hint-center">Sign in uses your phone and password. Email stays on file for receipts and support.</p>
+
+        <div class="form-group">
+          <label for="reg-password">Password *</label>
+          <div class="input-with-toggle">
+            <input type="password" id="reg-password" name="password" placeholder="Create a password"
+                   required minlength="8" autocomplete="new-password" />
+            <button type="button" class="toggle-password" onclick="togglePwd()" tabindex="-1">👁</button>
+          </div>
+          <small class="form-hint">At least 8 characters — required for sign-in.</small>
+        </div>
+
+        <div class="form-terms">
+          <input type="checkbox" id="terms-check" required />
+          <label for="terms-check">I agree to the <a href="{% url 'policies' %}#terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> for business use.</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="register-submit-btn">
+          Create Business Account →
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function togglePwd() {
+  const el = document.getElementById('reg-password');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

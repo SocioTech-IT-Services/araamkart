@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}Checkout — AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container">
+    <h1 class="page-title">Checkout</h1>
+
+    <div class="checkout-layout">
+      <!-- ── CUSTOMER FORM ── -->
+      <div class="checkout-form-wrap">
+        <form method="POST" action="{% url 'checkout' %}" id="checkout-form">
+          {% csrf_token %}
+
+          <div class="form-section">
+            <h3 class="form-section-title">📋 Business Details</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="co-name">Full Name *</label>
+                <input type="text" id="co-name" name="customer_name"
+                       value="{{ user.full_name }}" required placeholder="Rajesh Kumar" />
+              </div>
+              <div class="form-group">
+                <label for="co-business">Business Name</label>
+                <input type="text" id="co-business" name="business_name"
+                       value="{{ user.business_name }}" placeholder="Kumar General Store" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="co-phone">Phone Number *</label>
+                <input type="tel" id="co-phone" name="phone"
+                       value="{{ user.phone }}" required placeholder="+91 9876543210" />
+              </div>
+              <div class="form-group">
+                <label for="co-email">Email</label>
+                <input type="email" id="co-email" name="email"
+                       value="{{ user.email }}" placeholder="for order confirmation" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="form-section-title">📍 Delivery Address</h3>
+            <div class="form-group">
+              <label for="co-address">Full Address *</label>
+              <textarea id="co-address" name="address" rows="3" required
+                        placeholder="Shop No., Street, Area...">{{ user.address }}</textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="co-city">City</label>
+                <input type="text" id="co-city" name="city" placeholder="Mumbai" />
+              </div>
+              <div class="form-group">
+                <label for="co-pincode">PIN Code</label>
+                <input type="text" id="co-pincode" name="pincode" placeholder="400001" maxlength="6" pattern="[0-9]{6}" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3 class="form-section-title">💳 Payment Method</h3>
+            <div class="payment-options">
+              <label class="payment-option selected" for="pay-cod">
+                <input type="radio" id="pay-cod" name="payment" value="cod" checked />
+                <div class="payment-icon">💵</div>
+                <div class="payment-info">
+                  <strong>Cash on Delivery</strong>
+                  <small>Pay when your order arrives</small>
+                </div>
+                <span class="payment-check">✓</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="co-notes">Order Notes (optional)</label>
+            <textarea id="co-notes" name="notes" rows="2"
+                      placeholder="Special instructions, delivery time preference..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-full" id="place-order-btn">
+            ✅ Place Order
+          </button>
+        </form>
+      </div>
+
+      <!-- ── ORDER SUMMARY ── -->
+      <div class="checkout-summary">
+        <h3>Order Summary</h3>
+        {% for item in items %}
+        <div class="checkout-item">
+          <div class="checkout-item-info">
+            <span class="checkout-item-name">{{ item.product.name }}</span>
+            <span class="checkout-item-qty">× {{ item.quantity }} {{ item.product.unit }}</span>
+          </div>
+          <span class="checkout-item-total">₹{{ item.line_total }}</span>
+        </div>
+        {% endfor %}
+        <hr class="summary-divider" />
+        <div class="summary-row">
+          <span>Delivery</span><span class="free-delivery">FREE</span>
+        </div>
+        <div class="summary-row total-row">
+          <strong>Total</strong>
+          <strong>₹{{ total }}</strong>
+        </div>
+        <div class="cod-notice">
+          🤝 Pay ₹{{ total }} in cash at delivery
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

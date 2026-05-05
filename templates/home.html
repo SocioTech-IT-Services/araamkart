@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AaramKart — Aapka Aaram, Hamara Kaam | Wholesale Daily Needs{% endblock %}
+
+{% block content %}
+{# Layout matches project reference: idea.jpeg #}
+<section class="hero-idea">
+  <div class="nav-container hero-idea-inner">
+    <div class="hero-idea-copy">
+      <h1 class="hero-idea-title">Aapka Aaram,<br><span class="hero-idea-accent">Hamara Kaam</span></h1>
+      <p class="hero-idea-lead">Daily needs, great savings and free, fast delivery at your doorstep.</p>
+      <a href="{% url 'category_detail' 'grocery-bulk-items' %}" class="btn btn-hero-cta">Shop Now →</a>
+      <div class="hero-slider-dots" aria-hidden="true">
+        <span></span><span class="is-active"></span><span></span>
+      </div>
+    </div>
+    <div class="hero-idea-visual hero-visual-composite">
+      <div class="hero-visual-composite__inner">
+        <div class="hero-visual-composite__brand">
+          <img
+            src="{% static 'img/logo.jpeg' %}"
+            alt="AaramKart"
+            class="hero-visual-composite__logo"
+            loading="eager"
+            width="320"
+            height="160"
+          />
+        </div>
+        <div class="hero-visual-composite__row" aria-label="Beauty and stationery">
+          <figure class="hero-visual-composite__figure">
+            <img
+              src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=520&amp;q=80"
+              alt="Beauty and personal care products"
+              loading="lazy"
+              width="260"
+              height="200"
+            />
+          </figure>
+          <figure class="hero-visual-composite__figure">
+            <img
+              src="https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=520&amp;q=80"
+              alt="Stationery and office supplies"
+              loading="lazy"
+              width="260"
+              height="200"
+            />
+          </figure>
+        </div>
+      </div>
+    </div>
+    <aside class="hero-idea-features" aria-label="Why choose us">
+      <div class="hero-feature-btn" role="group">
+        <span class="hero-feature-btn__icon" aria-hidden="true">✓</span>
+        <span class="hero-feature-btn__text">
+          <span class="hero-feature-btn__title">100% Original Products</span>
+          <span class="hero-feature-btn__sub">Direct from trusted brands</span>
+        </span>
+      </div>
+      <div class="hero-feature-btn" role="group">
+        <span class="hero-feature-btn__icon" aria-hidden="true">₹</span>
+        <span class="hero-feature-btn__text">
+          <span class="hero-feature-btn__title">Best Prices Guaranteed</span>
+          <span class="hero-feature-btn__sub">Built for shopkeeper margins</span>
+        </span>
+      </div>
+      <div class="hero-feature-btn" role="group">
+        <span class="hero-feature-btn__icon" aria-hidden="true">🚚</span>
+        <span class="hero-feature-btn__text">
+          <span class="hero-feature-btn__title">Free &amp; Fast Delivery</span>
+          <span class="hero-feature-btn__sub">Free delivery and quick service to your door</span>
+        </span>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section class="home-section section-categories">
+  <div class="nav-container">
+    <div class="section-title-wrap">
+      <div class="title-line"></div>
+      <h2 class="section-title">Shop by Categories</h2>
+      <div class="title-line"></div>
+    </div>
+
+    <div class="cat-grid-idea">
+      {% for category in categories %}
+      <article class="cat-card-idea">
+        <a href="{% url 'category_detail' category.slug %}" class="cat-card-idea-link">
+          <div class="cat-circle">
+            {% if category.slug == 'personal-care-hygiene' %}
+              <img src="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&amp;q=80" alt="">
+            {% elif category.slug == 'grocery-bulk-items' %}
+              <img src="https://images.unsplash.com/photo-1586201375756-840068be8d8b?w=400&amp;q=80" alt="">
+            {% elif category.slug == 'household-essentials' %}
+              <img src="https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400&amp;q=80" alt="">
+            {% elif category.slug == 'stationery' %}
+              <img src="https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=400&amp;q=80" alt="">
+            {% elif category.slug == 'baby-care' %}
+              <img src="https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&amp;q=80" alt="">
+            {% elif category.slug == 'electronics-utility' %}
+              <img src="https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&amp;q=80" alt="">
+            {% elif category.slug == 'daily-essentials' %}
+              <img src="https://images.unsplash.com/photo-1584479898061-157f85007197?w=400&amp;q=80" alt="">
+            {% else %}
+              <span class="cat-emoji-fallback">{{ category.icon }}</span>
+            {% endif %}
+          </div>
+          <h3>{{ category.name }}</h3>
+          <span class="cat-shop-now">Shop Now →</span>
+        </a>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="features-row-section">
+  <div class="nav-container features-row-inner">
+    <div class="feature-item">
+      <div class="feature-circle">🛍️</div>
+      <div class="feature-info">
+        <h3>Daily Needs</h3>
+        <p>Everything you need, every day.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-circle">🚚</div>
+      <div class="feature-info">
+        <h3>Free &amp; Fast Delivery</h3>
+        <p>Free delivery and quick, reliable service to your doorstep.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-circle">🤝</div>
+      <div class="feature-info">
+        <h3>Trusted Service</h3>
+        <p>Quality products and customer satisfaction.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="why-band">
+  <div class="nav-container why-band-inner">
+    <div class="why-band-head">
+      <span class="why-leaf" aria-hidden="true">🌿</span>
+      <h2>Why Shop With AaramKart?</h2>
+    </div>
+    <ul class="why-band-icons">
+      <li><span class="wb-ic">📦</span><span>Wide Range of Products</span></li>
+      <li><span class="wb-ic">🔄</span><span>Easy Returns &amp; Refunds</span></li>
+      <li><span class="wb-ic">💳</span><span>Secure Payments</span></li>
+      <li><span class="wb-ic">🎧</span><span>24/7 Customer Support</span></li>
+    </ul>
+    <a href="{% url 'register' %}" class="btn btn-learn-more">Learn More</a>
+  </div>
+</section>
+
+<a href="https://wa.me/919774365127" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="WhatsApp">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
+</a>
+{% endblock %}

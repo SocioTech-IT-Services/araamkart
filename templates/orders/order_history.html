@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}My Orders — AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container">
+    <div class="page-header">
+      <h1 class="page-title">My Orders</h1>
+      <a href="{% url 'home' %}" class="btn btn-outline">Continue Shopping</a>
+    </div>
+
+    {% if orders %}
+    <div class="orders-list" id="orders-list">
+      {% for order in orders %}
+      <div class="order-card" id="order-card-{{ order.order_number }}">
+        <div class="order-card-header">
+          <div class="order-id-block">
+            <span class="order-label">Order</span>
+            <strong class="order-number">#{{ order.order_number }}</strong>
+          </div>
+          <span class="status-pill status-{{ order.status }}">{{ order.get_status_display }}</span>
+          <div class="order-date">{{ order.created_at|date:"d M Y, H:i" }}</div>
+        </div>
+
+        <div class="order-card-body">
+          <div class="order-items-preview">
+            {% for item in order.items.all|slice:":3" %}
+            <span class="order-item-chip">{{ item.product_name }} ×{{ item.quantity }}</span>
+            {% endfor %}
+            {% if order.items.count > 3 %}
+            <span class="order-item-chip more">+{{ order.items.count|add:"-3" }} more</span>
+            {% endif %}
+          </div>
+          <div class="order-meta">
+            <span>{{ order.city }}</span>
+            <span class="payment-chip">{{ order.payment_method|upper }}</span>
+          </div>
+        </div>
+
+        <div class="order-card-footer">
+          <strong class="order-total">₹{{ order.total_amount }}</strong>
+          <a href="{% url 'order_detail' order.order_number %}" class="btn btn-outline btn-sm" id="view-{{ order.order_number }}">
+            View Details →
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <h3>No orders yet</h3>
+      <p>Start shopping to see your order history here.</p>
+      <a href="{% url 'home' %}" class="btn btn-primary">Browse Products</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

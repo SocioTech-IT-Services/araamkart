@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ product.name }} — {{ product.brand }} | AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a href="{% url 'home' %}">Home</a> /
+      <a href="{% url 'category_detail' product.category.slug %}">{{ product.category.name }}</a> /
+      <span>{{ product.name }}</span>
+    </nav>
+
+    <div class="product-detail-layout">
+      <!-- ── IMAGE ── -->
+      <div class="product-detail-image">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" id="main-product-img" />
+        {% elif gallery_images %}
+        <img src="{{ gallery_images.0.image.url }}" alt="{{ product.name }}" id="main-product-img" />
+        {% else %}
+        <div class="product-img-placeholder-lg">{{ product.category.icon }}</div>
+        {% endif %}
+        {% if product.image or gallery_images %}
+        <div class="product-gallery-thumbs" role="tablist" aria-label="Product photos">
+          {% if product.image %}
+          <button type="button" class="product-gallery-thumb is-active" aria-current="true"
+                  data-full-src="{{ product.image.url }}" aria-label="Main photo">
+            <img src="{{ product.image.url }}" alt="" />
+          </button>
+          {% endif %}
+          {% for gi in gallery_images %}
+          <button type="button" class="product-gallery-thumb{% if not product.image and forloop.first %} is-active{% endif %}"
+                  data-full-src="{{ gi.image.url }}" aria-label="Photo {{ forloop.counter }}">
+            <img src="{{ gi.image.url }}" alt="" />
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="product-badges">
+          {% if product.stock > 0 %}
+          <span class="badge badge-green">✓ In Stock ({{ product.stock }} {{ product.unit }})</span>
+          {% else %}
+          <span class="badge badge-red">✗ Out of Stock</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── DETAILS ── -->
+      <div class="product-detail-info">
+        <p class="product-brand-tag">{{ product.brand }}</p>
+        <h1 class="product-detail-title">{{ product.name }}</h1>
+        {% if product.description %}
+        <p class="product-description">{{ product.description }}</p>
+        {% endif %}
+
+        <!-- MOQ Notice -->
+        <div class="moq-notice">
+          <span class="moq-label">📦 Minimum Order:</span>
+          <strong>{{ product.moq }} {{ product.unit }}</strong>
+        </div>
+
+        <!-- Pricing Tiers Table -->
+        {% if tiers %}
+        <div class="pricing-tiers-section">
+          <h3 class="tiers-title">💰 Bulk Pricing Tiers</h3>
+          <table class="tiers-table" id="pricing-tiers-table">
+            <thead>
+              <tr>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Label</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for tier in tiers %}
+              <tr class="tier-row {% if forloop.last %}tier-best{% endif %}"
+                  data-min="{{ tier.min_qty }}" data-price="{{ tier.unit_price }}">
+                <td>
+                  {{ tier.min_qty }}{% if tier.max_qty %} – {{ tier.max_qty }}{% else %}+{% endif %}
+                  {{ product.unit }}
+                </td>
+                <td class="tier-price">₹{{ tier.unit_price }}</td>
+                <td>
+                  {% if tier.label %}
+                  <span class="tier-label-tag">{{ tier.label }}</span>
+                  {% elif forloop.last %}
+                  <span class="tier-label-tag best-price">Best Price</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        <!-- Add to Cart -->
+        {% if user.is_authenticated %}
+        {% if product.stock > 0 %}
+        <div class="add-to-cart-section" id="add-to-cart-section">
+          <div class="qty-selector">
+            <label for="qty-input">Quantity ({{ product.unit }})</label>
+            <div class="qty-controls">
+              <button type="button" class="qty-btn" id="qty-minus" onclick="changeQty(-1)">−</button>
+              <input type="number" id="qty-input" value="{{ product.moq }}" min="{{ product.moq }}" max="{{ product.stock }}" />
+              <button type="button" class="qty-btn" id="qty-plus" onclick="changeQty(1)">+</button>
+            </div>
+            <small class="qty-hint">Min: {{ product.moq }} {{ product.unit }} | Available: {{ product.stock }} {{ product.unit }}</small>
+          </div>
+
+          <div class="price-preview" id="price-preview">
+            <span class="preview-label">Estimated Total:</span>
+            <span class="preview-price" id="preview-price">—</span>
+          </div>
+
+          <button class="btn btn-primary btn-lg btn-full" id="add-to-cart-btn"
+                  data-product-id="{{ product.pk }}" data-moq="{{ product.moq }}" data-stock="{{ product.stock }}">
+            🛒 Add to Cart
+          </button>
+        </div>
+        {% else %}
+        <div class="out-of-stock-msg">
+          <p>⚠️ This product is currently out of stock. Check back soon.</p>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="login-to-buy">
+          <a href="{% url 'login' %}" class="btn btn-primary btn-lg btn-full">Login to Place Order</a>
+          <p>Don't have an account? <a href="{% url 'register' %}">Register your business</a></p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Related Products -->
+    {% if related %}
+    <div class="related-section">
+      <h2 class="section-title">More from {{ product.category.name }}</h2>
+      <div class="products-grid">
+        {% for rp in related %}
+        <a href="{% url 'product_detail' rp.pk %}" class="product-card" id="related-{{ rp.pk }}">
+          <div class="product-img-wrap">
+            {% if rp.image %}<img src="{{ rp.image.url }}" alt="{{ rp.name }}" loading="lazy" />
+            {% else %}<div class="product-img-placeholder">{{ rp.category.icon }}</div>{% endif %}
+          </div>
+          <div class="product-info">
+            <p class="product-brand">{{ rp.brand }}</p>
+            <h3 class="product-name">{{ rp.name }}</h3>
+            <div class="product-pricing">
+              {% with rp.base_price as bp %}
+              {% if bp %}<span class="price-from">from</span><span class="price-main">₹{{ bp }}</span>{% endif %}
+              {% endwith %}
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/cart.js' %}"></script>
+<script>
+(function () {
+  var main = document.getElementById('main-product-img');
+  if (!main) return;
+  document.querySelectorAll('.product-gallery-thumb').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var src = btn.getAttribute('data-full-src');
+      if (!src) return;
+      main.src = src;
+      document.querySelectorAll('.product-gallery-thumb').forEach(function (b) {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-current', 'false');
+      });
+      btn.classList.add('is-active');
+      btn.setAttribute('aria-current', 'true');
+    });
+  });
+})();
+const PRICING_TIERS = [
+  {% for tier in tiers %}
+  { min: {{ tier.min_qty }}, max: {{ tier.max_qty|default:"null" }}, price: {{ tier.unit_price }} },
+  {% endfor %}
+];
+const productId = {{ product.pk }};
+const moq = {{ product.moq }};
+const stock = {{ product.stock }};
+initProductPage(PRICING_TIERS, productId, moq, stock);
+</script>
+{% endblock %}

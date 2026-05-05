@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Policies — AaramKart B2B{% endblock %}
+
+{% block content %}
+<section class="static-hero static-hero--compact">
+  <div class="nav-container static-hero-inner">
+    <h1 class="static-title">Policies &amp; terms</h1>
+    <p class="static-lead">Summary for business customers (B2B). Contact us for clarifications.</p>
+    <nav class="policy-jump" aria-label="On this page">
+      <a href="#shipping">Shipping</a>
+      <a href="#returns">Returns</a>
+      <a href="#terms">B2B terms</a>
+      <a href="#privacy">Privacy</a>
+    </nav>
+  </div>
+</section>
+
+<div class="nav-container policy-page">
+  <section class="policy-section" id="shipping">
+    <h2>Shipping policy</h2>
+    <p>We aim to deliver wholesale orders within Shillong as per agreed slots and route planning. Delivery may depend on product availability, weather, and order volume. Any fee or minimum order rules are shown at checkout or communicated by our team before dispatch.</p>
+  </section>
+
+  <section class="policy-section" id="returns">
+    <h2>Bulk returns &amp; refunds</h2>
+    <p>Damaged, incorrect, or short-supplied items should be reported within 48 hours of delivery with photos and invoice reference. Eligible cases may be replaced or adjusted as credit, subject to verification. Perishable or opened goods may not be eligible unless defective.</p>
+  </section>
+
+  <section class="policy-section" id="terms">
+    <h2>B2B terms of use</h2>
+    <p>By registering and placing orders you confirm you are a business / trade buyer. Prices, packs, and availability may change. You are responsible for accurate GST and billing details. Misuse of accounts, fraudulent orders, or resale violations may lead to suspension.</p>
+  </section>
+
+  <section class="policy-section" id="privacy">
+    <h2>Privacy policy</h2>
+    <p>We collect contact and order data needed to fulfil deliveries and support your account. We do not sell personal data. Messages (email/WhatsApp) may be used for order updates and service notices. You may request corrections or raise concerns via our contact details.</p>
+  </section>
+
+  <p class="policy-foot"><a href="{% url 'contact' %}">Questions? Contact us</a></p>
+</div>
+{% endblock %}

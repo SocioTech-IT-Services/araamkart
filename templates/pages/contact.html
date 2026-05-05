@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Contact &amp; Help — AaramKart Shillong{% endblock %}
+
+{% block content %}
+<section class="static-hero">
+  <div class="nav-container static-hero-inner">
+    <p class="static-kicker">Customer care</p>
+    <h1 class="static-title">Contact AaramKart</h1>
+    <p class="static-lead">Reach our Shillong team for orders, deliveries, and B2B support.</p>
+  </div>
+</section>
+
+<section class="static-section" id="help-center">
+  <div class="nav-container">
+    <h2 class="static-h2">Help center</h2>
+    <p class="static-prose">Quick answers for shopkeepers. For policy details, see our <a href="{% url 'policies' %}">policies page</a>.</p>
+    <ul class="faq-list">
+      <li><strong>Ordering</strong> — Browse categories, add bulk quantities to your cart, and checkout with your business details.</li>
+      <li><strong>Delivery</strong> — We deliver across Shillong; timing depends on route and order cut-off. Mention preferences in order notes.</li>
+      <li><strong>Payments</strong> — Pay as agreed at checkout or with our team (UPI, cards, and common modes where supported).</li>
+      <li><strong>Account</strong> — Register with phone, email, and password; sign in with phone and password.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="static-section static-section--muted">
+  <div class="nav-container contact-cards">
+    <article class="contact-card">
+      <span class="contact-card__icon" aria-hidden="true">📞</span>
+      <h3>Phone</h3>
+      <p><a href="tel:+919774365127">+91 97743 65127</a></p>
+      <p class="contact-card__hint">Mon–Sat, business hours</p>
+    </article>
+    <article class="contact-card">
+      <span class="contact-card__icon" aria-hidden="true">✉️</span>
+      <h3>Email</h3>
+      <p><a href="mailto:aaramkartshillong@gmail.com">aaramkartshillong@gmail.com</a></p>
+      <p class="contact-card__hint">We reply within 1–2 working days</p>
+    </article>
+    <article class="contact-card">
+      <span class="contact-card__icon" aria-hidden="true">💬</span>
+      <h3>WhatsApp</h3>
+      <p><a href="https://wa.me/919774365127" target="_blank" rel="noopener noreferrer">Chat with us</a></p>
+      <p class="contact-card__hint">Quick queries &amp; order help</p>
+    </article>
+    <article class="contact-card contact-card--wide">
+      <span class="contact-card__icon" aria-hidden="true">📍</span>
+      <h3>Office</h3>
+      <p><strong>Iewduh (Bara Bazar)</strong><br>Shillong, Meghalaya — 793002</p>
+    </article>
+  </div>
+</section>
+{% endblock %}

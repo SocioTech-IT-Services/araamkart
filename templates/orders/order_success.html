@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Order Placed! — AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container narrow">
+    <div class="success-card">
+      <div class="success-icon">✅</div>
+      <h1>Order Placed Successfully!</h1>
+      <p class="success-sub">Thank you, <strong>{{ order.customer_name }}</strong>!</p>
+
+      <div class="order-number-display">
+        <span>Order Number</span>
+        <strong id="order-number-display">#{{ order.order_number }}</strong>
+      </div>
+
+      <div class="order-summary-box">
+        <div class="summary-row"><span>Business</span><span>{{ order.business_name }}</span></div>
+        <div class="summary-row"><span>Phone</span><span>{{ order.phone }}</span></div>
+        <div class="summary-row"><span>Address</span><span>{{ order.address }}{% if order.city %}, {{ order.city }}{% endif %}</span></div>
+        <div class="summary-row"><span>Payment</span><span>Cash on Delivery</span></div>
+        <div class="summary-row total-row"><strong>Total</strong><strong>₹{{ order.total_amount }}</strong></div>
+      </div>
+
+      <div class="items-summary">
+        <h4>Items Ordered</h4>
+        {% for item in order.items.all %}
+        <div class="checkout-item">
+          <span>{{ item.product_name }} × {{ item.quantity }}</span>
+          <span>₹{{ item.line_total }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="success-message">
+        <p>📱 We'll contact you on <strong>{{ order.phone }}</strong> to confirm your order.</p>
+        {% if order.email %}<p>📧 A confirmation email has been sent to <strong>{{ order.email }}</strong>.</p>{% endif %}
+      </div>
+
+      <div class="success-actions">
+        <a href="{% url 'order_history' %}" class="btn btn-primary" id="view-orders-btn">View My Orders</a>
+        <a href="{% url 'home' %}" class="btn btn-outline" id="continue-shopping-btn">Continue Shopping</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

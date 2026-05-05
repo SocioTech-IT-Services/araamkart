@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Products — AaramKart Admin{% endblock %}
+
+{% block content %}
+<section class="page-section admin-section">
+  <div class="section-container">
+    <div class="admin-header">
+      <div>
+        <h1>Inventory &amp; stock</h1>
+        <p>{{ products|length }} product{{ products|length|pluralize }} — set stock, use ± for quick changes, <strong>Edit</strong> for full details, or <strong>Remove</strong> to delete.</p>
+      </div>
+      <div class="admin-header-actions">
+        <a href="{% url 'admin_product_add' %}" class="btn btn-primary">+ Add product</a>
+        <div class="admin-nav-pills">
+          <a href="{% url 'admin_dashboard' %}" class="pill">Dashboard</a>
+          <a href="{% url 'admin_products' %}" class="pill active">Inventory</a>
+          <a href="{% url 'admin_orders' %}" class="pill">Orders</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section-card">
+      <div class="table-responsive">
+        <table class="admin-table" id="products-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Product</th>
+              <th>Brand</th>
+              <th>Category</th>
+              <th>Stock</th>
+              <th>MOQ</th>
+              <th>Base price</th>
+              <th>Available</th>
+              <th>Edit / remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in products %}
+            <tr id="product-row-{{ product.pk }}">
+              <td class="td-thumb">
+                {% if product.image %}
+                <img src="{{ product.image.url }}" alt="" class="admin-table-thumb" width="44" height="44" />
+                {% else %}
+                <span class="thumb-placeholder" aria-hidden="true">📷</span>
+                {% endif %}
+              </td>
+              <td>
+                <strong>{{ product.name }}</strong>
+                {% if product.pricing_tiers.count > 1 %}
+                <span class="bulk-tag">{{ product.pricing_tiers.count }} tiers</span>
+                {% endif %}
+              </td>
+              <td>{{ product.brand }}</td>
+              <td>{{ product.category.name }}</td>
+              <td>
+                <div class="stock-edit stock-edit--full">
+                  <div class="stock-adj">
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Remove 10 from stock" onclick="adjustStock({{ product.pk }}, -10)">−10</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Remove 1 from stock" onclick="adjustStock({{ product.pk }}, -1)">−1</button>
+                    <input type="number" class="stock-input" id="stock-{{ product.pk }}"
+                           value="{{ product.stock }}" min="0"
+                           onchange="updateStock({{ product.pk }}, this.value)" aria-label="Stock quantity" />
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Add 1 to stock" onclick="adjustStock({{ product.pk }}, 1)">+1</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Add 10 to stock" onclick="adjustStock({{ product.pk }}, 10)">+10</button>
+                  </div>
+                  <span class="stock-unit">{{ product.unit }}</span>
+                </div>
+                {% if product.stock <= 10 %}
+                <span class="low-stock-warn">{% if product.stock == 0 %}Out of stock{% else %}Low stock{% endif %}</span>
+                {% endif %}
+              </td>
+              <td>{{ product.moq }} {{ product.unit }}</td>
+              <td>
+                {% with product.base_price as bp %}
+                {% if bp %}₹{{ bp }}{% else %}—{% endif %}
+                {% endwith %}
+              </td>
+              <td>
+                <label class="toggle-inline">
+                  <input type="checkbox" {% if product.is_active %}checked{% endif %}
+                         onchange="toggleActive({{ product.pk }}, this.checked)" aria-label="Toggle availability" />
+                  <span>{% if product.is_active %}On{% else %}Off{% endif %}</span>
+                </label>
+              </td>
+              <td class="td-actions">
+                <a href="{% url 'admin_product_edit' product.pk %}" class="btn btn-outline btn-xs">Edit</a>
+                <form method="post" action="{% url 'admin_product_delete' product.pk %}" class="inline-delete-form"
+                      onsubmit="return confirm('Remove this product from the catalog? This cannot be undone.');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline btn-xs btn-danger-outline">Remove</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-quick-add">
+      <p>Need volume pricing tiers (bulk rates)? Use <a href="/django-admin/catalog/product/" target="_blank">Django Admin → Products ↗</a></p>
+    </div>
+
+  </div>
+</section>
+
+<div class="toast" id="stock-toast"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function updateStock(productId, stock) {
+  fetch('{% url "admin_update_stock" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify({product_id: productId, stock: parseInt(stock, 10)})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('stock-' + productId).value = data.stock;
+      showToast('Stock: ' + data.stock + ' ✓', 'success');
+    } else showToast('Update failed', 'error');
+  });
+}
+
+function adjustStock(productId, delta) {
+  fetch('{% url "admin_update_stock" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify({product_id: productId, delta: delta})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('stock-' + productId).value = data.stock;
+      showToast((delta >= 0 ? '+' : '') + delta + ' → now ' + data.stock, 'success');
+    } else showToast('Update failed', 'error');
+  });
+}
+
+function toggleActive(productId, isActive) {
+  fetch('{% url "admin_toggle_product_active" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify({product_id: productId, is_active: isActive})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) showToast(isActive ? 'Product is live ✓' : 'Product hidden', 'success');
+    else showToast('Update failed', 'error');
+  });
+}
+
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return m ? m[2] : '';
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('stock-toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+{% endblock %}

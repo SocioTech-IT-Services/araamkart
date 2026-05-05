@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}My Profile — AaramKart{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="section-container narrow">
+    <div class="page-header">
+      <h1>My Profile</h1>
+      <a href="{% url 'order_history' %}" class="btn btn-outline">View Orders</a>
+    </div>
+    <div class="profile-card">
+      <div class="profile-avatar">{{ user.full_name|first|upper }}</div>
+      <div class="profile-details">
+        <table class="detail-table">
+          <tr><th>Name</th><td>{{ user.full_name }}</td></tr>
+          {% if user.business_name %}<tr><th>Business</th><td>{{ user.business_name }}</td></tr>{% endif %}
+          {% if user.email %}<tr><th>Email</th><td>{{ user.email }}</td></tr>{% endif %}
+          {% if user.phone %}<tr><th>Phone</th><td>{{ user.phone }}</td></tr>{% endif %}
+          <tr><th>Account Status</th><td>
+            {% if user.is_verified %}<span class="badge badge-green">Verified ✓</span>
+            {% else %}<span class="badge badge-yellow">Pending Verification</span>{% endif %}
+          </td></tr>
+          <tr><th>Member Since</th><td>{{ user.date_joined|date:"d M Y" }}</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

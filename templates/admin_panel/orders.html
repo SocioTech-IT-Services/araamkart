@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Manage Orders — AaramKart Admin{% endblock %}
+
+{% block content %}
+<section class="page-section admin-section">
+  <div class="section-container">
+    <div class="admin-header">
+      <div>
+        <h1>Order Management</h1>
+        <p>{{ orders|length }} order{{ orders|length|pluralize }}{% if status_filter %} (filtered: {{ status_filter }}){% endif %}</p>
+      </div>
+      <div class="admin-nav-pills">
+        <a href="{% url 'admin_dashboard' %}" class="pill">Dashboard</a>
+        <a href="{% url 'admin_products' %}" class="pill">Inventory</a>
+        <a href="{% url 'admin_orders' %}" class="pill active">Orders</a>
+      </div>
+    </div>
+
+    <!-- Status Filter Tabs -->
+    <div class="status-filter-tabs" id="status-tabs">
+      <a href="{% url 'admin_orders' %}" class="status-tab {% if not status_filter %}active{% endif %}">All</a>
+      {% for s, label in status_choices %}
+      <a href="{% url 'admin_orders' %}?status={{ s }}" class="status-tab {% if status_filter == s %}active{% endif %} status-{{ s }}">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="admin-section-card">
+      {% if orders %}
+      <div class="table-responsive">
+        <table class="admin-table" id="orders-admin-table">
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Business</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+            <tr id="order-row-{{ order.pk }}">
+              <td><strong>#{{ order.order_number }}</strong></td>
+              <td>{{ order.business_name|truncatechars:18 }}</td>
+              <td>{{ order.customer_name }}</td>
+              <td>{{ order.phone }}</td>
+              <td>{{ order.items.count }} item{{ order.items.count|pluralize }}</td>
+              <td><strong>₹{{ order.total_amount }}</strong></td>
+              <td>
+                <select class="status-select" id="status-{{ order.pk }}"
+                        onchange="updateOrderStatus({{ order.pk }}, this.value)">
+                  {% for s, label in status_choices %}
+                  <option value="{{ s }}" {% if order.status == s %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>{{ order.created_at|date:"d M, H:i" }}</td>
+              <td>
+                <a href="{% url 'admin_order_detail' order.order_number %}" class="btn btn-outline btn-xs">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state-sm">No orders found for this filter.</div>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+
+<div class="toast" id="order-toast"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function updateOrderStatus(orderId, newStatus) {
+  fetch('{% url "admin_update_order_status" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify({order_id: orderId, status: newStatus})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) showToast('Status updated ✓', 'success');
+    else showToast('Update failed', 'error');
+  });
+}
+
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return m ? m[2] : '';
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('order-toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+{% endblock %}
