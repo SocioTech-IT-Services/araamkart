@@ -1,16 +1,9 @@
-{% extends 'base.html' %}
+{% extends 'admin_panel/base.html' %}
 {% block title %}Order #{{ order.order_number }} — Admin{% endblock %}
 
-{% block content %}
+{% block admin_main %}
 <section class="page-section admin-section">
   <div class="section-container narrow">
-    <div class="admin-header admin-header--compact">
-      <div class="admin-nav-pills">
-        <a href="{% url 'admin_dashboard' %}" class="pill">Dashboard</a>
-        <a href="{% url 'admin_products' %}" class="pill">Inventory</a>
-        <a href="{% url 'admin_orders' %}" class="pill active">Orders</a>
-      </div>
-    </div>
 
     <nav class="breadcrumb">
       <a href="{% url 'admin_orders' %}">All orders</a> / <span>#{{ order.order_number }}</span>
@@ -84,4 +77,4 @@
     </div>
   </div>
 </section>
-{% endblock %}
+{% endblock admin_main %}

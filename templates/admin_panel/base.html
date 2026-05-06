@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block main_class %}admin-panel-layout{% endblock %}
+
+{% block content %}
+<div class="admin-app-shell" id="admin-app-shell">
+  {% include 'admin_panel/_sidebar.html' %}
+  <div class="admin-sidebar-backdrop" id="admin-sidebar-backdrop" aria-hidden="true"></div>
+  <div class="admin-app-main">
+    <div class="admin-mobile-bar">
+      <button type="button" class="admin-sidebar-toggle" id="admin-sidebar-toggle" aria-controls="admin-sidebar" aria-expanded="false" aria-label="Open admin menu">
+        <svg class="admin-sidebar-toggle__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        <span class="admin-sidebar-toggle__text">Menu</span>
+      </button>
+    </div>
+    {% block admin_main %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

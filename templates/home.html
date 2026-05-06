@@ -15,57 +15,41 @@
         <span></span><span class="is-active"></span><span></span>
       </div>
     </div>
-    <div class="hero-idea-visual hero-visual-composite">
-      <div class="hero-visual-composite__inner">
-        <div class="hero-visual-composite__brand">
-          <img
-            src="{% static 'img/logo.jpeg' %}"
-            alt="AaramKart"
-            class="hero-visual-composite__logo"
-            loading="eager"
-            width="320"
-            height="160"
-          />
-        </div>
-        <div class="hero-visual-composite__row" aria-label="Beauty and stationery">
-          <figure class="hero-visual-composite__figure">
-            <img
-              src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=520&amp;q=80"
-              alt="Beauty and personal care products"
-              loading="lazy"
-              width="260"
-              height="200"
-            />
-          </figure>
-          <figure class="hero-visual-composite__figure">
-            <img
-              src="https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=520&amp;q=80"
-              alt="Stationery and office supplies"
-              loading="lazy"
-              width="260"
-              height="200"
-            />
-          </figure>
-        </div>
-      </div>
+    <div class="hero-idea-visual hero-visual-middle">
+      <figure class="hero-visual-middle__card">
+        <img
+          src="{% static 'img/hero-middle-basket.png' %}"
+          alt="AaramKart grocery and household essentials basket"
+          class="hero-visual-middle__img"
+          loading="eager"
+          width="438"
+          height="394"
+        />
+      </figure>
     </div>
     <aside class="hero-idea-features" aria-label="Why choose us">
       <div class="hero-feature-btn" role="group">
-        <span class="hero-feature-btn__icon" aria-hidden="true">✓</span>
+        <span class="hero-feature-btn__icon hero-feature-btn__icon--original" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
         <span class="hero-feature-btn__text">
           <span class="hero-feature-btn__title">100% Original Products</span>
           <span class="hero-feature-btn__sub">Direct from trusted brands</span>
         </span>
       </div>
       <div class="hero-feature-btn" role="group">
-        <span class="hero-feature-btn__icon" aria-hidden="true">₹</span>
+        <span class="hero-feature-btn__icon hero-feature-btn__icon--price" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3h12M6 8h12M6 13h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13c6.667 0 6.667-10 0-10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="m6 13 8.5 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
         <span class="hero-feature-btn__text">
           <span class="hero-feature-btn__title">Best Prices Guaranteed</span>
           <span class="hero-feature-btn__sub">Built for shopkeeper margins</span>
         </span>
       </div>
       <div class="hero-feature-btn" role="group">
-        <span class="hero-feature-btn__icon" aria-hidden="true">🚚</span>
+        <span class="hero-feature-btn__icon hero-feature-btn__icon--delivery" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 18H9M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="2.2"/><circle cx="7" cy="18" r="2" stroke="currentColor" stroke-width="2.2"/></svg>
+        </span>
         <span class="hero-feature-btn__text">
           <span class="hero-feature-btn__title">Free &amp; Fast Delivery</span>
           <span class="hero-feature-btn__sub">Free delivery and quick service to your door</span>
@@ -118,21 +102,27 @@
 <section class="features-row-section">
   <div class="nav-container features-row-inner">
     <div class="feature-item">
-      <div class="feature-circle">🛍️</div>
+      <div class="feature-circle feature-circle--daily" aria-hidden="true">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
       <div class="feature-info">
         <h3>Daily Needs</h3>
         <p>Everything you need, every day.</p>
       </div>
     </div>
     <div class="feature-item">
-      <div class="feature-circle">🚚</div>
+      <div class="feature-circle feature-circle--ship" aria-hidden="true">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 18H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="18" r="2" stroke="currentColor" stroke-width="2"/></svg>
+      </div>
       <div class="feature-info">
-        <h3>Free &amp; Fast Delivery</h3>
-        <p>Free delivery and quick, reliable service to your doorstep.</p>
+        <h3>Fast Delivery</h3>
+        <p>Quick and reliable delivery to your doorstep.</p>
       </div>
     </div>
     <div class="feature-item">
-      <div class="feature-circle">🤝</div>
+      <div class="feature-circle feature-circle--trust" aria-hidden="true">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
       <div class="feature-info">
         <h3>Trusted Service</h3>
         <p>Quality products and customer satisfaction.</p>
@@ -144,14 +134,28 @@
 <section class="why-band">
   <div class="nav-container why-band-inner">
     <div class="why-band-head">
-      <span class="why-leaf" aria-hidden="true">🌿</span>
+      <span class="why-leaf" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.5 2 8.8a7 7 0 0 1-10 9.2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 20a7 7 0 0 0 6.98-7.82 13 13 0 0 0-4.02-8.18" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </span>
       <h2>Why Shop With AaramKart?</h2>
     </div>
     <ul class="why-band-icons">
-      <li><span class="wb-ic">📦</span><span>Wide Range of Products</span></li>
-      <li><span class="wb-ic">🔄</span><span>Easy Returns &amp; Refunds</span></li>
-      <li><span class="wb-ic">💳</span><span>Secure Payments</span></li>
-      <li><span class="wb-ic">🎧</span><span>24/7 Customer Support</span></li>
+      <li>
+        <span class="wb-ic wb-ic--range" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span>Wide Range of Products</span>
+      </li>
+      <li>
+        <span class="wb-ic wb-ic--returns" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span>Easy Returns &amp; Refunds</span>
+      </li>
+      <li>
+        <span class="wb-ic wb-ic--pay" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" stroke-width="2"/></svg></span>
+        <span>Secure Payments</span>
+      </li>
+      <li>
+        <span class="wb-ic wb-ic--support" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span>24/7 Customer Support</span>
+      </li>
     </ul>
     <a href="{% url 'register' %}" class="btn btn-learn-more">Learn More</a>
   </div>

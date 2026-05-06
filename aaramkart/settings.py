@@ -98,7 +98,7 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Bump this (or set STATIC_CACHE_BUSTER in .env) when CSS/JS changes don’t show — browsers cache /static/ aggressively.
-STATIC_CACHE_BUSTER = config("STATIC_CACHE_BUSTER", default="20260507")
+STATIC_CACHE_BUSTER = config("STATIC_CACHE_BUSTER", default="20260517")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

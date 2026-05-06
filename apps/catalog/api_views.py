@@ -24,16 +24,28 @@ class ProductListAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        products = Product.objects.filter(is_active=True).select_related("category").prefetch_related("pricing_tiers")
+        products = Product.objects.filter(is_active=True).select_related("category", "brand_obj", "subcategory").prefetch_related("pricing_tiers")
         category = request.GET.get("category")
         brand = request.GET.get("brand")
-        q = request.GET.get("q")
+        q = request.GET.get("q", "").strip()
         if category:
             products = products.filter(category__slug=category)
         if brand:
             products = products.filter(brand__icontains=brand)
         if q:
-            products = products.filter(Q(name__icontains=q) | Q(brand__icontains=q))
+            products = products.filter(
+                Q(name__icontains=q)
+                | Q(brand__icontains=q)
+                | Q(brand_obj__name__icontains=q)
+                | Q(subcategory__name__icontains=q)
+                | Q(category__name__icontains=q)
+            ).distinct()
+        try:
+            lim = int(request.GET.get("limit", "0"))
+            if lim > 0:
+                products = products[:lim]
+        except ValueError:
+            pass
         return Response(ProductListSerializer(products, many=True, context={"request": request}).data)
 
     def post(self, request):

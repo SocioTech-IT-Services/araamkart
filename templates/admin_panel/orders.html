@@ -1,18 +1,13 @@
-{% extends 'base.html' %}
+{% extends 'admin_panel/base.html' %}
 {% block title %}Manage Orders — AaramKart Admin{% endblock %}
 
-{% block content %}
+{% block admin_main %}
 <section class="page-section admin-section">
   <div class="section-container">
     <div class="admin-header">
       <div>
         <h1>Order Management</h1>
         <p>{{ orders|length }} order{{ orders|length|pluralize }}{% if status_filter %} (filtered: {{ status_filter }}){% endif %}</p>
-      </div>
-      <div class="admin-nav-pills">
-        <a href="{% url 'admin_dashboard' %}" class="pill">Dashboard</a>
-        <a href="{% url 'admin_products' %}" class="pill">Inventory</a>
-        <a href="{% url 'admin_orders' %}" class="pill active">Orders</a>
       </div>
     </div>
 
@@ -78,7 +73,7 @@
 </section>
 
 <div class="toast" id="order-toast"></div>
-{% endblock %}
+{% endblock admin_main %}
 
 {% block extra_scripts %}
 <script>

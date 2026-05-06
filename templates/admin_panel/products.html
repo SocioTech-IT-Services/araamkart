@@ -1,9 +1,9 @@
-{% extends 'base.html' %}
+{% extends 'admin_panel/base.html' %}
 {% load static %}
 
 {% block title %}Manage Products — AaramKart Admin{% endblock %}
 
-{% block content %}
+{% block admin_main %}
 <section class="page-section admin-section">
   <div class="section-container">
     <div class="admin-header">
@@ -13,15 +13,23 @@
       </div>
       <div class="admin-header-actions">
         <a href="{% url 'admin_product_add' %}" class="btn btn-primary">+ Add product</a>
-        <div class="admin-nav-pills">
-          <a href="{% url 'admin_dashboard' %}" class="pill">Dashboard</a>
-          <a href="{% url 'admin_products' %}" class="pill active">Inventory</a>
-          <a href="{% url 'admin_orders' %}" class="pill">Orders</a>
-        </div>
       </div>
     </div>
 
     <div class="admin-section-card">
+      <div class="admin-import-strip">
+        <form method="post" action="{% url 'admin_bulk_import_products' %}" enctype="multipart/form-data" class="admin-import-form">
+          {% csrf_token %}
+          <label for="import-file" class="admin-import-label">Bulk import (.xlsx)</label>
+          <input id="import-file" type="file" name="import_file" accept=".xlsx" required />
+          <button type="submit" class="btn btn-outline btn-xs">Upload</button>
+        </form>
+        <p class="form-hint-inline">
+          Required columns: <code>category</code>, <code>subcategory</code>, <code>brand</code>, <code>product_name</code>,
+          <code>variant_name</code>, <code>price</code>, <code>stock</code>, <code>unit</code>, <code>moq</code>.
+          Optional: <code>sku</code>, <code>variant_sku</code>.
+        </p>
+      </div>
       <div class="table-responsive">
         <table class="admin-table" id="products-table">
           <thead>
@@ -30,6 +38,8 @@
               <th>Product</th>
               <th>Brand</th>
               <th>Category</th>
+              <th>Subcategory</th>
+              <th>Variants</th>
               <th>Stock</th>
               <th>MOQ</th>
               <th>Base price</th>
@@ -55,6 +65,8 @@
               </td>
               <td>{{ product.brand }}</td>
               <td>{{ product.category.name }}</td>
+              <td>{{ product.subcategory.name|default:"—" }}</td>
+              <td>{{ product.variants.count }}</td>
               <td>
                 <div class="stock-edit stock-edit--full">
                   <div class="stock-adj">
@@ -108,7 +120,7 @@
 </section>
 
 <div class="toast" id="stock-toast"></div>
-{% endblock %}
+{% endblock admin_main %}
 
 {% block extra_scripts %}
 <script>

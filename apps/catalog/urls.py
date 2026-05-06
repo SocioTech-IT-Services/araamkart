@@ -8,6 +8,7 @@ from .views import (
     contact,
     best_offers,
     policies,
+    subcategories_api,
 )
 
 urlpatterns = [
@@ -18,4 +19,5 @@ urlpatterns = [
     path("category/<slug:slug>/", category_detail, name="category_detail"),
     path("product/<int:pk>/", product_detail, name="product_detail"),
     path("search/", search_results, name="search"),
+    path("api/subcategories/", subcategories_api, name="subcategories_api"),
 ]

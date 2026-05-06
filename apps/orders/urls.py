@@ -5,6 +5,7 @@ from .views import (
     checkout_view, order_success, order_history, order_detail,
     admin_dashboard, admin_products, admin_orders,
     admin_product_add, admin_product_edit, admin_product_delete,
+    admin_bulk_import_products,
     admin_gallery_image_delete,
     admin_order_detail,
     admin_update_order_status, admin_update_stock,
@@ -26,6 +27,7 @@ urlpatterns = [
     path("admin-panel/", admin_dashboard, name="admin_dashboard"),
     path("admin-panel/products/", admin_products, name="admin_products"),
     path("admin-panel/products/add/", admin_product_add, name="admin_product_add"),
+    path("admin-panel/products/import/", admin_bulk_import_products, name="admin_bulk_import_products"),
     path("admin-panel/products/<int:pk>/edit/", admin_product_edit, name="admin_product_edit"),
     path("admin-panel/products/<int:pk>/delete/", admin_product_delete, name="admin_product_delete"),
     path(

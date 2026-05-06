@@ -1,12 +1,25 @@
 """Catalog app — Template Views"""
 from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
 from django.db.models import Q
-from .models import Category, Product
+from .models import Category, Product, SubCategory, Brand
 
 
 def home(request):
-    categories = Category.objects.filter(is_active=True).order_by("order")
-    return render(request, "home.html", {"categories": categories})
+    wanted_home_categories = [
+        "Personal Care & Hygiene",
+        "Household Essentials",
+        "Utilities",
+        "Games",
+        "Baby Care",
+        "Stationery",
+        "Female Hygiene",
+    ]
+    category_qs = Category.objects.filter(is_active=True, name__in=wanted_home_categories)
+    category_map = {c.name: c for c in category_qs}
+    featured_categories = [category_map[name] for name in wanted_home_categories if name in category_map]
+
+    return render(request, "home.html", {"categories": featured_categories})
 
 
 def contact(request):
@@ -24,18 +37,30 @@ def policies(request):
 
 def category_detail(request, slug):
     category = get_object_or_404(Category, slug=slug, is_active=True)
-    products = Product.objects.filter(category=category, is_active=True).prefetch_related("pricing_tiers")
+    products = (
+        Product.objects.filter(category=category, is_active=True)
+        .select_related("subcategory", "brand_obj")
+        .prefetch_related("pricing_tiers")
+    )
 
     # Filters
     brand = request.GET.get("brand", "").strip()
+    subcategory_slug = request.GET.get("subcategory", "").strip()
     min_price = request.GET.get("min_price", "")
     max_price = request.GET.get("max_price", "")
     search = request.GET.get("q", "").strip()
 
+    if subcategory_slug:
+        products = products.filter(subcategory__slug=subcategory_slug)
     if brand:
-        products = products.filter(brand__icontains=brand)
+        products = products.filter(Q(brand__icontains=brand) | Q(brand_obj__name__icontains=brand))
     if search:
-        products = products.filter(Q(name__icontains=search) | Q(brand__icontains=search))
+        products = products.filter(
+            Q(name__icontains=search)
+            | Q(brand__icontains=search)
+            | Q(brand_obj__name__icontains=search)
+            | Q(subcategory__name__icontains=search)
+        )
 
     # Brand list for filter sidebar
     all_brands = (
@@ -44,6 +69,8 @@ def category_detail(request, slug):
         .distinct()
         .order_by("brand")
     )
+    all_brand_objs = Brand.objects.filter(products__category=category, is_active=True).distinct().order_by("name")
+    subcategories = category.subcategories.filter(is_active=True).order_by("order", "name")
 
     # Price filter (approximate via base_price)
     filtered_products = []
@@ -71,6 +98,9 @@ def category_detail(request, slug):
         "products": filtered_products,
         "all_brands": all_brands,
         "selected_brand": brand,
+        "subcategories": subcategories,
+        "selected_subcategory": subcategory_slug,
+        "all_brand_objs": all_brand_objs,
         "min_price": min_price,
         "max_price": max_price,
         "search": search,
@@ -96,6 +126,8 @@ def product_detail(request, pk):
 def search_results(request):
     query = request.GET.get("q", "").strip()
     category_id = request.GET.get("category", "")
+    subcategory_id = request.GET.get("subcategory", "")
+    brand = request.GET.get("brand", "").strip()
     products = Product.objects.filter(is_active=True).prefetch_related("pricing_tiers")
     
     if query:
@@ -105,5 +137,27 @@ def search_results(request):
     
     if category_id:
         products = products.filter(category__slug=category_id)
+    if subcategory_id:
+        products = products.filter(subcategory__slug=subcategory_id)
+    if brand:
+        products = products.filter(Q(brand__icontains=brand) | Q(brand_obj__name__icontains=brand))
 
-    return render(request, "catalog/search.html", {"products": products, "query": query})
+    return render(
+        request,
+        "catalog/search.html",
+        {"products": products, "query": query, "selected_subcategory": subcategory_id, "selected_brand": brand},
+    )
+
+
+def subcategories_api(request):
+    category_slug = request.GET.get("category")
+    category_id = request.GET.get("category_id")
+    if not category_slug and not category_id:
+        return JsonResponse({"subcategories": []})
+    filters = {"is_active": True}
+    if category_id:
+        filters["category_id"] = category_id
+    else:
+        filters["category__slug"] = category_slug
+    subcats = SubCategory.objects.filter(**filters).order_by("order", "name").values("id", "name")
+    return JsonResponse({"subcategories": list(subcats)})

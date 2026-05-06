@@ -139,23 +139,9 @@
     {% if related %}
     <div class="related-section">
       <h2 class="section-title">More from {{ product.category.name }}</h2>
-      <div class="products-grid">
+      <div class="products-grid" id="products-grid-related">
         {% for rp in related %}
-        <a href="{% url 'product_detail' rp.pk %}" class="product-card" id="related-{{ rp.pk }}">
-          <div class="product-img-wrap">
-            {% if rp.image %}<img src="{{ rp.image.url }}" alt="{{ rp.name }}" loading="lazy" />
-            {% else %}<div class="product-img-placeholder">{{ rp.category.icon }}</div>{% endif %}
-          </div>
-          <div class="product-info">
-            <p class="product-brand">{{ rp.brand }}</p>
-            <h3 class="product-name">{{ rp.name }}</h3>
-            <div class="product-pricing">
-              {% with rp.base_price as bp %}
-              {% if bp %}<span class="price-from">from</span><span class="price-main">₹{{ bp }}</span>{% endif %}
-              {% endwith %}
-            </div>
-          </div>
-        </a>
+        {% include "catalog/_product_card.html" with product=rp card_id_prefix="related" show_stock_badge=False %}
         {% endfor %}
       </div>
     </div>

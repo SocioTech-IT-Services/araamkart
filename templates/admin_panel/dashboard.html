@@ -1,19 +1,13 @@
-{% extends 'base.html' %}
+{% extends 'admin_panel/base.html' %}
 {% block title %}Admin Dashboard — AaramKart{% endblock %}
 
-{% block content %}
+{% block admin_main %}
 <section class="page-section admin-section">
   <div class="section-container">
     <div class="admin-header">
       <div>
         <h1>Admin Dashboard</h1>
         <p>Welcome back, {{ request.user.full_name }} — manage stock, products, and orders from here.</p>
-      </div>
-      <div class="admin-nav-pills">
-        <a href="{% url 'admin_dashboard' %}" class="pill active">Dashboard</a>
-        <a href="{% url 'admin_products' %}" class="pill">Inventory &amp; stock</a>
-        <a href="{% url 'admin_orders' %}" class="pill">Orders</a>
-        <a href="{% url 'admin:index' %}" class="pill" target="_blank">Django Admin ↗</a>
       </div>
     </div>
 
@@ -104,4 +98,4 @@
 
   </div>
 </section>
-{% endblock %}
+{% endblock admin_main %}

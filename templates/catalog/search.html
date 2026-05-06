@@ -10,25 +10,9 @@
     </div>
 
     {% if products %}
-    <div class="products-grid">
+    <div class="products-grid" id="products-grid">
       {% for product in products %}
-      <a href="{% url 'product_detail' product.pk %}" class="product-card" id="sr-{{ product.pk }}">
-        <div class="product-img-wrap">
-          {% if product.image %}<img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy" />
-          {% else %}<div class="product-img-placeholder">{{ product.category.icon }}</div>{% endif %}
-        </div>
-        <div class="product-info">
-          <p class="product-brand">{{ product.brand }}</p>
-          <h3 class="product-name">{{ product.name }}</h3>
-          <p class="product-cat-tag">{{ product.category.name }}</p>
-          <div class="product-pricing">
-            {% with product.base_price as bp %}
-            {% if bp %}<span class="price-from">from</span><span class="price-main">₹{{ bp }}</span>{% endif %}
-            {% endwith %}
-          </div>
-          <span class="moq-tag">MOQ: {{ product.moq }} {{ product.unit }}</span>
-        </div>
-      </a>
+      {% include "catalog/_product_card.html" with product=product card_id_prefix="sr" show_stock_badge=True %}
       {% endfor %}
     </div>
     {% else %}

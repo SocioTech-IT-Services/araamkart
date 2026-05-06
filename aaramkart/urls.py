@@ -4,6 +4,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+admin.site.site_header = "AaramKart administration"
+admin.site.site_title = "AaramKart Admin"
+admin.site.index_title = "Store administration"
+
 urlpatterns = [
     path("django-admin/", admin.site.urls),
     # Frontend views

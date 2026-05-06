@@ -105,6 +105,45 @@ function initLoginModal() {
     }
 }
 
+function initAdminSidebar() {
+    const shell = document.getElementById('admin-app-shell');
+    if (!shell) return;
+
+    const toggle = document.getElementById('admin-sidebar-toggle');
+    const backdrop = document.getElementById('admin-sidebar-backdrop');
+    const sidebar = document.getElementById('admin-sidebar');
+    const mq = window.matchMedia('(max-width: 900px)');
+
+    const setOpen = (open) => {
+        shell.classList.toggle('admin-app-shell--nav-open', open);
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.setAttribute('aria-label', open ? 'Close admin menu' : 'Open admin menu');
+        }
+        if (backdrop) backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+        if (mq.matches && open) document.body.style.overflow = 'hidden';
+        else document.body.style.overflow = '';
+    };
+
+    const close = () => {
+        if (mq.matches) setOpen(false);
+    };
+
+    toggle?.addEventListener('click', () => {
+        setOpen(!shell.classList.contains('admin-app-shell--nav-open'));
+    });
+
+    backdrop?.addEventListener('click', close);
+
+    sidebar?.querySelectorAll('a.admin-sidebar__link').forEach((a) => {
+        a.addEventListener('click', () => close());
+    });
+
+    mq.addEventListener('change', () => {
+        if (!mq.matches) setOpen(false);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // ── DROPDOWNS (optional legacy ids) ──
     const userBtn = document.getElementById('nav-user-btn');
@@ -132,6 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initLoginModal();
+    initNavSearchSuggest();
+    initBulkAddGrid();
+    initAdminSidebar();
 
     const alerts = document.querySelectorAll('.messages-container .alert');
     alerts.forEach((alert) => {
@@ -149,6 +191,185 @@ function createMessagesContainer() {
     div.className = 'messages-container';
     document.body.appendChild(div);
     return div;
+}
+
+function initNavSearchSuggest() {
+    const input = document.getElementById('nav-search-input');
+    const panel = document.getElementById('nav-search-suggestions');
+    if (!input || !panel) return;
+
+    const hide = () => {
+        panel.setAttribute('hidden', '');
+        panel.innerHTML = '';
+        input.setAttribute('aria-expanded', 'false');
+    };
+
+    const escapeHtml = (s) =>
+        String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/"/g, '&quot;');
+
+    const renderLoading = () => {
+        panel.removeAttribute('hidden');
+        input.setAttribute('aria-expanded', 'true');
+        panel.innerHTML = `
+          <div class="nav-search-suggestions--loading">
+            <div class="skeleton-shimmer" style="margin-bottom:8px"></div>
+            <div class="skeleton-shimmer" style="margin-bottom:8px"></div>
+            <div class="skeleton-shimmer"></div>
+          </div>`;
+    };
+
+    const renderResults = (items) => {
+        if (!items.length) {
+            hide();
+            return;
+        }
+        panel.innerHTML = items
+            .map((p) => {
+                const thumb = p.image
+                    ? `<img src="${String(p.image).replace(/"/g, '&quot;')}" alt="" width="44" height="44" />`
+                    : '<span class="nav-search-suggest-item__ph" aria-hidden="true"></span>';
+                return `
+          <a role="option" class="nav-search-suggest-item" href="/product/${p.id}/">
+            ${thumb}
+            <div class="nav-search-suggest-item__meta">
+              <div class="nav-search-suggest-item__name">${escapeHtml(p.name)}</div>
+              <div class="nav-search-suggest-item__sub">${escapeHtml(p.brand || '')}${p.category_name ? ' · ' + escapeHtml(p.category_name) : ''}</div>
+            </div>
+            <div class="nav-search-suggest-item__price">${p.base_price != null ? '₹' + escapeHtml(String(p.base_price)) : '—'}</div>
+          </a>`;
+            })
+            .join('');
+    };
+
+    let debounce = null;
+    input.addEventListener('input', () => {
+        clearTimeout(debounce);
+        const q = input.value.trim();
+        if (q.length < 2) {
+            hide();
+            return;
+        }
+        debounce = setTimeout(async () => {
+            renderLoading();
+            try {
+                const res = await fetch(`/api/products/?q=${encodeURIComponent(q)}&limit=3`);
+                if (!res.ok) throw new Error('bad');
+                const data = await res.json();
+                renderResults(Array.isArray(data) ? data : []);
+            } catch {
+                hide();
+            }
+        }, 220);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hide();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!panel.contains(e.target) && e.target !== input) hide();
+    });
+}
+
+function initBulkAddGrid() {
+    if (document.body.dataset.auth !== '1') return;
+
+    const onCartResponse = (data) => {
+        const badge = document.querySelector('.cart-count-badge');
+        const totalEl = document.querySelector('.cart-meta-item .meta-value');
+        if (badge && data.items) badge.textContent = String(data.items.length);
+        if (totalEl && data.total != null) totalEl.textContent = `₹${Number(data.total).toFixed(2)}`;
+    };
+
+    const findLine = (data, productId) =>
+        (data.items || []).find((it) => it.product && Number(it.product.id) === Number(productId));
+
+    document.body.addEventListener('click', async (e) => {
+        const addBtn = e.target.closest('.js-bulk-add');
+        if (addBtn) {
+            e.preventDefault();
+            const bar = addBtn.closest('.product-bulk-bar');
+            if (!bar) return;
+            const pid = bar.dataset.productId;
+            const moq = parseInt(bar.dataset.moq, 10) || 1;
+            const stock = parseInt(bar.dataset.stock, 10) || 0;
+            if (!pid || stock <= 0) return;
+            if (stock < moq) {
+                showToast('Available stock is below MOQ for this product.', 'error');
+                return;
+            }
+            const qty = Math.min(moq, stock);
+            try {
+                const res = await fetch('/api/cart/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') || '',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ product_id: Number(pid), quantity: qty }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    showToast(data.error || 'Could not add to cart', 'error');
+                    return;
+                }
+                onCartResponse(data);
+                const line = findLine(data, pid);
+                bar.dataset.itemId = line ? line.id : '';
+                bar.dataset.qty = String(line ? line.quantity : qty);
+                addBtn.classList.add('hidden');
+                const qtyUi = bar.querySelector('.js-bulk-qty');
+                const valEl = bar.querySelector('.js-bulk-val');
+                if (qtyUi) qtyUi.classList.remove('hidden');
+                if (valEl) valEl.textContent = String(line ? line.quantity : qty);
+                showToast('Added to bulk cart', 'success');
+            } catch {
+                showToast('Network error', 'error');
+            }
+            return;
+        }
+
+        const inc = e.target.closest('.js-bulk-inc');
+        const dec = e.target.closest('.js-bulk-dec');
+        if (!inc && !dec) return;
+        const bar = e.target.closest('.product-bulk-bar');
+        if (!bar) return;
+        const itemId = bar.dataset.itemId;
+        const pid = bar.dataset.productId;
+        const moq = parseInt(bar.dataset.moq, 10) || 1;
+        const stock = parseInt(bar.dataset.stock, 10) || 0;
+        if (!itemId) return;
+        let qty = parseInt(bar.dataset.qty, 10) || moq;
+        qty += inc ? 1 : -1;
+        qty = Math.max(moq, Math.min(qty, stock));
+        if (qty === parseInt(bar.dataset.qty, 10) && dec) return;
+        try {
+            const res = await fetch('/api/cart/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ item_id: Number(itemId), quantity: qty }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                showToast(data.error || 'Update failed', 'error');
+                return;
+            }
+            onCartResponse(data);
+            bar.dataset.qty = String(qty);
+            const valEl = bar.querySelector('.js-bulk-val');
+            if (valEl) valEl.textContent = String(qty);
+        } catch {
+            showToast('Network error', 'error');
+        }
+    });
 }
 
 function showToast(message, type = 'success') {

@@ -1,5 +1,6 @@
 """Orders app — Template Views (Cart, Checkout, Order History)"""
 import json
+from decimal import Decimal, InvalidOperation
 from django.db.models import Sum
 from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import render, redirect, get_object_or_404
@@ -8,9 +9,10 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
+from openpyxl import load_workbook
 
 from apps.catalog.forms import AdminProductForm
-from apps.catalog.models import Product, ProductImage
+from apps.catalog.models import Product, ProductImage, Category, SubCategory, Brand, ProductVariant
 from .models import Cart, CartItem, Order, OrderItem
 from apps.notifications.services import send_order_confirmation
 
@@ -245,11 +247,160 @@ def admin_dashboard(request):
 
 @admin_required
 def admin_products(request):
-    from apps.catalog.models import Category
-
-    products = Product.objects.select_related("category").prefetch_related("pricing_tiers").order_by("-updated_at")
+    products = (
+        Product.objects.select_related("category", "subcategory", "brand_obj")
+        .prefetch_related("pricing_tiers", "variants")
+        .order_by("-updated_at")
+    )
     categories = Category.objects.filter(is_active=True)
-    return render(request, "admin_panel/products.html", {"products": products, "categories": categories})
+    return render(
+        request,
+        "admin_panel/products.html",
+        {"products": products, "categories": categories, "brands": Brand.objects.filter(is_active=True)},
+    )
+
+
+@admin_required
+@require_POST
+def admin_bulk_import_products(request):
+    file = request.FILES.get("import_file")
+    if not file:
+        messages.error(request, "Please upload an Excel (.xlsx) file.")
+        return redirect("admin_products")
+    if not file.name.lower().endswith(".xlsx"):
+        messages.error(request, "Only .xlsx files are supported.")
+        return redirect("admin_products")
+
+    wb = load_workbook(file, data_only=True)
+    ws = wb.active
+    headers = [str(c.value).strip().lower() if c.value is not None else "" for c in ws[1]]
+    required = [
+        "category",
+        "subcategory",
+        "brand",
+        "product_name",
+        "variant_name",
+        "price",
+        "stock",
+        "unit",
+        "moq",
+    ]
+    missing = [h for h in required if h not in headers]
+    if missing:
+        messages.error(request, f"Missing required columns: {', '.join(missing)}")
+        return redirect("admin_products")
+
+    idx = {h: headers.index(h) for h in headers}
+    created_products = 0
+    created_variants = 0
+    updated_variants = 0
+    errors = 0
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=2), start=2):
+        try:
+            def val(key):
+                cell = row[idx[key]]
+                return "" if cell.value is None else str(cell.value).strip()
+
+            category_name = val("category")
+            subcategory_name = val("subcategory")
+            brand_name = val("brand")
+            product_name = val("product_name")
+            variant_name = val("variant_name") or "Default"
+            unit = val("unit") or "pcs"
+            sku = val("sku") if "sku" in idx else ""
+            variant_sku = val("variant_sku") if "variant_sku" in idx else ""
+            moq_raw = val("moq") or "1"
+            price_raw = val("price")
+            stock_raw = val("stock") or "0"
+
+            if not (category_name and subcategory_name and brand_name and product_name and price_raw):
+                errors += 1
+                continue
+
+            category, _ = Category.objects.get_or_create(name=category_name, defaults={"is_active": True})
+            subcategory, _ = SubCategory.objects.get_or_create(
+                category=category, name=subcategory_name, defaults={"is_active": True}
+            )
+            brand_obj, _ = Brand.objects.get_or_create(name=brand_name, defaults={"is_active": True})
+
+            moq = max(1, int(float(moq_raw)))
+            price = Decimal(str(price_raw))
+            stock = max(0, int(float(stock_raw)))
+
+            product, created = Product.objects.get_or_create(
+                category=category,
+                subcategory=subcategory,
+                name=product_name,
+                defaults={
+                    "brand": brand_name,
+                    "brand_obj": brand_obj,
+                    "unit": unit,
+                    "moq": moq,
+                    "stock": stock,
+                    "sku": sku or None,
+                    "is_active": True,
+                },
+            )
+            if created:
+                created_products += 1
+            else:
+                product.brand_obj = brand_obj
+                product.brand = brand_name
+                product.unit = unit or product.unit
+                product.moq = moq
+                if sku:
+                    product.sku = sku
+                product.subcategory = subcategory
+                product.save()
+
+            variant_defaults = {
+                "price": price,
+                "stock": stock,
+                "is_active": True,
+            }
+            variant, v_created = ProductVariant.objects.get_or_create(
+                product=product,
+                name=variant_name,
+                defaults={
+                    **variant_defaults,
+                    "sku": variant_sku or None,
+                },
+            )
+            if v_created:
+                created_variants += 1
+            else:
+                variant.price = price
+                variant.stock = stock
+                if variant_sku:
+                    variant.sku = variant_sku
+                variant.is_active = True
+                variant.save()
+                updated_variants += 1
+
+            # Keep legacy product fields in sync.
+            product.stock = stock
+            product.save(update_fields=["stock", "updated_at"])
+
+            tier = product.pricing_tiers.order_by("min_qty").first()
+            if tier:
+                tier.min_qty = 1
+                tier.unit_price = price
+                tier.max_qty = None
+                tier.save()
+            else:
+                product.pricing_tiers.create(min_qty=1, max_qty=None, unit_price=price, label="")
+
+        except (ValueError, TypeError, InvalidOperation):
+            errors += 1
+            continue
+
+    messages.success(
+        request,
+        f"Import complete: {created_products} products created, "
+        f"{created_variants} variants created, {updated_variants} variants updated, {errors} rows skipped.",
+    )
+    return redirect("admin_products")
 
 
 @admin_required

@@ -23,6 +23,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     base_price = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -30,6 +31,15 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_base_price(self, obj):
         return float(obj.base_price) if obj.base_price else None
+
+    def get_image(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        url = obj.image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

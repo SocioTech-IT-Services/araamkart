@@ -1,4 +1,4 @@
-"""Catalog app models — Category, Product, PricingTier"""
+"""Catalog app models — Category, SubCategory, Brand, Product, Variants, Pricing"""
 from django.db import models
 from django.utils.text import slugify
 
@@ -24,10 +24,56 @@ class Category(models.Model):
         ordering = ["order", "name"]
 
 
+class SubCategory(models.Model):
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="subcategories")
+    name = models.CharField(max_length=120)
+    slug = models.SlugField(blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.category.name} / {self.name}"
+
+    class Meta:
+        ordering = ["category__order", "order", "name"]
+        unique_together = [("category", "slug")]
+        verbose_name = "Subcategory"
+        verbose_name_plural = "Subcategories"
+
+
+class Brand(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(unique=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["name"]
+
+
 class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products")
+    subcategory = models.ForeignKey(
+        SubCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
+    )
+    brand_obj = models.ForeignKey(
+        Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
+    )
     name = models.CharField(max_length=200)
     brand = models.CharField(max_length=100)
+    sku = models.CharField(max_length=60, blank=True, unique=True, null=True)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to="products/", null=True, blank=True)
     stock = models.PositiveIntegerField(default=0)
@@ -88,3 +134,23 @@ class PricingTier(models.Model):
 
     class Meta:
         ordering = ["min_qty"]
+
+
+class ProductVariant(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variants")
+    name = models.CharField(max_length=120, blank=True, help_text="e.g. 200ml, 1kg pack, Twin pack")
+    size_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    size_unit = models.CharField(max_length=20, blank=True, help_text="e.g. ml, g, kg, l")
+    pack_size = models.PositiveIntegerField(default=1)
+    sku = models.CharField(max_length=80, blank=True, unique=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    stock = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        label = self.name or "Default"
+        return f"{self.product.name} — {label}"
+
+    class Meta:
+        ordering = ["product__name", "id"]

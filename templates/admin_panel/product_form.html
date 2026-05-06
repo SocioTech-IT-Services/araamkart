@@ -1,19 +1,14 @@
-{% extends 'base.html' %}
+{% extends 'admin_panel/base.html' %}
 {% load static %}
 {% block title %}{{ title }} — AaramKart Admin{% endblock %}
 
-{% block content %}
+{% block admin_main %}
 <section class="page-section admin-section">
   <div class="section-container admin-form-container">
     <div class="admin-header">
       <div>
         <h1>{{ title }}</h1>
         <p class="admin-sub">{% if product %}Update images, price, stock, and availability.{% else %}Add photos (required for best results), price, and stock.{% endif %}</p>
-      </div>
-      <div class="admin-nav-pills">
-        <a href="{% url 'admin_dashboard' %}" class="pill">Dashboard</a>
-        <a href="{% url 'admin_products' %}" class="pill active">Inventory</a>
-        <a href="{% url 'admin_orders' %}" class="pill">Orders</a>
       </div>
     </div>
 
@@ -69,9 +64,24 @@
             {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
           </div>
           <div class="form-group">
+            <label for="id_sku">SKU</label>
+            {{ form.sku }}
+            {% if form.sku.errors %}<span class="field-error">{{ form.sku.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
             <label for="id_brand">Brand</label>
             {{ form.brand }}
             {% if form.brand.errors %}<span class="field-error">{{ form.brand.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_brand_obj">Brand (master)</label>
+            {{ form.brand_obj }}
+            {% if form.brand_obj.errors %}<span class="field-error">{{ form.brand_obj.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_subcategory">Subcategory</label>
+            {{ form.subcategory }}
+            {% if form.subcategory.errors %}<span class="field-error">{{ form.subcategory.errors.0 }}</span>{% endif %}
           </div>
           <div class="form-group form-group-wide">
             <label for="id_description">Description</label>
@@ -130,7 +140,7 @@
     </div>
   </div>
 </section>
-{% endblock %}
+{% endblock admin_main %}
 
 {% block extra_scripts %}
 <script>
@@ -159,6 +169,34 @@
       img.src = url;
       previewWrap.appendChild(img);
     }
+  });
+})();
+
+(function () {
+  var categorySelect = document.getElementById('id_category');
+  var subcategorySelect = document.getElementById('id_subcategory');
+  if (!categorySelect || !subcategorySelect) return;
+
+  function refillSubcategories(items) {
+    var current = subcategorySelect.value;
+    subcategorySelect.innerHTML = '<option value="">---------</option>';
+    items.forEach(function (it) {
+      var opt = document.createElement('option');
+      opt.value = it.id;
+      opt.textContent = it.name;
+      if (String(it.id) === String(current)) opt.selected = true;
+      subcategorySelect.appendChild(opt);
+    });
+  }
+
+  categorySelect.addEventListener('change', function () {
+    if (!categorySelect.value) {
+      refillSubcategories([]);
+      return;
+    }
+    fetch('{% url "subcategories_api" %}?category_id=' + encodeURIComponent(categorySelect.value))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { refillSubcategories(data.subcategories || []); });
   });
 })();
 </script>

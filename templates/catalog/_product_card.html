@@ -1,0 +1,61 @@
+{% comment %}
+  Premium product card — expects: product, card_id_prefix, show_stock_badge (optional, default true)
+{% endcomment %}
+<div class="product-card-shell">
+  <a href="{% url 'product_detail' product.pk %}" class="product-card" id="{{ card_id_prefix }}-{{ product.pk }}">
+    <div class="product-img-wrap">
+      {% if product.image %}
+      <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy" />
+      {% else %}
+      <div class="product-img-placeholder">{{ product.category.icon }}</div>
+      {% endif %}
+      {% if show_stock_badge != False %}
+      {% if product.stock > 10 %}
+      <span class="stock-badge stock-badge--in">In Stock</span>
+      {% elif product.stock > 0 %}
+      <span class="stock-badge low-stock">Low Stock</span>
+      {% else %}
+      <span class="stock-badge out-of-stock">Out of Stock</span>
+      {% endif %}
+      {% endif %}
+    </div>
+    <div class="product-info">
+      <p class="product-brand">{{ product.brand_obj.name|default:product.brand }}</p>
+      <h3 class="product-name">{{ product.name }}</h3>
+      {% if product.subcategory %}<p class="product-cat-tag">{{ product.subcategory.name }}</p>{% elif product.category %}<p class="product-cat-tag">{{ product.category.name }}</p>{% endif %}
+      <div class="product-pricing">
+        {% with product.base_price as bp %}
+        {% if bp %}
+        <span class="price-from">from</span>
+        <span class="price-main">₹{{ bp }}</span>
+        <span class="price-unit">/ {{ product.unit }}</span>
+        {% else %}
+        <span class="price-main">—</span>
+        {% endif %}
+        {% endwith %}
+      </div>
+      <div class="product-meta">
+        <span class="moq-tag">MOQ: {{ product.moq }} {{ product.unit }}</span>
+        {% if product.pricing_tiers.count > 1 %}
+        <span class="bulk-tag">Bulk savings</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% if user.is_authenticated %}
+  <div
+    class="product-bulk-bar"
+    data-product-id="{{ product.pk }}"
+    data-moq="{{ product.moq }}"
+    data-stock="{{ product.stock }}"
+    data-unit="{{ product.unit }}"
+  >
+    <button type="button" class="btn-bulk-add js-bulk-add" {% if product.stock == 0 %}disabled{% endif %}>Bulk add</button>
+    <div class="bulk-qty-controls js-bulk-qty hidden" aria-live="polite">
+      <button type="button" class="bulk-qty-btn js-bulk-dec" aria-label="Decrease quantity">−</button>
+      <span class="bulk-qty-val js-bulk-val">{{ product.moq }}</span>
+      <button type="button" class="bulk-qty-btn js-bulk-inc" aria-label="Increase quantity">+</button>
+    </div>
+  </div>
+  {% endif %}
+</div>

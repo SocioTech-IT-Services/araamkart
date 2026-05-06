@@ -10,102 +10,50 @@
       <a href="{% url 'home' %}">Home</a> / <span>{{ category.name }}</span>
     </nav>
 
-    <div class="category-layout">
-      <!-- ── FILTER SIDEBAR ── -->
-      <aside class="filter-sidebar" id="filter-sidebar">
-        <div class="filter-header">
-          <h3>Filters</h3>
-          <a href="{% url 'category_detail' category.slug %}" class="clear-filters">Clear All</a>
-        </div>
-
-        <form method="GET" id="filter-form">
-          <div class="filter-group">
-            <label class="filter-label">Search</label>
-            <input type="text" name="q" value="{{ search }}" placeholder="Search in {{ category.name }}" class="filter-input" />
-          </div>
-
-          <div class="filter-group">
-            <label class="filter-label">Brand</label>
-            <select name="brand" class="filter-input" onchange="this.form.submit()">
-              <option value="">All Brands</option>
-              {% for b in all_brands %}
-              <option value="{{ b }}" {% if selected_brand == b %}selected{% endif %}>{{ b }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label class="filter-label">Price Range (₹)</label>
-            <div class="price-range">
-              <input type="number" name="min_price" value="{{ min_price }}" placeholder="Min" class="filter-input half" min="0" />
-              <span>–</span>
-              <input type="number" name="max_price" value="{{ max_price }}" placeholder="Max" class="filter-input half" min="0" />
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-full" id="apply-filters-btn">Apply Filters</button>
-        </form>
-      </aside>
-
-      <!-- ── PRODUCTS AREA ── -->
-      <div class="products-area">
+    <div class="category-layout category-layout--full">
+      <div class="products-area products-area--full">
         <div class="products-top-bar">
           <div>
             <h1 class="page-title">{{ category.name }}</h1>
+            {% if not subcategories %}
             <p class="result-count">{{ products|length }} product{{ products|length|pluralize }} found</p>
+            {% endif %}
           </div>
-          <button class="btn btn-outline mobile-filter-toggle" id="mobile-filter-btn"
-                  onclick="document.getElementById('filter-sidebar').classList.toggle('open')">
-            ⚙ Filters
-          </button>
         </div>
 
+        {% if subcategories %}
+        <section class="premium-subtopic-band" aria-label="{{ category.name }} subtopics">
+          <div class="premium-subtopic-head premium-subtopic-head--actions-only">
+            <a href="{% url 'category_detail' category.slug %}" class="premium-subtopic-reset">All</a>
+          </div>
+          <div class="premium-subtopic-grid">
+            {% for sc in subcategories %}
+            <a href="{% url 'category_detail' category.slug %}?subcategory={{ sc.slug }}"
+               class="premium-subtopic-pill{% if selected_subcategory == sc.slug %} is-active{% endif %}">
+              <span class="premium-subtopic-pill__media" aria-hidden="true">
+                <img src="https://source.unsplash.com/280x280/?{{ sc.name|urlencode }}" alt="" width="280" height="280" loading="lazy" />
+              </span>
+              <span class="premium-subtopic-pill__label">{{ sc.name }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+
+        {% if not subcategories %}
         {% if products %}
         <div class="products-grid" id="products-grid">
           {% for product in products %}
-          <a href="{% url 'product_detail' product.pk %}" class="product-card" id="prod-{{ product.pk }}">
-            <div class="product-img-wrap">
-              {% if product.image %}
-              <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy" />
-              {% else %}
-              <div class="product-img-placeholder">{{ product.category.icon }}</div>
-              {% endif %}
-              {% if product.stock <= 10 %}
-              <span class="stock-badge {% if product.stock == 0 %}out-of-stock{% else %}low-stock{% endif %}">
-                {% if product.stock == 0 %}Out of Stock{% else %}Low Stock{% endif %}
-              </span>
-              {% endif %}
-            </div>
-            <div class="product-info">
-              <p class="product-brand">{{ product.brand }}</p>
-              <h3 class="product-name">{{ product.name }}</h3>
-              <div class="product-pricing">
-                {% with product.base_price as bp %}
-                {% if bp %}
-                <span class="price-from">from</span>
-                <span class="price-main">₹{{ bp }}</span>
-                <span class="price-unit">/ {{ product.unit }}</span>
-                {% else %}
-                <span class="price-main">—</span>
-                {% endif %}
-                {% endwith %}
-              </div>
-              <div class="product-meta">
-                <span class="moq-tag">MOQ: {{ product.moq }} {{ product.unit }}</span>
-                {% if product.pricing_tiers.count > 1 %}
-                <span class="bulk-tag">Bulk Pricing ↓</span>
-                {% endif %}
-              </div>
-            </div>
-          </a>
+          {% include "catalog/_product_card.html" with product=product card_id_prefix="prod" show_stock_badge=True %}
           {% endfor %}
         </div>
         {% else %}
         <div class="empty-state">
           <div class="empty-icon">🔍</div>
           <h3>No products found</h3>
-          <p>Try adjusting your filters or <a href="{% url 'category_detail' category.slug %}">clear all filters</a>.</p>
+          <p>Try another subtopic or <a href="{% url 'category_detail' category.slug %}">view all products</a>.</p>
         </div>
+        {% endif %}
         {% endif %}
       </div>
     </div>
