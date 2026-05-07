@@ -16,34 +16,44 @@
     <div class="product-detail-layout">
       <!-- ── IMAGE ── -->
       <div class="product-detail-image">
-        {% if product.image %}
-        <img src="{{ product.image.url }}" alt="{{ product.name }}" id="main-product-img" />
-        {% elif gallery_images %}
-        <img src="{{ gallery_images.0.image.url }}" alt="{{ product.name }}" id="main-product-img" />
-        {% else %}
-        <div class="product-img-placeholder-lg">{{ product.category.icon }}</div>
-        {% endif %}
-        {% if product.image or gallery_images %}
-        <div class="product-gallery-thumbs" role="tablist" aria-label="Product photos">
+        <div class="product-hero-media" id="product-hero-media">
+          {% if product.image %}
+          <img src="{{ product.image.url }}" alt="{{ product.name }}" id="main-product-img" class="product-hero-media-item" />
+          {% elif gallery_images %}
+          <img src="{{ gallery_images.0.image.url }}" alt="{{ product.name }}" id="main-product-img" class="product-hero-media-item" />
+          {% else %}
+          <div class="product-img-placeholder-lg">{{ product.category.icon }}</div>
+          {% endif %}
+          <video id="main-product-video" class="product-hero-media-item is-hidden" controls muted playsinline></video>
+        </div>
+        {% if product.image or gallery_images or product.video_url %}
+        <div class="product-gallery-thumbs" role="tablist" aria-label="Product media">
           {% if product.image %}
           <button type="button" class="product-gallery-thumb is-active" aria-current="true"
-                  data-full-src="{{ product.image.url }}" aria-label="Main photo">
+                  data-full-src="{{ product.image.url }}" data-media-type="image" aria-label="Main photo">
             <img src="{{ product.image.url }}" alt="" />
           </button>
           {% endif %}
           {% for gi in gallery_images %}
           <button type="button" class="product-gallery-thumb{% if not product.image and forloop.first %} is-active{% endif %}"
-                  data-full-src="{{ gi.image.url }}" aria-label="Photo {{ forloop.counter }}">
+                  data-full-src="{{ gi.image.url }}" data-media-type="image" aria-label="Photo {{ forloop.counter }}">
             <img src="{{ gi.image.url }}" alt="" />
           </button>
           {% endfor %}
+          {% if product.video_url %}
+          <button type="button" class="product-gallery-thumb product-gallery-thumb--video"
+                  data-full-src="{{ product.video_url }}" data-media-type="video" aria-label="Product video">
+            <span>▶</span>
+          </button>
+          {% endif %}
         </div>
         {% endif %}
-        <div class="product-badges">
+        <div class="product-badges product-badges--icon">
+          <span class="badge badge-icon" data-tip="Direct from trusted sellers">🛡 Trusted</span>
           {% if product.stock > 0 %}
-          <span class="badge badge-green">✓ In Stock ({{ product.stock }} {{ product.unit }})</span>
+          <span class="badge badge-green badge-icon" data-tip="Ready stock available now">📦 In Stock ({{ product.stock }} {{ product.unit }})</span>
           {% else %}
-          <span class="badge badge-red">✗ Out of Stock</span>
+          <span class="badge badge-red badge-icon" data-tip="Currently unavailable">⛔ Out of Stock</span>
           {% endif %}
         </div>
       </div>
@@ -62,38 +72,25 @@
           <strong>{{ product.moq }} {{ product.unit }}</strong>
         </div>
 
-        <!-- Pricing Tiers Table -->
+        <!-- Floating Pricing Cards -->
         {% if tiers %}
         <div class="pricing-tiers-section">
-          <h3 class="tiers-title">💰 Bulk Pricing Tiers</h3>
-          <table class="tiers-table" id="pricing-tiers-table">
-            <thead>
-              <tr>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Label</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for tier in tiers %}
-              <tr class="tier-row {% if forloop.last %}tier-best{% endif %}"
-                  data-min="{{ tier.min_qty }}" data-price="{{ tier.unit_price }}">
-                <td>
-                  {{ tier.min_qty }}{% if tier.max_qty %} – {{ tier.max_qty }}{% else %}+{% endif %}
-                  {{ product.unit }}
-                </td>
-                <td class="tier-price">₹{{ tier.unit_price }}</td>
-                <td>
-                  {% if tier.label %}
-                  <span class="tier-label-tag">{{ tier.label }}</span>
-                  {% elif forloop.last %}
-                  <span class="tier-label-tag best-price">Best Price</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <h3 class="tiers-title">💰 Choose Your Price Tier</h3>
+          <div class="tier-cards" id="pricing-tier-cards">
+            {% for tier in tiers %}
+            <button type="button"
+                    class="tier-card{% if forloop.first %} is-active{% endif %}"
+                    data-min="{{ tier.min_qty }}"
+                    data-max="{{ tier.max_qty|default:'' }}"
+                    data-price="{{ tier.unit_price }}">
+              <span class="tier-card-range">
+                {{ tier.min_qty }}{% if tier.max_qty %} - {{ tier.max_qty }}{% else %}+{% endif %} {{ product.unit }}
+              </span>
+              <span class="tier-card-price">₹{{ tier.unit_price }}</span>
+              <span class="tier-card-label">{% if tier.label %}{{ tier.label }}{% else %}Standard{% endif %}</span>
+            </button>
+            {% endfor %}
+          </div>
         </div>
         {% endif %}
 
@@ -108,6 +105,10 @@
               <input type="number" id="qty-input" value="{{ product.moq }}" min="{{ product.moq }}" max="{{ product.stock }}" />
               <button type="button" class="qty-btn" id="qty-plus" onclick="changeQty(1)">+</button>
             </div>
+            <div class="stock-meter-wrap" aria-label="Stock level">
+              <div class="stock-meter"><span class="stock-meter-fill" id="stock-meter-fill"></span></div>
+              <small class="stock-meter-text" id="stock-meter-text">In Stock: {{ product.stock }} {{ product.unit }}</small>
+            </div>
             <small class="qty-hint">Min: {{ product.moq }} {{ product.unit }} | Available: {{ product.stock }} {{ product.unit }}</small>
           </div>
 
@@ -116,7 +117,7 @@
             <span class="preview-price" id="preview-price">—</span>
           </div>
 
-          <button class="btn btn-primary btn-lg btn-full" id="add-to-cart-btn"
+          <button class="btn btn-primary btn-lg btn-full btn-cart-premium" id="add-to-cart-btn"
                   data-product-id="{{ product.pk }}" data-moq="{{ product.moq }}" data-stock="{{ product.stock }}">
             🛒 Add to Cart
           </button>
@@ -149,6 +150,15 @@
 
   </div>
 </section>
+{% if user.is_authenticated and product.stock > 0 %}
+<div class="mobile-sticky-cart-bar" id="mobile-sticky-cart-bar">
+  <div class="mobile-sticky-cart-meta">
+    <span class="mobile-sticky-cart-total" id="sticky-preview-price">₹0</span>
+    <small>{{ product.moq }}+ {{ product.unit }} minimum</small>
+  </div>
+  <button class="btn btn-primary btn-cart-premium" id="sticky-add-to-cart-btn" type="button">Add to Cart</button>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -156,12 +166,27 @@
 <script>
 (function () {
   var main = document.getElementById('main-product-img');
+  var mainVideo = document.getElementById('main-product-video');
   if (!main) return;
   document.querySelectorAll('.product-gallery-thumb').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var src = btn.getAttribute('data-full-src');
+      var mediaType = btn.getAttribute('data-media-type') || 'image';
       if (!src) return;
-      main.src = src;
+      if (mediaType === 'video' && mainVideo) {
+        main.classList.add('is-hidden');
+        mainVideo.classList.remove('is-hidden');
+        mainVideo.src = src;
+        mainVideo.load();
+      } else {
+        if (mainVideo) {
+          mainVideo.pause();
+          mainVideo.classList.add('is-hidden');
+          mainVideo.removeAttribute('src');
+        }
+        main.classList.remove('is-hidden');
+        main.src = src;
+      }
       document.querySelectorAll('.product-gallery-thumb').forEach(function (b) {
         b.classList.remove('is-active');
         b.setAttribute('aria-current', 'false');

@@ -1,8 +1,29 @@
 """Catalog app — Template Views"""
+import json
+from functools import lru_cache
+from pathlib import Path
+
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.db.models import Q
 from .models import Category, Product, SubCategory, Brand
+
+
+@lru_cache(maxsize=1)
+def _catalog_image_manifest():
+    manifest_path = (
+        Path(__file__).resolve().parent.parent.parent
+        / "static"
+        / "img"
+        / "generated"
+        / "manifest.json"
+    )
+    if not manifest_path.exists():
+        return {}
+    try:
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
 def home(request):
@@ -18,6 +39,9 @@ def home(request):
     category_qs = Category.objects.filter(is_active=True, name__in=wanted_home_categories)
     category_map = {c.name: c for c in category_qs}
     featured_categories = [category_map[name] for name in wanted_home_categories if name in category_map]
+    image_manifest = _catalog_image_manifest()
+    for category in featured_categories:
+        category.generated_image = image_manifest.get(category.name, {}).get("category_image")
 
     return render(request, "home.html", {"categories": featured_categories})
 
@@ -70,7 +94,11 @@ def category_detail(request, slug):
         .order_by("brand")
     )
     all_brand_objs = Brand.objects.filter(products__category=category, is_active=True).distinct().order_by("name")
-    subcategories = category.subcategories.filter(is_active=True).order_by("order", "name")
+    subcategories = list(category.subcategories.filter(is_active=True).order_by("order", "name"))
+    category_manifest = _catalog_image_manifest().get(category.name, {})
+    subcategory_images = category_manifest.get("subcategories", {})
+    for subcategory in subcategories:
+        subcategory.generated_image = subcategory_images.get(subcategory.name)
 
     # Price filter (approximate via base_price)
     filtered_products = []

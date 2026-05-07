@@ -146,7 +146,18 @@
     <div class="nav-category-strip" aria-label="Shop by category">
       {% for c in nav_categories %}
       {% if c.slug == 'personal-care-hygiene' or c.slug == 'household-essentials' or c.slug == 'utilities' or c.slug == 'games' or c.slug == 'baby-care' or c.slug == 'stationery' or c.slug == 'female-hygiene' %}
-      <a href="{% url 'category_detail' c.slug %}" class="nav-category-pill">{{ c.name }}</a>
+      <div class="nav-category-item">
+        <a href="{% url 'category_detail' c.slug %}" class="nav-category-pill">{{ c.name }}</a>
+        {% if c.subcategories.all %}
+        <div class="nav-subcategory-pop" role="menu" aria-label="{{ c.name }} subcategories">
+          {% for sc in c.subcategories.all %}
+          {% if sc.is_active %}
+          <a href="{% url 'category_detail' c.slug %}?subcategory={{ sc.slug }}" class="nav-subcategory-link" role="menuitem">{{ sc.name }}</a>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
       {% endif %}
       {% endfor %}
     </div>
@@ -212,9 +223,18 @@
     </div>
     <div class="footer-col">
       <h4>Shillong Office</h4>
-      <p>📞 <a href="tel:+919774365127">+91 9774365127</a></p>
-      <p>✉️ <a href="mailto:aaramkartshillong@gmail.com">aaramkartshillong@gmail.com</a></p>
-      <p>📍 <strong>Iewduh (Bara Bazar)</strong><br>Shillong, Meghalaya - 793002</p>
+      <p class="footer-office-line">
+        <span class="footer-office-icon" aria-hidden="true">📞</span>
+        <span class="footer-office-text"><a href="tel:+919774365127">+91 9774365127</a></span>
+      </p>
+      <p class="footer-office-line">
+        <span class="footer-office-icon" aria-hidden="true">✉️</span>
+        <span class="footer-office-text"><a href="mailto:aaramkartshillong@gmail.com">aaramkartshillong@gmail.com</a></span>
+      </p>
+      <p class="footer-office-line">
+        <span class="footer-office-icon" aria-hidden="true">📍</span>
+        <span class="footer-office-text"><strong>Iewduh (Bara Bazar)</strong><br>Shillong, Meghalaya - 793002</span>
+      </p>
     </div>
   </div>
   <div class="footer-bottom">

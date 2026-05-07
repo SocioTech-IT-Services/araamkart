@@ -1,0 +1,203 @@
+{
+  "Personal Care & Hygiene": {
+    "category_image": "img/generated/categories/personal-care-hygiene.svg",
+    "subcategories": {
+      "Shampoo": "img/generated/subcategories/personal-care-hygiene--shampoo.svg",
+      "Conditioner": "img/generated/subcategories/personal-care-hygiene--conditioner.svg",
+      "Hair Oil": "img/generated/subcategories/personal-care-hygiene--hair-oil.svg",
+      "Hair Serum": "img/generated/subcategories/personal-care-hygiene--hair-serum.svg",
+      "Hair Cream": "img/generated/subcategories/personal-care-hygiene--hair-cream.svg",
+      "Hair Styling Gel": "img/generated/subcategories/personal-care-hygiene--hair-styling-gel.svg",
+      "Hair Wax": "img/generated/subcategories/personal-care-hygiene--hair-wax.svg",
+      "Hair Color": "img/generated/subcategories/personal-care-hygiene--hair-color.svg",
+      "Henna": "img/generated/subcategories/personal-care-hygiene--henna.svg",
+      "Shampoo Hair Color": "img/generated/subcategories/personal-care-hygiene--shampoo-hair-color.svg",
+      "Bath Soap": "img/generated/subcategories/personal-care-hygiene--bath-soap.svg",
+      "Body Wash": "img/generated/subcategories/personal-care-hygiene--body-wash.svg",
+      "Hand Wash": "img/generated/subcategories/personal-care-hygiene--hand-wash.svg",
+      "Hand Sanitizer": "img/generated/subcategories/personal-care-hygiene--hand-sanitizer.svg",
+      "Adult Diapers": "img/generated/subcategories/personal-care-hygiene--adult-diapers.svg",
+      "Body Oil": "img/generated/subcategories/personal-care-hygiene--body-oil.svg"
+    }
+  },
+  "Oral Care": {
+    "category_image": "img/generated/categories/oral-care.svg",
+    "subcategories": {
+      "Toothpaste": "img/generated/subcategories/oral-care--toothpaste.svg",
+      "Toothbrush": "img/generated/subcategories/oral-care--toothbrush.svg",
+      "Mouthwash": "img/generated/subcategories/oral-care--mouthwash.svg"
+    }
+  },
+  "Skin Care / Creams & Lotion": {
+    "category_image": "img/generated/categories/skin-care-creams-lotion.svg",
+    "subcategories": {
+      "Antiseptic Cream": "img/generated/subcategories/skin-care-creams-lotion--antiseptic-cream.svg",
+      "Fairness Cream": "img/generated/subcategories/skin-care-creams-lotion--fairness-cream.svg",
+      "Moisturizer": "img/generated/subcategories/skin-care-creams-lotion--moisturizer.svg",
+      "Sunscreen": "img/generated/subcategories/skin-care-creams-lotion--sunscreen.svg",
+      "Face Serum": "img/generated/subcategories/skin-care-creams-lotion--face-serum.svg",
+      "Men's Cream": "img/generated/subcategories/skin-care-creams-lotion--mens-cream.svg",
+      "Men's Face Wash": "img/generated/subcategories/skin-care-creams-lotion--mens-face-wash.svg",
+      "Face Wash": "img/generated/subcategories/skin-care-creams-lotion--face-wash.svg",
+      "Anti Aging Cream": "img/generated/subcategories/skin-care-creams-lotion--anti-aging-cream.svg",
+      "BB Cream": "img/generated/subcategories/skin-care-creams-lotion--bb-cream.svg",
+      "CC Cream": "img/generated/subcategories/skin-care-creams-lotion--cc-cream.svg",
+      "Foundation": "img/generated/subcategories/skin-care-creams-lotion--foundation.svg",
+      "Compact": "img/generated/subcategories/skin-care-creams-lotion--compact.svg",
+      "Glycerin": "img/generated/subcategories/skin-care-creams-lotion--glycerin.svg",
+      "Cold Cream": "img/generated/subcategories/skin-care-creams-lotion--cold-cream.svg",
+      "Face Pack": "img/generated/subcategories/skin-care-creams-lotion--face-pack.svg",
+      "Face Scrub": "img/generated/subcategories/skin-care-creams-lotion--face-scrub.svg",
+      "Antiseptic Liquids": "img/generated/subcategories/skin-care-creams-lotion--antiseptic-liquids.svg"
+    }
+  },
+  "Vaseline & Lip Care": {
+    "category_image": "img/generated/categories/vaseline-lip-care.svg",
+    "subcategories": {
+      "Petroleum Jelly": "img/generated/subcategories/vaseline-lip-care--petroleum-jelly.svg",
+      "Lip Balm": "img/generated/subcategories/vaseline-lip-care--lip-balm.svg"
+    }
+  },
+  "Perfume & Fragrance": {
+    "category_image": "img/generated/categories/perfume-fragrance.svg",
+    "subcategories": {
+      "Perfume": "img/generated/subcategories/perfume-fragrance--perfume.svg",
+      "Deodorant": "img/generated/subcategories/perfume-fragrance--deodorant.svg",
+      "Pocket Deo": "img/generated/subcategories/perfume-fragrance--pocket-deo.svg",
+      "Roll On": "img/generated/subcategories/perfume-fragrance--roll-on.svg"
+    }
+  },
+  "Razor & Grooming": {
+    "category_image": "img/generated/categories/razor-grooming.svg",
+    "subcategories": {
+      "Blades": "img/generated/subcategories/razor-grooming--blades.svg",
+      "Razor": "img/generated/subcategories/razor-grooming--razor.svg",
+      "Shaving Cream": "img/generated/subcategories/razor-grooming--shaving-cream.svg",
+      "Shaving Lotion": "img/generated/subcategories/razor-grooming--shaving-lotion.svg",
+      "Shaving Brush": "img/generated/subcategories/razor-grooming--shaving-brush.svg"
+    }
+  },
+  "Household Essentials": {
+    "category_image": "img/generated/categories/household-essentials.svg",
+    "subcategories": {
+      "Toilet Cleaner": "img/generated/subcategories/household-essentials--toilet-cleaner.svg",
+      "Glass Cleaner": "img/generated/subcategories/household-essentials--glass-cleaner.svg",
+      "Lizol/Floor Cleaner": "img/generated/subcategories/household-essentials--lizolfloor-cleaner.svg",
+      "Bathroom Cleaner": "img/generated/subcategories/household-essentials--bathroom-cleaner.svg",
+      "Phenyl": "img/generated/subcategories/household-essentials--phenyl.svg",
+      "Bleaching Powder": "img/generated/subcategories/household-essentials--bleaching-powder.svg",
+      "Toilet Brush": "img/generated/subcategories/household-essentials--toilet-brush.svg",
+      "Utensil Scrub": "img/generated/subcategories/household-essentials--utensil-scrub.svg",
+      "Cloth Washing Brush": "img/generated/subcategories/household-essentials--cloth-washing-brush.svg",
+      "Floor Brush": "img/generated/subcategories/household-essentials--floor-brush.svg",
+      "Dishwasher Bar": "img/generated/subcategories/household-essentials--dishwasher-bar.svg",
+      "Dishwasher Gel": "img/generated/subcategories/household-essentials--dishwasher-gel.svg",
+      "Clothes Detergent": "img/generated/subcategories/household-essentials--clothes-detergent.svg",
+      "Naphthalene Balls": "img/generated/subcategories/household-essentials--naphthalene-balls.svg",
+      "Incense Sticks": "img/generated/subcategories/household-essentials--incense-sticks.svg",
+      "Candles": "img/generated/subcategories/household-essentials--candles.svg",
+      "Safety Pins": "img/generated/subcategories/household-essentials--safety-pins.svg",
+      "Lighters": "img/generated/subcategories/household-essentials--lighters.svg",
+      "Shoe Brush": "img/generated/subcategories/household-essentials--shoe-brush.svg",
+      "Shoe Polish": "img/generated/subcategories/household-essentials--shoe-polish.svg"
+    }
+  },
+  "Utilities": {
+    "category_image": "img/generated/categories/utilities.svg",
+    "subcategories": {
+      "Batteries": "img/generated/subcategories/utilities--batteries.svg",
+      "Torch Light": "img/generated/subcategories/utilities--torch-light.svg",
+      "Glue / Gum": "img/generated/subcategories/utilities--glue-gum.svg",
+      "Tapes": "img/generated/subcategories/utilities--tapes.svg",
+      "Scissors": "img/generated/subcategories/utilities--scissors.svg",
+      "Nail Cutter": "img/generated/subcategories/utilities--nail-cutter.svg",
+      "Needles & Thread": "img/generated/subcategories/utilities--needles-thread.svg",
+      "Nail Remover": "img/generated/subcategories/utilities--nail-remover.svg",
+      "Cotton": "img/generated/subcategories/utilities--cotton.svg",
+      "Combs": "img/generated/subcategories/utilities--combs.svg",
+      "Handkerchief": "img/generated/subcategories/utilities--handkerchief.svg",
+      "Rope": "img/generated/subcategories/utilities--rope.svg",
+      "Lock & Keys": "img/generated/subcategories/utilities--lock-keys.svg",
+      "Mirrors": "img/generated/subcategories/utilities--mirrors.svg",
+      "Ear Buds": "img/generated/subcategories/utilities--ear-buds.svg",
+      "Bandages": "img/generated/subcategories/utilities--bandages.svg",
+      "Cloth Clips": "img/generated/subcategories/utilities--cloth-clips.svg",
+      "Toilet Papers": "img/generated/subcategories/utilities--toilet-papers.svg",
+      "Bulbs": "img/generated/subcategories/utilities--bulbs.svg",
+      "Drawing Pins": "img/generated/subcategories/utilities--drawing-pins.svg"
+    }
+  },
+  "Games": {
+    "category_image": "img/generated/categories/games.svg",
+    "subcategories": {
+      "Playing Cards": "img/generated/subcategories/games--playing-cards.svg",
+      "Housie Books": "img/generated/subcategories/games--housie-books.svg",
+      "Tennis Balls": "img/generated/subcategories/games--tennis-balls.svg",
+      "Balloons": "img/generated/subcategories/games--balloons.svg"
+    }
+  },
+  "Baby Care": {
+    "category_image": "img/generated/categories/baby-care.svg",
+    "subcategories": {
+      "Baby Soap": "img/generated/subcategories/baby-care--baby-soap.svg",
+      "Baby Cream": "img/generated/subcategories/baby-care--baby-cream.svg",
+      "Baby Powder": "img/generated/subcategories/baby-care--baby-powder.svg",
+      "Baby Oil": "img/generated/subcategories/baby-care--baby-oil.svg",
+      "Baby Shampoo": "img/generated/subcategories/baby-care--baby-shampoo.svg",
+      "Baby Lotion": "img/generated/subcategories/baby-care--baby-lotion.svg",
+      "Baby Hair Oil": "img/generated/subcategories/baby-care--baby-hair-oil.svg",
+      "Baby Body Wash": "img/generated/subcategories/baby-care--baby-body-wash.svg",
+      "Baby Diapers": "img/generated/subcategories/baby-care--baby-diapers.svg",
+      "Baby Wipes": "img/generated/subcategories/baby-care--baby-wipes.svg",
+      "Anti Rash Cream": "img/generated/subcategories/baby-care--anti-rash-cream.svg",
+      "Baby Bottles": "img/generated/subcategories/baby-care--baby-bottles.svg",
+      "Soother": "img/generated/subcategories/baby-care--soother.svg",
+      "Teether": "img/generated/subcategories/baby-care--teether.svg",
+      "Gripe Water": "img/generated/subcategories/baby-care--gripe-water.svg",
+      "Baby Gift Sets": "img/generated/subcategories/baby-care--baby-gift-sets.svg"
+    }
+  },
+  "Stationery": {
+    "category_image": "img/generated/categories/stationery.svg",
+    "subcategories": {
+      "Plain Notebook": "img/generated/subcategories/stationery--plain-notebook.svg",
+      "Ruled Notebook": "img/generated/subcategories/stationery--ruled-notebook.svg",
+      "Gel Pen": "img/generated/subcategories/stationery--gel-pen.svg",
+      "Ball Pen": "img/generated/subcategories/stationery--ball-pen.svg",
+      "Pencil": "img/generated/subcategories/stationery--pencil.svg",
+      "Eraser": "img/generated/subcategories/stationery--eraser.svg",
+      "Sharpener": "img/generated/subcategories/stationery--sharpener.svg",
+      "Lead Pencil": "img/generated/subcategories/stationery--lead-pencil.svg",
+      "Lead": "img/generated/subcategories/stationery--lead.svg",
+      "Marker": "img/generated/subcategories/stationery--marker.svg",
+      "Highlighter": "img/generated/subcategories/stationery--highlighter.svg",
+      "Scale": "img/generated/subcategories/stationery--scale.svg",
+      "Correction Pen": "img/generated/subcategories/stationery--correction-pen.svg",
+      "Scissors": "img/generated/subcategories/stationery--scissors.svg",
+      "Cellotape": "img/generated/subcategories/stationery--cellotape.svg",
+      "Stapler & Pins": "img/generated/subcategories/stationery--stapler-pins.svg",
+      "Pocket Diary": "img/generated/subcategories/stationery--pocket-diary.svg",
+      "Color Pencil": "img/generated/subcategories/stationery--color-pencil.svg",
+      "Sketch Pen": "img/generated/subcategories/stationery--sketch-pen.svg",
+      "Wax Crayons": "img/generated/subcategories/stationery--wax-crayons.svg",
+      "Plastic Crayons": "img/generated/subcategories/stationery--plastic-crayons.svg",
+      "Water Color": "img/generated/subcategories/stationery--water-color.svg",
+      "Geometry Box": "img/generated/subcategories/stationery--geometry-box.svg",
+      "Book Cover": "img/generated/subcategories/stationery--book-cover.svg",
+      "Chalk": "img/generated/subcategories/stationery--chalk.svg",
+      "Slate": "img/generated/subcategories/stationery--slate.svg",
+      "Exam Board": "img/generated/subcategories/stationery--exam-board.svg",
+      "Glue Stick": "img/generated/subcategories/stationery--glue-stick.svg"
+    }
+  },
+  "Female Hygiene": {
+    "category_image": "img/generated/categories/female-hygiene.svg",
+    "subcategories": {
+      "Sanitary Pads": "img/generated/subcategories/female-hygiene--sanitary-pads.svg",
+      "Panty Liners": "img/generated/subcategories/female-hygiene--panty-liners.svg",
+      "Veet": "img/generated/subcategories/female-hygiene--veet.svg",
+      "Hair Remover": "img/generated/subcategories/female-hygiene--hair-remover.svg",
+      "Razor": "img/generated/subcategories/female-hygiene--razor.svg"
+    }
+  }
+}

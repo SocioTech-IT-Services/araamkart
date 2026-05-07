@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6f9e55" />
+      <stop offset="100%" stop-color="#12f118" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#bg)" />
+  <rect x="48" y="48" width="1104" height="1104" rx="56" fill="rgba(255,255,255,0.14)" />
+  <rect x="72" y="540" width="1056" height="548" rx="44" fill="#f8fbff" />
+  <text x="72" y="170" fill="white" font-size="120" font-family="Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif">💋</text>
+  <text x="210" y="155" fill="white" font-size="58" font-family="Inter,Segoe UI,Arial,sans-serif" font-weight="800">AaramKart</text>
+  <text x="72" y="248" fill="rgba(255,255,255,0.94)" font-size="34" font-family="Inter,Segoe UI,Arial,sans-serif" font-weight="600">Subcategory</text>
+  <text x="72" y="300" fill="rgba(255,255,255,0.92)" font-size="36" font-family="Inter,Segoe UI,Arial,sans-serif" font-weight="600">Vaseline &amp; Lip Care</text>
+  <text x="72" y="690" fill="#0c1f3e" font-size="56" font-family="Inter,Segoe UI,Arial,sans-serif" font-weight="700">Petroleum Jelly</text>
+  <text x="72" y="1122" fill="#4b6287" font-size="28" font-family="Inter,Segoe UI,Arial,sans-serif">Generated catalog image</text>
+</svg>

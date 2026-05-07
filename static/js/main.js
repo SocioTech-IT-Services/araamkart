@@ -144,6 +144,245 @@ function initAdminSidebar() {
     });
 }
 
+function initCategorySlider() {
+    document.querySelectorAll('.cat-slider-wrap').forEach((wrap) => {
+        const track = wrap.querySelector('.cat-slider-track');
+        const lane = track?.querySelector('.cat-grid-idea');
+        if (!track || !lane) return;
+
+        const prevBtn = wrap.querySelector('.cat-slider-arrow--left');
+        const nextBtn = wrap.querySelector('.cat-slider-arrow--right');
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const stepPx = 220;
+        let offset = 0;
+        let laneWidth = lane.scrollWidth;
+
+        const normalize = () => {
+            while (offset <= -laneWidth) offset += laneWidth;
+            while (offset > 0) offset -= laneWidth;
+        };
+
+        const render = () => {
+            track.style.transform = `translate3d(${offset}px, 0, 0)`;
+        };
+
+        const updateLaneWidth = () => {
+            laneWidth = lane.scrollWidth;
+            if (!laneWidth) laneWidth = 1;
+            normalize();
+            render();
+        };
+
+        const tick = () => {
+            offset -= 0.45;
+            normalize();
+            render();
+            window.requestAnimationFrame(tick);
+        };
+
+        const nudge = (delta) => {
+            offset += delta;
+            normalize();
+            render();
+        };
+
+        updateLaneWidth();
+        window.addEventListener('resize', updateLaneWidth);
+
+        prevBtn?.addEventListener('click', () => nudge(stepPx));
+        nextBtn?.addEventListener('click', () => nudge(-stepPx));
+        if (!prefersReduced) {
+            tick();
+        }
+    });
+}
+
+function initConversionTrustSection() {
+    const sellingTrack = document.getElementById('most-selling-track');
+    const sellingCarousel = document.getElementById('most-selling-carousel');
+    const reviewsGrid = document.getElementById('trusted-reviews-grid');
+    if (!sellingTrack || !sellingCarousel || !reviewsGrid) return;
+
+    const leftArrow = document.querySelector('.most-selling-arrow--left');
+    const rightArrow = document.querySelector('.most-selling-arrow--right');
+
+    const sellingFallback = [
+        { product_name: 'Dettol Antiseptic Liquid 500ml', wholesale_price: 198, discount_percentage: 12, stock_status: 'In Stock', image: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=640&q=80' },
+        { product_name: 'Surf Excel Detergent 1kg', wholesale_price: 162, discount_percentage: 10, stock_status: 'In Stock', image: 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?w=640&q=80' },
+        { product_name: 'Dove Shampoo Intense Repair', wholesale_price: 276, discount_percentage: 15, stock_status: 'Low Stock', image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=640&q=80' },
+        { product_name: 'Colgate Dental Cream Value Pack', wholesale_price: 240, discount_percentage: 9, stock_status: 'In Stock', image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=640&q=80' },
+        { product_name: 'Amul Butter 500g', wholesale_price: 252, discount_percentage: 7, stock_status: 'Out of Stock', image: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=640&q=80' },
+    ];
+
+    const reviewData = [
+        {
+            store: 'Mawlai General Store',
+            locality: 'Mawlai',
+            quote: 'Best margins on Personal Care items. My stock reaches Mawlai within 4 hours. Truly Aaram for my business!',
+        },
+        {
+            store: 'Bara Bazar Distributor',
+            locality: 'Iewduh (Bara Bazar)',
+            quote: 'Finally a wholesale app that understands Shillong traffic. Delivery is always early, and the Household Essentials are 100% genuine.',
+        },
+        {
+            store: 'Laitumkhrah Retail Hub',
+            locality: 'Laitumkhrah',
+            quote: 'Consistent pricing, verified stock, and quick support. It has made repeat ordering very smooth for our counters.',
+        },
+        {
+            store: 'Police Bazar Mini Mart',
+            locality: 'Police Bazar',
+            quote: 'Our top-selling grocery lines are always available. The app saves me daily sourcing time.',
+        },
+        {
+            store: 'Nongthymmai Traders',
+            locality: 'Nongthymmai',
+            quote: 'Bulk household essentials arrive packed well and on-time. Margins are steady every week.',
+        },
+        {
+            store: 'Iewduh Value Store',
+            locality: 'Iewduh',
+            quote: 'Trusted quality and easy repeat orders. AaramKart has improved my stock planning a lot.',
+        },
+    ];
+
+    const stockClass = (status) => {
+        const s = String(status || '').toLowerCase();
+        if (s.includes('low')) return 'low-stock';
+        if (s.includes('out')) return 'out-of-stock';
+        return 'in-stock';
+    };
+
+    const renderSellingCards = (items) => {
+        sellingTrack.innerHTML = items.map((item) => `
+            <article class="most-selling-card">
+              <div class="most-selling-img-wrap">
+                <span class="trending-badge">🔥 Trending</span>
+                <img src="${item.image || ''}" alt="${item.product_name}" loading="lazy" />
+              </div>
+              <div class="most-selling-body">
+                <h3 class="most-selling-name">${item.product_name}</h3>
+                <div class="most-selling-tabs">
+                  <span class="most-selling-tab">${item.category || 'General'}</span>
+                  <span class="most-selling-tab">${item.subcategory || 'Popular'}</span>
+                </div>
+                <p class="most-selling-price">₹${item.wholesale_price}</p>
+                <p class="most-selling-volume">${item.quantity_sold || 0} sold</p>
+                <div class="most-selling-meta">
+                  <span class="discount-chip">${item.discount_percentage || 0}% OFF</span>
+                  <span class="stock-pill ${stockClass(item.stock_status)}">${item.stock_status || 'In Stock'}</span>
+                </div>
+              </div>
+            </article>
+        `).join('');
+    };
+
+    const renderSellingSkeleton = () => {
+        sellingTrack.innerHTML = Array.from({ length: 4 }).map(() => `
+            <article class="most-selling-card skeleton-card">
+              <div class="most-selling-img-wrap"><div class="skeleton-box" style="width:100%;height:100%"></div></div>
+              <div class="most-selling-body">
+                <div class="skeleton-line" style="width:90%"></div>
+                <div class="skeleton-line" style="width:58%"></div>
+                <div class="skeleton-line" style="width:76%;margin-top:0.6rem"></div>
+              </div>
+            </article>
+        `).join('');
+    };
+
+    const renderReviews = (items) => {
+        reviewsGrid.innerHTML = items.map((item) => `
+            <article class="trusted-review-card">
+              <div class="trusted-review-top">
+                <h3 class="trusted-review-store">${item.store}</h3>
+                <span class="verified-pill">Verified Purchase</span>
+              </div>
+              <p class="trusted-review-locality">${item.locality}</p>
+              <p class="trusted-review-stars">★★★★★</p>
+              <p class="trusted-review-quote">${item.quote}</p>
+            </article>
+        `).join('');
+    };
+
+    const startReviewSlider = () => {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) return;
+
+        const originals = Array.from(reviewsGrid.children);
+        if (!originals.length) return;
+        originals.forEach((card) => {
+            const clone = card.cloneNode(true);
+            clone.setAttribute('aria-hidden', 'true');
+            reviewsGrid.appendChild(clone);
+        });
+
+        let offset = 0;
+        let laneWidth = originals.reduce((acc, card) => acc + card.getBoundingClientRect().width, 0);
+        const styles = window.getComputedStyle(reviewsGrid);
+        const gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+        laneWidth += gap * Math.max(0, originals.length - 1);
+
+        const tick = () => {
+            offset -= 0.28;
+            if (Math.abs(offset) >= laneWidth) offset = 0;
+            reviewsGrid.style.transform = `translate3d(${offset}px,0,0)`;
+            window.requestAnimationFrame(tick);
+        };
+        tick();
+    };
+
+    const renderReviewSkeleton = () => {
+        reviewsGrid.innerHTML = Array.from({ length: 3 }).map(() => `
+            <article class="trusted-review-card skeleton-card">
+              <div class="skeleton-line" style="width:52%"></div>
+              <div class="skeleton-line" style="width:38%;margin-top:0.55rem"></div>
+              <div class="skeleton-line" style="width:30%;margin-top:0.55rem"></div>
+              <div class="skeleton-line" style="width:96%;margin-top:0.7rem"></div>
+              <div class="skeleton-line" style="width:86%"></div>
+            </article>
+        `).join('');
+    };
+
+    const mapApiProduct = (p) => ({
+        product_name: p.product_name || p.name || 'AaramKart Bestseller',
+        wholesale_price: p.wholesale_price ?? p.base_price ?? p.price ?? 0,
+        discount_percentage: p.discount_percentage ?? p.discount ?? 0,
+        stock_status: p.stock_status || ((p.stock ?? 1) > 10 ? 'In Stock' : (p.stock > 0 ? 'Low Stock' : 'Out of Stock')),
+        image: p.image || p.image_url || '',
+        quantity_sold: p.quantity_sold ?? 0,
+        category: p.category || '',
+        subcategory: p.subcategory || '',
+    });
+
+    const loadSelling = async () => {
+        try {
+            const res = await fetch('/api/products/most-selling/?limit=10', { credentials: 'same-origin' });
+            if (!res.ok) throw new Error('products fetch failed');
+            const data = await res.json();
+            const raw = Array.isArray(data) ? data : (data.results || data.products || []);
+            const normalized = raw.map(mapApiProduct).filter((x) => x.product_name);
+            renderSellingCards(normalized.length ? normalized : sellingFallback);
+        } catch {
+            renderSellingCards(sellingFallback);
+        }
+    };
+
+    const step = 260;
+    leftArrow?.addEventListener('click', () => sellingCarousel.scrollBy({ left: -step, behavior: 'smooth' }));
+    rightArrow?.addEventListener('click', () => sellingCarousel.scrollBy({ left: step, behavior: 'smooth' }));
+
+    renderSellingSkeleton();
+    renderReviewSkeleton();
+
+    window.setTimeout(() => {
+        renderReviews(reviewData);
+        startReviewSlider();
+        loadSelling();
+        window.setInterval(loadSelling, 60000);
+    }, 420);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // ── DROPDOWNS (optional legacy ids) ──
     const userBtn = document.getElementById('nav-user-btn');
@@ -174,6 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavSearchSuggest();
     initBulkAddGrid();
     initAdminSidebar();
+    initCategorySlider();
+    initConversionTrustSection();
 
     const alerts = document.querySelectorAll('.messages-container .alert');
     alerts.forEach((alert) => {

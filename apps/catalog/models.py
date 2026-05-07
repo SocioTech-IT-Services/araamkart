@@ -1,6 +1,7 @@
 """Catalog app models — Category, SubCategory, Brand, Product, Variants, Pricing"""
 from django.db import models
 from django.utils.text import slugify
+from decimal import Decimal
 
 
 class Category(models.Model):
@@ -64,6 +65,12 @@ class Brand(models.Model):
 
 
 class Product(models.Model):
+    NET_QUANTITY_UNIT_CHOICES = [
+        ("ml", "ml"),
+        ("g", "g"),
+        ("pieces", "pieces"),
+    ]
+
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products")
     subcategory = models.ForeignKey(
         SubCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
@@ -79,6 +86,45 @@ class Product(models.Model):
     stock = models.PositiveIntegerField(default=0)
     moq = models.PositiveIntegerField(default=1, help_text="Minimum Order Quantity")
     unit = models.CharField(max_length=30, default="pcs", help_text="e.g. pcs, kg, box, carton")
+    pack_quantity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Number of single items in one packet/bundle",
+    )
+    single_product_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Price of one item if bought separately",
+    )
+    packet_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Actual packet/bundle selling price",
+    )
+    net_quantity_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Numeric net quantity for one packet/unit",
+    )
+    net_quantity_unit = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=NET_QUANTITY_UNIT_CHOICES,
+        help_text="Unit for net quantity",
+    )
+    discount_percentage = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Computed bundle savings percentage",
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -102,6 +148,16 @@ class Product(models.Model):
         if applicable:
             return applicable.unit_price
         return self.base_price
+
+    def sync_discount_from_pack_pricing(self):
+        if not (self.pack_quantity and self.single_product_price and self.packet_price):
+            self.discount_percentage = None
+            return
+        total_single = Decimal(self.single_product_price) * Decimal(self.pack_quantity)
+        if total_single <= 0:
+            self.discount_percentage = None
+            return
+        self.discount_percentage = (Decimal("1") - (Decimal(self.packet_price) / total_single)) * Decimal("100")
 
     class Meta:
         ordering = ["name"]

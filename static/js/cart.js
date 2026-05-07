@@ -25,6 +25,15 @@ function initProductPage(tiers, productId, moq, stock) {
     if (addToCartBtn) {
         addToCartBtn.addEventListener('click', handleAddToCart);
     }
+
+    const stickyAddBtn = document.getElementById('sticky-add-to-cart-btn');
+    if (stickyAddBtn) {
+        stickyAddBtn.addEventListener('click', handleAddToCart);
+    }
+
+    bindTierCards();
+    updateStockMeter();
+    syncStickyTotal();
 }
 
 function changeQty(delta) {
@@ -36,7 +45,11 @@ function changeQty(delta) {
     if (val > currentStock) val = currentStock;
     
     input.value = val;
+    if (window.navigator && typeof window.navigator.vibrate === 'function') {
+        window.navigator.vibrate(10);
+    }
     updatePricePreview();
+    updateStockMeter();
 }
 
 function updatePricePreview() {
@@ -53,16 +66,8 @@ function updatePricePreview() {
     const unitPrice = getPriceForQty(qty);
     const total = unitPrice * qty;
     preview.textContent = `₹${total.toLocaleString('en-IN')}`;
-    
-    // Highlight active tier in table
-    document.querySelectorAll('.tier-row').forEach(row => {
-        row.classList.remove('active-tier');
-        const min = parseInt(row.dataset.min);
-        if (qty >= min) {
-            // This is complex because we want the *highest* min that is <= qty
-            // We'll just clear all and then re-add to the correct one in getPriceForQty
-        }
-    });
+    syncStickyTotal();
+    highlightActiveTierCard(qty);
 }
 
 function getPriceForQty(qty) {
@@ -108,6 +113,53 @@ async function handleAddToCart() {
     } catch (err) {
         showToast('Something went wrong. Please try again.', 'error');
     }
+}
+
+function bindTierCards() {
+    const qtyInput = document.getElementById('qty-input');
+    if (!qtyInput) return;
+    document.querySelectorAll('.tier-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const min = parseInt(card.dataset.min || '0', 10);
+            if (min > 0) {
+                qtyInput.value = Math.max(min, currentMoq);
+                updatePricePreview();
+                updateStockMeter();
+            }
+        });
+    });
+}
+
+function highlightActiveTierCard(qty) {
+    let activeCard = null;
+    document.querySelectorAll('.tier-card').forEach(card => {
+        card.classList.remove('is-active');
+        const min = parseInt(card.dataset.min || '0', 10);
+        if (qty >= min) {
+            if (!activeCard || min >= parseInt(activeCard.dataset.min || '0', 10)) {
+                activeCard = card;
+            }
+        }
+    });
+    if (activeCard) activeCard.classList.add('is-active');
+}
+
+function updateStockMeter() {
+    const fill = document.getElementById('stock-meter-fill');
+    const text = document.getElementById('stock-meter-text');
+    const qtyInput = document.getElementById('qty-input');
+    if (!fill || !text || !qtyInput || !currentStock) return;
+
+    const qty = parseInt(qtyInput.value || '0', 10);
+    const ratio = Math.min(100, Math.max(0, Math.round((qty / currentStock) * 100)));
+    fill.style.width = `${ratio}%`;
+    text.textContent = `In Stock: ${currentStock} | Selected: ${qty}`;
+}
+
+function syncStickyTotal() {
+    const preview = document.getElementById('preview-price');
+    const sticky = document.getElementById('sticky-preview-price');
+    if (preview && sticky) sticky.textContent = preview.textContent || '₹0';
 }
 
 // ── CART PAGE LOGIC ──

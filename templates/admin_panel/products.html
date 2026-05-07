@@ -9,14 +9,28 @@
     <div class="admin-header">
       <div>
         <h1>Inventory &amp; stock</h1>
-        <p>{{ products|length }} product{{ products|length|pluralize }} — set stock, use ± for quick changes, <strong>Edit</strong> for full details, or <strong>Remove</strong> to delete.</p>
+        <p>{{ products|length }} product{{ products|length|pluralize }} — use <strong>Add product</strong>, update stock with ±, and use <strong>Edit details</strong> or <strong>Delete</strong> anytime.</p>
       </div>
       <div class="admin-header-actions">
-        <a href="{% url 'admin_product_add' %}" class="btn btn-primary">+ Add product</a>
+        <a href="{% url 'admin_product_add' %}" class="btn btn-primary">+ Add product with image</a>
       </div>
     </div>
 
     <div class="admin-section-card">
+      <div class="inventory-easy-tools">
+        <label for="inventory-search" class="inventory-easy-tools__label">Find item quickly</label>
+        <input
+          id="inventory-search"
+          type="search"
+          class="inventory-search-input"
+          placeholder="Search by product, brand, category, or subcategory"
+          aria-label="Search inventory rows"
+        />
+        <label class="inventory-easy-toggle" title="Hide advanced columns for simpler view">
+          <input type="checkbox" id="simple-view-toggle" checked />
+          <span>Simple view</span>
+        </label>
+      </div>
       <div class="admin-import-strip">
         <form method="post" action="{% url 'admin_bulk_import_products' %}" enctype="multipart/form-data" class="admin-import-form">
           {% csrf_token %}
@@ -24,11 +38,6 @@
           <input id="import-file" type="file" name="import_file" accept=".xlsx" required />
           <button type="submit" class="btn btn-outline btn-xs">Upload</button>
         </form>
-        <p class="form-hint-inline">
-          Required columns: <code>category</code>, <code>subcategory</code>, <code>brand</code>, <code>product_name</code>,
-          <code>variant_name</code>, <code>price</code>, <code>stock</code>, <code>unit</code>, <code>moq</code>.
-          Optional: <code>sku</code>, <code>variant_sku</code>.
-        </p>
       </div>
       <div class="table-responsive">
         <table class="admin-table" id="products-table">
@@ -39,17 +48,21 @@
               <th>Brand</th>
               <th>Category</th>
               <th>Subcategory</th>
-              <th>Variants</th>
+              <th class="advanced-col">Variants</th>
               <th>Stock</th>
-              <th>MOQ</th>
-              <th>Base price</th>
+              <th class="advanced-col">MOQ</th>
+              <th class="advanced-col">Net Qty</th>
+              <th class="advanced-col">Base price</th>
               <th>Available</th>
               <th>Edit / remove</th>
             </tr>
           </thead>
           <tbody>
             {% for product in products %}
-            <tr id="product-row-{{ product.pk }}">
+            <tr
+              id="product-row-{{ product.pk }}"
+              data-filter-text="{{ product.name|lower }} {{ product.brand|lower }} {{ product.category.name|lower }} {{ product.subcategory.name|default:''|lower }}"
+            >
               <td class="td-thumb">
                 {% if product.image %}
                 <img src="{{ product.image.url }}" alt="" class="admin-table-thumb" width="44" height="44" />
@@ -66,17 +79,17 @@
               <td>{{ product.brand }}</td>
               <td>{{ product.category.name }}</td>
               <td>{{ product.subcategory.name|default:"—" }}</td>
-              <td>{{ product.variants.count }}</td>
+              <td class="advanced-col">{{ product.variants.count }}</td>
               <td>
                 <div class="stock-edit stock-edit--full">
                   <div class="stock-adj">
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Remove 10 from stock" onclick="adjustStock({{ product.pk }}, -10)">−10</button>
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Remove 1 from stock" onclick="adjustStock({{ product.pk }}, -1)">−1</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Reduce stock by 10" onclick="adjustStock({{ product.pk }}, -10)">-10</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Reduce stock by 1" onclick="adjustStock({{ product.pk }}, -1)">-1</button>
                     <input type="number" class="stock-input" id="stock-{{ product.pk }}"
                            value="{{ product.stock }}" min="0"
                            onchange="updateStock({{ product.pk }}, this.value)" aria-label="Stock quantity" />
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Add 1 to stock" onclick="adjustStock({{ product.pk }}, 1)">+1</button>
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Add 10 to stock" onclick="adjustStock({{ product.pk }}, 10)">+10</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Increase stock by 1" onclick="adjustStock({{ product.pk }}, 1)">+1</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Increase stock by 10" onclick="adjustStock({{ product.pk }}, 10)">+10</button>
                   </div>
                   <span class="stock-unit">{{ product.unit }}</span>
                 </div>
@@ -84,8 +97,15 @@
                 <span class="low-stock-warn">{% if product.stock == 0 %}Out of stock{% else %}Low stock{% endif %}</span>
                 {% endif %}
               </td>
-              <td>{{ product.moq }} {{ product.unit }}</td>
-              <td>
+              <td class="advanced-col">{{ product.moq }} {{ product.unit }}</td>
+              <td class="advanced-col">
+                {% if product.net_quantity_value and product.net_quantity_unit %}
+                  {{ product.net_quantity_value }} {{ product.net_quantity_unit }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="advanced-col">
                 {% with product.base_price as bp %}
                 {% if bp %}₹{{ bp }}{% else %}—{% endif %}
                 {% endwith %}
@@ -98,11 +118,11 @@
                 </label>
               </td>
               <td class="td-actions">
-                <a href="{% url 'admin_product_edit' product.pk %}" class="btn btn-outline btn-xs">Edit</a>
+                <a href="{% url 'admin_product_edit' product.pk %}" class="btn btn-outline btn-xs">Edit details</a>
                 <form method="post" action="{% url 'admin_product_delete' product.pk %}" class="inline-delete-form"
-                      onsubmit="return confirm('Remove this product from the catalog? This cannot be undone.');">
+                      onsubmit="return confirm('Delete {{ product.name|escapejs }}? This cannot be undone.');">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-outline btn-xs btn-danger-outline">Remove</button>
+                  <button type="submit" class="btn btn-outline btn-xs btn-danger-outline">Delete</button>
                 </form>
               </td>
             </tr>
@@ -178,5 +198,29 @@ function showToast(msg, type) {
   t.className = 'toast toast-' + type + ' show';
   setTimeout(() => t.classList.remove('show'), 2500);
 }
+
+(function () {
+  const searchInput = document.getElementById('inventory-search');
+  const rows = Array.from(document.querySelectorAll('#products-table tbody tr'));
+  const simpleToggle = document.getElementById('simple-view-toggle');
+  const table = document.getElementById('products-table');
+
+  function applyFilter() {
+    const q = (searchInput?.value || '').trim().toLowerCase();
+    rows.forEach((row) => {
+      const text = row.dataset.filterText || '';
+      row.style.display = !q || text.includes(q) ? '' : 'none';
+    });
+  }
+
+  function applyViewMode() {
+    if (!table || !simpleToggle) return;
+    table.classList.toggle('is-simple-view', simpleToggle.checked);
+  }
+
+  searchInput?.addEventListener('input', applyFilter);
+  simpleToggle?.addEventListener('change', applyViewMode);
+  applyViewMode();
+})();
 </script>
 {% endblock %}
