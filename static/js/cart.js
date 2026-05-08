@@ -71,17 +71,20 @@ function updatePricePreview() {
         if (isNaN(packets) || packets < packetPricing.minPackets) {
             preview.textContent = '—';
             syncStickyTotal();
+            syncAddToCartButtonPrice();
             return;
         }
         const total = packets * packetPricing.packetPrice;
         preview.textContent = `₹${total.toLocaleString('en-IN')}`;
         syncStickyTotal();
+        syncAddToCartButtonPrice();
         return;
     }
 
     const qty = parseInt(input.value, 10);
     if (isNaN(qty) || qty < 1) {
         preview.textContent = '—';
+        syncAddToCartButtonPrice();
         return;
     }
 
@@ -89,6 +92,7 @@ function updatePricePreview() {
     const total = unitPrice * qty;
     preview.textContent = `₹${total.toLocaleString('en-IN')}`;
     syncStickyTotal();
+    syncAddToCartButtonPrice();
     highlightActiveTierCard(qty);
 }
 
@@ -129,9 +133,12 @@ async function handleAddToCart() {
         const data = await response.json();
         if (data.success) {
             showToast(data.message, 'success');
-            // Update cart badge
-            const badge = document.getElementById('cart-badge');
-            if (badge) badge.textContent = data.cart_count;
+            const badge = document.querySelector('.cart-count-badge');
+            if (badge && data.cart_count != null) badge.textContent = String(data.cart_count);
+            const totalEl = document.querySelector('.cart-count-badge')?.closest('.cart-meta-item')?.querySelector('.meta-value');
+            if (totalEl && data.cart_total != null) {
+                totalEl.textContent = `₹${Number(data.cart_total).toFixed(2)}`;
+            }
         } else {
             showToast(data.error, 'error');
         }
@@ -198,17 +205,60 @@ function syncStickyTotal() {
     if (preview && sticky) sticky.textContent = preview.textContent || '₹0';
 }
 
+function syncAddToCartButtonPrice() {
+    const preview = document.getElementById('preview-price');
+    const addBtnPrice = document.getElementById('add-to-cart-btn-price');
+    if (!addBtnPrice) return;
+    const v = (preview && preview.textContent ? preview.textContent.trim() : '');
+    addBtnPrice.textContent = v && v !== '—' ? ` • ${v}` : '';
+}
+
 // ── CART PAGE LOGIC ──
 
 async function updateCartItem(itemId, newQty) {
     const qtyInput = document.getElementById(`qty-${itemId}`);
-    const min = parseInt(qtyInput.min);
-    const max = parseInt(qtyInput.max);
+    const minusBtn = document.getElementById(`minus-${itemId}`);
+    const plusBtn = document.getElementById(`plus-${itemId}`);
+    const min = parseInt(qtyInput.min, 10);
+    const max = parseInt(qtyInput.max, 10);
+    const packetMode = qtyInput.dataset.packetMode === '1';
+    const packQty = parseInt(qtyInput.dataset.packQty || '0', 10);
+    const prevQty = parseInt(qtyInput.value, 10) || min;
 
-    if (newQty < min) newQty = min;
-    if (newQty > max) newQty = max;
+    newQty = parseInt(newQty, 10);
+    if (Number.isNaN(newQty)) newQty = min;
+
+    if (packetMode && packQty > 0) {
+        const minMultiple = Math.ceil(min / packQty) * packQty;
+        if (newQty < minMultiple) newQty = minMultiple;
+        newQty = Math.round(newQty / packQty) * packQty;
+        if (newQty < minMultiple) newQty = minMultiple;
+        if (newQty > max) {
+            newQty = Math.floor(max / packQty) * packQty;
+            if (newQty === prevQty && plusBtn) {
+                showToast('Limit reached for available stock.', 'error');
+            }
+        }
+        if (newQty <= 0) {
+            showToast(`Not enough stock for a full packet of ${packQty}.`, 'error');
+            newQty = parseInt(qtyInput.value, 10) || minMultiple;
+        }
+    } else {
+        if (newQty < min) {
+            newQty = min;
+            if (newQty === prevQty && minusBtn) showToast('Minimum order quantity reached.', 'error');
+        }
+        if (newQty > max) {
+            newQty = max;
+            if (newQty === prevQty && plusBtn) showToast('Limit reached for available stock.', 'error');
+        }
+    }
 
     qtyInput.value = newQty;
+    toggleQtyButtons(itemId);
+    qtyInput.classList.remove('is-pulse');
+    void qtyInput.offsetWidth;
+    qtyInput.classList.add('is-pulse');
 
     try {
         const response = await fetch('/orders/cart/update/', {
@@ -226,16 +276,45 @@ async function updateCartItem(itemId, newQty) {
         const data = await response.json();
         if (data.success) {
             // Update prices on UI
-            document.getElementById(`unit-price-${itemId}`).textContent = `₹${data.unit_price} / unit`;
+            const unitEl = document.getElementById(`unit-price-${itemId}`);
+            if (unitEl) {
+                if (unitEl.dataset.packetMode === '1') {
+                    const pu = unitEl.dataset.packetUnit || 'pcs';
+                    const singular = pu === 'pcs' ? 'piece' : pu;
+                    unitEl.textContent = `₹${data.unit_price} per ${singular}`;
+                } else {
+                    unitEl.textContent = `₹${data.unit_price} / unit`;
+                }
+            }
             document.getElementById(`line-total-${itemId}`).textContent = `₹${data.line_total}`;
-            document.getElementById('cart-total').textContent = `₹${data.cart_total}`;
-            document.getElementById('grand-total').textContent = `₹${data.cart_total}`;
+            animateRollTotal('cart-total', data.cart_total);
+            animateRollTotal('grand-total', data.cart_total);
+            toggleQtyButtons(itemId);
         } else {
             showToast(data.error, 'error');
+            qtyInput.value = String(prevQty);
+            toggleQtyButtons(itemId);
         }
     } catch (err) {
         showToast('Failed to update cart.', 'error');
+        qtyInput.value = String(prevQty);
+        toggleQtyButtons(itemId);
     }
+}
+
+function toggleQtyButtons(itemId) {
+    const qtyInput = document.getElementById(`qty-${itemId}`);
+    const minusBtn = document.getElementById(`minus-${itemId}`);
+    const plusBtn = document.getElementById(`plus-${itemId}`);
+    if (!qtyInput) return;
+    const min = parseInt(qtyInput.min, 10);
+    const max = parseInt(qtyInput.max, 10);
+    const packetMode = qtyInput.dataset.packetMode === '1';
+    const packQty = parseInt(qtyInput.dataset.packQty || '0', 10);
+    const qty = parseInt(qtyInput.value, 10) || min;
+    const maxAllowed = packetMode && packQty > 0 ? Math.floor(max / packQty) * packQty : max;
+    if (minusBtn) minusBtn.disabled = qty <= min;
+    if (plusBtn) plusBtn.disabled = qty >= maxAllowed;
 }
 
 async function removeCartItem(itemId) {
@@ -253,16 +332,37 @@ async function removeCartItem(itemId) {
 
         const data = await response.json();
         if (data.success) {
-            document.getElementById(`cart-item-${itemId}`).remove();
-            document.getElementById('cart-total').textContent = `₹${data.cart_total}`;
-            document.getElementById('grand-total').textContent = `₹${data.cart_total}`;
+            const row = document.getElementById(`cart-item-${itemId}`);
+            if (row) {
+                row.classList.add('is-removing');
+                window.setTimeout(() => row.remove(), 260);
+            }
+            animateRollTotal('cart-total', data.cart_total);
+            animateRollTotal('grand-total', data.cart_total);
             document.getElementById('cart-badge').textContent = data.cart_count;
-            
             if (data.cart_count === 0) {
-                location.reload(); // Show empty state
+                window.setTimeout(() => location.reload(), 280); // Show empty state after animation
             }
         }
     } catch (err) {
         showToast('Failed to remove item.', 'error');
     }
 }
+
+function animateRollTotal(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('is-rolling');
+    window.setTimeout(() => {
+        const n = Number(value);
+        el.textContent = `₹${Number.isFinite(n) ? n.toFixed(2) : value}`;
+        el.classList.remove('is-rolling');
+    }, 140);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.qty-input[id^="qty-"]').forEach((input) => {
+        const itemId = input.id.replace('qty-', '');
+        toggleQtyButtons(itemId);
+    });
+});

@@ -1,5 +1,6 @@
 """Orders app — Template Views (Cart, Checkout, Order History)"""
 import json
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from django.db.models import Sum
 from django.contrib.auth.views import redirect_to_login
@@ -9,6 +10,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
+from django.utils import timezone
 from openpyxl import load_workbook
 
 from apps.catalog.forms import AdminProductForm
@@ -18,15 +20,35 @@ from apps.notifications.services import send_order_confirmation
 
 
 # ── Cart ──────────────────────────────────────────────────────────────────────
+def _packet_rules(product):
+    if not (product.packet_price and product.pack_quantity):
+        return None
+    pack_qty = int(product.pack_quantity or 0)
+    if pack_qty <= 0:
+        return None
+    min_multiple_qty = pack_qty * 1
+    return {"pack_qty": pack_qty, "min_multiple_qty": min_multiple_qty}
 
-@login_required
+
 def cart_view(request):
+    if not request.user.is_authenticated:
+        return render(
+            request,
+            "orders/cart.html",
+            {"items": [], "total": 0, "login_prompt": True, "next_path": request.get_full_path()},
+        )
     cart, _ = Cart.objects.get_or_create(user=request.user)
     items = cart.items.select_related("product").prefetch_related("product__pricing_tiers")
+    for item in items:
+        product = item.product
+        item.packet_mode = bool(product.packet_price and product.pack_quantity)
+        rules = _packet_rules(product)
+        item.packet_min_qty = rules["min_multiple_qty"] if rules else product.moq
     return render(request, "orders/cart.html", {
         "cart": cart,
         "items": items,
         "total": cart.get_total(),
+        "login_prompt": False,
     })
 
 
@@ -39,8 +61,23 @@ def add_to_cart(request):
 
     product = get_object_or_404(Product, pk=product_id, is_active=True)
 
-    if quantity < product.moq:
+    packet_rules = _packet_rules(product)
+    if not packet_rules and quantity < product.moq:
         return JsonResponse({"success": False, "error": f"Minimum order quantity is {product.moq} {product.unit}."})
+
+    if packet_rules:
+        pack_qty = packet_rules["pack_qty"]
+        min_multiple_qty = packet_rules["min_multiple_qty"]
+        if quantity % pack_qty != 0:
+            return JsonResponse({
+                "success": False,
+                "error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}.",
+            })
+        if quantity < min_multiple_qty:
+            return JsonResponse({
+                "success": False,
+                "error": f"Minimum packet order is {min_multiple_qty} {product.unit} ({min_multiple_qty // pack_qty} packet(s)).",
+            })
 
     if quantity > product.stock:
         return JsonResponse({"success": False, "error": "Not enough stock available."})
@@ -52,14 +89,22 @@ def add_to_cart(request):
     else:
         item.quantity = quantity
 
+    if packet_rules and item.quantity % packet_rules["pack_qty"] != 0:
+        return JsonResponse({
+            "success": False,
+            "error": f"This item is sold in full packets of {packet_rules['pack_qty']}.",
+        })
+
     if item.quantity > product.stock:
         item.quantity = product.stock
     item.save()
 
+    cart_total = cart.get_total()
     return JsonResponse({
         "success": True,
         "message": f"Added {quantity} {product.unit} of {product.name} to cart.",
         "cart_count": cart.item_count(),
+        "cart_total": float(cart_total),
     })
 
 
@@ -73,8 +118,23 @@ def update_cart(request):
     item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
     product = item.product
 
-    if quantity < product.moq:
+    packet_rules = _packet_rules(product)
+    if not packet_rules and quantity < product.moq:
         return JsonResponse({"success": False, "error": f"Minimum order quantity is {product.moq} {product.unit}."})
+
+    if packet_rules:
+        pack_qty = packet_rules["pack_qty"]
+        min_multiple_qty = packet_rules["min_multiple_qty"]
+        if quantity % pack_qty != 0:
+            return JsonResponse({
+                "success": False,
+                "error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}.",
+            })
+        if quantity < min_multiple_qty:
+            return JsonResponse({
+                "success": False,
+                "error": f"Minimum packet order is {min_multiple_qty} {product.unit} ({min_multiple_qty // pack_qty} packet(s)).",
+            })
 
     if quantity > product.stock:
         return JsonResponse({"success": False, "error": "Not enough stock available."})
@@ -122,14 +182,24 @@ def checkout_view(request):
         business_name = request.POST.get("business_name", "").strip()
         phone = request.POST.get("phone", "").strip()
         email = request.POST.get("email", "").strip()
+        street_locality = request.POST.get("street_locality", "").strip()
+        landmark = request.POST.get("landmark", "").strip()
         address = request.POST.get("address", "").strip()
         city = request.POST.get("city", "").strip()
         pincode = request.POST.get("pincode", "").strip()
         notes = request.POST.get("notes", "").strip()
 
-        if not all([customer_name, phone, address]):
+        address_parts = [part for part in [street_locality, landmark, address] if part]
+        full_address = ", ".join(address_parts)
+
+        if not all([customer_name, phone, street_locality, address]):
             messages.error(request, "Please fill in all required fields.")
-            return render(request, "orders/checkout.html", {"cart": cart, "items": items})
+            return render(request, "orders/checkout.html", {
+                "cart": cart,
+                "items": items,
+                "total": cart.get_total(),
+                "user": request.user,
+            })
 
         # Create order
         total = cart.get_total()
@@ -139,7 +209,7 @@ def checkout_view(request):
             business_name=business_name,
             phone=phone,
             email=email,
-            address=address,
+            address=full_address,
             city=city,
             pincode=pincode,
             notes=notes,
@@ -189,6 +259,56 @@ def order_success(request, order_number):
     return render(request, "orders/order_success.html", {"order": order})
 
 
+@login_required
+def order_quotation(request, order_number):
+    if request.user.is_staff or request.user.is_admin:
+        order = get_object_or_404(
+            Order.objects.prefetch_related("items__product"),
+            order_number=order_number,
+        )
+    else:
+        order = get_object_or_404(
+            Order.objects.prefetch_related("items__product"),
+            order_number=order_number,
+            user=request.user,
+        )
+
+    issued_on = timezone.localdate()
+    valid_until = issued_on + timedelta(days=7)
+    subtotal = sum((item.line_total() for item in order.items.all()), Decimal("0"))
+    mrp_total = Decimal("0")
+    discount_amount = Decimal("0")
+    for item in order.items.all():
+        mrp_unit = None
+        if item.product and item.product.single_product_price:
+            mrp_unit = Decimal(item.product.single_product_price)
+        elif item.unit_price is not None:
+            mrp_unit = Decimal(item.unit_price)
+        if mrp_unit is None:
+            continue
+        line_mrp_total = mrp_unit * Decimal(item.quantity)
+        line_selling_total = Decimal(item.unit_price) * Decimal(item.quantity)
+        mrp_total += line_mrp_total
+        discount_amount += max(Decimal("0"), line_mrp_total - line_selling_total)
+
+    discount_pct = Decimal("0")
+    if mrp_total > 0:
+        discount_pct = (discount_amount * Decimal("100")) / mrp_total
+    shipping = Decimal("0.00")
+    download_mode = request.GET.get("download") == "1"
+    return render(request, "orders/quotation.html", {
+        "order": order,
+        "issued_on": issued_on,
+        "valid_until": valid_until,
+        "subtotal": subtotal,
+        "mrp_total": mrp_total,
+        "discount_amount": discount_amount,
+        "discount_pct": discount_pct,
+        "shipping": shipping,
+        "download_mode": download_mode,
+    })
+
+
 # ── Order History ─────────────────────────────────────────────────────────────
 
 @login_required
@@ -233,6 +353,17 @@ def admin_dashboard(request):
     unit_agg = OrderItem.objects.filter(order__in=non_cancelled).aggregate(u=Sum("quantity"))
     units_sold = unit_agg["u"] or 0
 
+    chart_rows = list(
+        Product.objects.filter(is_active=True)
+        .order_by("-stock", "name")
+        .values("name", "stock")[:15]
+    )
+    max_stock = max((r["stock"] for r in chart_rows), default=0)
+    scale = max_stock if max_stock > 0 else 1
+    product_stock_chart = [
+        {**r, "bar_pct": round(100 * r["stock"] / scale, 1)} for r in chart_rows
+    ]
+
     context = {
         "total_orders": Order.objects.count(),
         "pending_orders": Order.objects.filter(status="pending").count(),
@@ -241,6 +372,8 @@ def admin_dashboard(request):
         "recent_orders": Order.objects.order_by("-created_at")[:10],
         "total_sales_rs": total_sales_rs,
         "units_sold": units_sold,
+        "product_stock_chart": product_stock_chart,
+        "product_stock_chart_max": max_stock,
     }
     return render(request, "admin_panel/dashboard.html", context)
 

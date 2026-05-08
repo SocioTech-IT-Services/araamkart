@@ -12,6 +12,16 @@ from .serializers import CartSerializer, OrderSerializer, PlaceOrderSerializer
 from apps.notifications.services import send_order_confirmation
 
 
+def _packet_rules(product):
+    if not (product.packet_price and product.pack_quantity):
+        return None
+    pack_qty = int(product.pack_quantity or 0)
+    if pack_qty <= 0:
+        return None
+    min_multiple_qty = pack_qty * 1
+    return {"pack_qty": pack_qty, "min_multiple_qty": min_multiple_qty}
+
+
 class CartAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -27,13 +37,29 @@ class CartAPIView(APIView):
             product = Product.objects.get(pk=product_id, is_active=True)
         except Product.DoesNotExist:
             return Response({"error": "Product not found."}, status=404)
-        if quantity < product.moq:
+        packet_rules = _packet_rules(product)
+        if not packet_rules and quantity < product.moq:
             return Response({"error": f"Minimum order quantity is {product.moq} {product.unit}."}, status=400)
+        if packet_rules:
+            pack_qty = packet_rules["pack_qty"]
+            min_multiple_qty = packet_rules["min_multiple_qty"]
+            if quantity % pack_qty != 0:
+                return Response(
+                    {"error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}."},
+                    status=400,
+                )
+            if quantity < min_multiple_qty:
+                return Response(
+                    {"error": f"Minimum packet order is {min_multiple_qty} {product.unit} ({min_multiple_qty // pack_qty} packet(s))."},
+                    status=400,
+                )
         if quantity > product.stock:
             return Response({"error": "Not enough stock."}, status=400)
         cart, _ = Cart.objects.get_or_create(user=request.user)
         item, created = CartItem.objects.get_or_create(cart=cart, product=product)
         item.quantity = quantity if created else item.quantity + quantity
+        if packet_rules and item.quantity % packet_rules["pack_qty"] != 0:
+            return Response({"error": f"This item is sold in full packets of {packet_rules['pack_qty']}."}, status=400)
         item.save()
         return Response(CartSerializer(cart).data)
 
@@ -45,8 +71,22 @@ class CartAPIView(APIView):
             item = CartItem.objects.get(pk=item_id, cart__user=request.user)
         except CartItem.DoesNotExist:
             return Response({"error": "Item not found."}, status=404)
-        if quantity < item.product.moq:
+        packet_rules = _packet_rules(item.product)
+        if not packet_rules and quantity < item.product.moq:
             return Response({"error": f"Minimum is {item.product.moq}."}, status=400)
+        if packet_rules:
+            pack_qty = packet_rules["pack_qty"]
+            min_multiple_qty = packet_rules["min_multiple_qty"]
+            if quantity % pack_qty != 0:
+                return Response(
+                    {"error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}."},
+                    status=400,
+                )
+            if quantity < min_multiple_qty:
+                return Response(
+                    {"error": f"Minimum packet order is {min_multiple_qty} {item.product.unit} ({min_multiple_qty // pack_qty} packet(s))."},
+                    status=400,
+                )
         item.quantity = quantity
         item.save()
         return Response(CartSerializer(item.cart).data)

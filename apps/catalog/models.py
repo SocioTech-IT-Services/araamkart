@@ -135,11 +135,24 @@ class Product(models.Model):
     @property
     def base_price(self):
         """Return lowest tier price (MOQ tier)."""
+        # Packet pricing takes precedence across the storefront.
+        if self.packet_price and self.pack_quantity:
+            try:
+                return Decimal(self.packet_price) / Decimal(self.pack_quantity)
+            except Exception:
+                pass
         tier = self.pricing_tiers.order_by("min_qty").first()
         return tier.unit_price if tier else None
 
     def get_price_for_qty(self, qty):
         """Return unit price for a given quantity."""
+        # If packet pricing is configured, always treat it as the final price.
+        # Cart quantities are stored as single units (pcs), so we return an effective per-piece rate.
+        if self.packet_price and self.pack_quantity:
+            try:
+                return Decimal(self.packet_price) / Decimal(self.pack_quantity)
+            except Exception:
+                pass
         applicable = (
             self.pricing_tiers.filter(min_qty__lte=qty)
             .order_by("-min_qty")

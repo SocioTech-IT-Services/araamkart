@@ -28,12 +28,6 @@
         {% if packet_display_price %}
         <span class="price-main">₹{{ packet_display_price }}</span>
         <span class="price-unit">per packet</span>
-        {% if product.single_product_price %}
-        <span class="price-strike">₹{{ product.single_product_price }}</span>
-        {% endif %}
-        {% if product.discount_percentage %}
-        <span class="discount-badge">{{ product.discount_percentage|floatformat:0 }}% OFF</span>
-        {% endif %}
         {% else %}
           {% with product.base_price as bp %}
           {% if bp %}
@@ -65,11 +59,13 @@
     data-moq="{{ product.moq }}"
     data-stock="{{ product.stock }}"
     data-unit="{{ product.unit }}"
+    data-pack-qty="{{ product.pack_quantity|default:0 }}"
+    data-packet-mode="{% if product.packet_price and product.pack_quantity %}1{% else %}0{% endif %}"
   >
     <button type="button" class="btn-bulk-add js-bulk-add" {% if product.stock == 0 %}disabled{% endif %}>Add to Cart</button>
     <div class="bulk-qty-controls js-bulk-qty" aria-live="polite">
       <button type="button" class="bulk-qty-btn js-bulk-dec" aria-label="Decrease quantity">−</button>
-      <span class="bulk-qty-val js-bulk-val">{{ product.moq }}</span>
+      <span class="bulk-qty-val js-bulk-val">{% if product.packet_price and product.pack_quantity %}{{ product.pack_quantity }}{% else %}{{ product.moq }}{% endif %}</span>
       <button type="button" class="bulk-qty-btn js-bulk-inc" aria-label="Increase quantity">+</button>
     </div>
   </div>

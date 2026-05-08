@@ -4,22 +4,8 @@
 {% block admin_main %}
 <section class="page-section admin-section">
   <div class="section-container">
-    <div class="admin-header">
-      <div>
-        <h1>Admin Dashboard</h1>
-        <p>Welcome back, {{ request.user.full_name }} — manage stock, products, and orders from here.</p>
-      </div>
-    </div>
-
-    <div class="admin-inventory-hub">
-      <div class="admin-inventory-hub__text">
-        <h2>Inventory &amp; stock control</h2>
-        <p>Create products, set quantities, add or remove stock with quick adjustments, mark items out of stock, or remove a product from the catalog.</p>
-      </div>
-      <div class="admin-inventory-hub__actions">
-        <a href="{% url 'admin_products' %}" class="btn btn-primary">Open inventory table</a>
-        <a href="{% url 'admin_product_add' %}" class="btn btn-white">+ New product</a>
-      </div>
+    <div class="admin-header admin-header--compact">
+      <h1>Dashboard</h1>
     </div>
 
     <!-- ── STAT CARDS ── -->
@@ -55,6 +41,26 @@
         <div class="stat-label">Low stock (≤10)</div>
       </div>
     </div>
+
+    {% if product_stock_chart %}
+    <div class="admin-section-card admin-chart-card" aria-label="Product stock levels">
+      <div class="section-card-header">
+        <h2>Stock by product</h2>
+        <span class="admin-chart-sub">Top {{ product_stock_chart|length }} by quantity on hand · max {{ product_stock_chart_max }}</span>
+      </div>
+      <div class="admin-bar-chart" role="img" aria-label="Bar chart of stock per product">
+        {% for row in product_stock_chart %}
+        <div class="admin-bar-row">
+          <span class="admin-bar-label" title="{{ row.name }}">{{ row.name|truncatechars:32 }}</span>
+          <div class="admin-bar-track">
+            <div class="admin-bar-fill" style="width: {{ row.bar_pct }}%;"></div>
+          </div>
+          <span class="admin-bar-value">{{ row.stock }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
 
     <!-- ── RECENT ORDERS ── -->
     <div class="admin-section-card">

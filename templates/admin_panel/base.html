@@ -8,6 +8,20 @@
   {% include 'admin_panel/_sidebar.html' %}
   <div class="admin-sidebar-backdrop" id="admin-sidebar-backdrop" aria-hidden="true"></div>
   <div class="admin-app-main">
+    <div class="admin-topbar">
+      <div class="admin-topbar__spacer" aria-hidden="true"></div>
+      <details class="admin-profile-menu">
+        <summary class="admin-profile-menu__trigger">
+          <span class="admin-profile-menu__avatar" aria-hidden="true">👤</span>
+          <span class="admin-profile-menu__name">{{ request.user.full_name|default:"Admin" }}</span>
+        </summary>
+        <div class="admin-profile-menu__dropdown" role="menu">
+          <a href="{% url 'home' %}" role="menuitem">Home</a>
+          <a href="{% url 'profile' %}" role="menuitem">My Profile</a>
+          <a href="{% url 'logout' %}" role="menuitem" class="admin-profile-menu__logout">Logout</a>
+        </div>
+      </details>
+    </div>
     <div class="admin-mobile-bar">
       <button type="button" class="admin-sidebar-toggle" id="admin-sidebar-toggle" aria-controls="admin-sidebar" aria-expanded="false" aria-label="Open admin menu">
         <svg class="admin-sidebar-toggle__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>

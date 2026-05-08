@@ -1,0 +1,229 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quotation {{ order.order_number }} - AaramKart</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Lato:wght@400;700;900&family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
+    body { margin: 0; padding: 1.2rem; background: #f8fafc; color: #263238; font-family: "Lato", Arial, sans-serif; }
+    .sheet { max-width: 900px; margin: 0 auto; background: #fff; border: 1px solid #dfe5eb; border-radius: 14px; padding: 1.2rem; }
+    .head {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+      border-bottom: 1px solid #dbe4ef; padding: .95rem; margin-bottom: .8rem;
+      border-radius: 12px; background: linear-gradient(135deg, #eef2ff 0%, #f8fbff 100%);
+      text-align: left;
+    }
+    .title { margin: 0; font-size: 1.2rem; color: #1A237E; font-weight: 700; font-family: "Montserrat", sans-serif; }
+    .quotation-word { font-family: "Playfair Display", serif; letter-spacing: .01em; }
+    .proforma-title {
+      margin-top: .16rem;
+      color: #37474F;
+      font-family: "Montserrat", sans-serif;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+    .muted { color: #607d8b; font-size: .84rem; }
+    .head .muted { color: #37474F; font-weight: 600; }
+    .brand-block { display: flex; gap: .7rem; align-items: flex-start; }
+    .brand-logo {
+      width: 46px; height: 46px; border-radius: 12px;
+      background: linear-gradient(135deg, #1A237E, #37474F);
+      display: grid; place-items: center; color: #fff; font-weight: 900; letter-spacing: .03em;
+      box-shadow: 0 10px 22px rgba(15,23,42,.28), inset 0 1px 0 rgba(255,255,255,.3);
+      flex: 0 0 auto;
+      overflow: hidden;
+    }
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .brand-text strong { display: block; font-size: 1.05rem; color: #1A237E; font-weight: 800; font-family: "Montserrat", sans-serif; }
+    .brand-text .muted { margin-top: .08rem; }
+    .head-contact { color: #37474F; font-size: .82rem; font-weight: 600; text-align: right; line-height: 1.42; }
+    .head-contact__line { display: block; }
+    .head-contact__line--address { white-space: nowrap; }
+    .quote-no { font-weight: 900; color: #1A237E; font-size: .92rem; letter-spacing: .01em; }
+    .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin: .8rem 0; }
+    .card { border: 1px solid #dde3ea; border-radius: 10px; padding: .7rem; background: #f9f9f9; }
+    .card-customer { background: #f4f7fb; border-color: #d9e2ec; }
+    .card strong { color: #1A237E; font-size: .96rem; font-weight: 900; font-family: "Montserrat", sans-serif; }
+    table { width: 100%; border-collapse: collapse; margin-top: .8rem; }
+    th, td { border: 0; border-bottom: 1px solid #e3e8ee; padding: .62rem .5rem; text-align: left; font-size: .88rem; }
+    th {
+      background: #ffffff;
+      color: #37474F;
+      font-family: "Montserrat", sans-serif;
+      font-weight: 800;
+      border-bottom: 1.5px solid #9aa8b5;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      font-size: .78rem;
+    }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .item-title { color: #1E293B; font-weight: 800; }
+    .item-sub { display: block; margin-top: .08rem; color: #78909c; font-size: .76rem; }
+    .totals { margin-top: .7rem; margin-left: auto; width: min(340px, 100%); }
+    .grand-total-box {
+      margin-left: auto;
+      margin-top: .55rem;
+      background: #000000;
+      color: #fff;
+      border-radius: 10px;
+      padding: .55rem .75rem;
+      width: min(280px, 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 900;
+      font-size: 1.16rem;
+      letter-spacing: .01em;
+      box-shadow: 0 10px 18px rgba(0,0,0,.25);
+    }
+    .grand-total-box strong { font-weight: 900; font-size: 1.2rem; }
+    .grand-total-box strong:last-child { color: #10b981; }
+    .row { display: flex; justify-content: space-between; padding: .3rem 0; font-size: .9rem; color: #37474F; }
+    .row.total { border-top: 1px dashed #a7b4c0; margin-top: .35rem; padding-top: .45rem; font-size: 1.08rem; font-weight: 900; color: #000000; }
+    .terms {
+      margin-top: 2rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: .65rem .75rem;
+      background: #fffbeb;
+      max-width: 68%;
+      font-size: 9pt;
+      line-height: 1.45;
+    }
+    .terms h4 { margin: 0 0 .35rem; font-family: "Montserrat", sans-serif; color: #1A237E; font-size: 9pt; }
+    .terms ul { margin: 0; padding-left: 1rem; }
+    .terms li { margin: .1rem 0; }
+    .invoice-tagline {
+      margin: .7rem 0 0;
+      text-align: center;
+      color: #334155;
+      font-family: "Courier Prime", "Courier New", monospace;
+      font-size: .98rem;
+      font-style: normal;
+      letter-spacing: .04em;
+    }
+    .footer { margin-top: 1.4rem; display: flex; justify-content: space-between; gap: 1rem; align-items: end; }
+    .sign { min-width: 220px; text-align: center; }
+    .line { border-top: 1px solid #94a3b8; margin-top: 2rem; padding-top: .35rem; font-size: .82rem; color: #475569; }
+    .actions { max-width: 900px; margin: 0 auto .8rem; display: flex; gap: .5rem; justify-content: flex-end; }
+    .btn { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; padding: .5rem .8rem; border-radius: 10px; cursor: pointer; text-decoration: none; font-size: .85rem; }
+    .btn-primary { background: #10b981; border-color: #10b981; color: #fff; }
+    @media print {
+      body { padding: 0; background: #fff; }
+      .actions { display: none; }
+      .sheet { border: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="actions">
+    <a href="{% url 'order_quotation' order.order_number %}" class="btn">View</a>
+    <button type="button" onclick="window.print()" class="btn btn-primary">Download PDF</button>
+  </div>
+  <section class="sheet">
+    <div class="head">
+      <div class="brand-block">
+        <div class="brand-logo" aria-hidden="true">
+          <img src="{% get_media_prefix %}products/logo.jpeg" alt="AaramKart Logo" />
+        </div>
+        <div class="brand-text">
+          <strong>AaramKart</strong>
+          <div class="proforma-title">INVOICE</div>
+          <div class="muted quote-no">Quotation No: Q-{{ order.order_number }}</div>
+          <div class="muted">Issue Date: {{ issued_on|date:"d M Y" }}</div>
+        </div>
+      </div>
+      <div class="head-contact">
+        <span class="head-contact__line">Iewduh (Bara Bazar)</span>
+        <span class="head-contact__line">Shillong</span>
+        <span class="head-contact__line">Meghalaya - 793002</span>
+        <span class="head-contact__line">+91 9774365127 | aaramkartshillong@gmail.com</span>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="card card-customer">
+        <strong>Bill To</strong>
+        <div class="muted" style="margin-top:.35rem;">{{ order.customer_name|title }}</div>
+        <div class="muted">{{ order.phone }}</div>
+        <div class="muted">{% if order.email %}{{ order.email }}{% else %}-{% endif %}</div>
+        <div class="muted">{{ order.address|title }}</div>
+      </div>
+      <div class="card">
+        <strong>Order Reference</strong>
+        <div class="muted" style="margin-top:.35rem;">Order No: {{ order.order_number }}</div>
+        <div class="muted">Payment: Cash on Delivery</div>
+        <div class="muted">Shipping: Free Delivery in Shillong</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 44px;">#</th>
+          <th>Product</th>
+          <th class="num">Quantity</th>
+          <th class="num">MRP</th>
+          <th class="num">Selling Unit Price</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in order.items.all %}
+        <tr>
+          <td>{{ forloop.counter|stringformat:"02d" }}</td>
+          <td><span class="item-title">{{ item.product_name|title }}</span><span class="item-sub">Pack of 12 (Bulk Wholesale)</span></td>
+          <td class="num">{{ item.quantity }} pcs</td>
+          <td class="num">{% if item.product and item.product.single_product_price %}₹{{ item.product.single_product_price }}{% else %}₹{{ item.unit_price }}{% endif %}</td>
+          <td class="num">₹{{ item.unit_price }}</td>
+          <td class="num">₹{{ item.line_total }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div class="row"><span>Original Total</span><strong>₹{{ mrp_total|floatformat:2 }}</strong></div>
+      <div class="row"><span>Subtotal</span><strong>₹{{ subtotal }}</strong></div>
+      <div class="row"><span>Discount</span><strong>₹{{ discount_amount|floatformat:2 }} ({{ discount_pct|floatformat:1 }}%)</strong></div>
+      <div class="row"><span>Shipping</span><strong>₹{{ shipping }}</strong></div>
+      <div class="row total"><span>Discounted Total</span><span>₹{{ order.total_amount }}</span></div>
+      <div class="grand-total-box"><strong>Total Payable</strong><strong>₹{{ order.total_amount }}</strong></div>
+    </div>
+
+    <div class="terms">
+      <h4>Terms and Conditions</h4>
+      <ul>
+        <li>Returns: Goods once sold are not subject to return.</li>
+        <li>Replacement: Damaged items may be replaced if reported within <strong>72 Hours</strong> of delivery with valid proof.</li>
+        <li>Validity: This quotation is valid for 7 days from the issue date.</li>
+        <li>Delivery: Complimentary shipping within Shillong.</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <div class="muted">Generated by Sociotech IT Services.</div>
+      <div class="sign">
+        <div class="line">Authorized Signatory</div>
+      </div>
+    </div>
+    <div class="invoice-tagline">Aapka Aaram, Hamara Kaam !!!</div>
+  </section>
+  {% if download_mode %}
+  <script>
+    window.addEventListener('load', function () {
+      window.print();
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

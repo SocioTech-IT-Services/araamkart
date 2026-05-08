@@ -75,44 +75,16 @@
               <span class="product-pricing-card__hint">Packet price</span>
               <span class="product-pricing-card__amount">₹{{ product.packet_price }}</span>
             </div>
-            {% if product.discount_percentage %}
-            <span class="discount-badge discount-badge--large">{{ product.discount_percentage|floatformat:1 }}% OFF</span>
-            {% endif %}
           </div>
           <dl class="product-pricing-breakdown">
             <div class="product-pricing-breakdown__row">
               <dt>Quantity per packet</dt>
               <dd><strong>{{ product.pack_quantity }}</strong> {{ product.unit }}</dd>
             </div>
-            {% if product.single_product_price %}
             <div class="product-pricing-breakdown__row">
-              <dt>Single MRP</dt>
-              <dd>₹{{ product.single_product_price }}</dd>
+              <dt>Final selling price</dt>
+              <dd>Sold only at packet price</dd>
             </div>
-            {% endif %}
-            {% if list_price_total %}
-            <div class="product-pricing-breakdown__row">
-              <dt>Actual total MRP</dt>
-              <dd><span class="price-strike">₹{{ list_price_total }}</span></dd>
-            </div>
-            {% endif %}
-            {% if packet_savings_amount is not None %}
-            <div class="product-pricing-breakdown__row product-pricing-breakdown__row--savings">
-              <dt>Your savings</dt>
-              <dd>
-                <span class="product-pricing-savings">₹{{ packet_savings_amount }}</span>
-                {% if product.discount_percentage %}
-                <span class="product-pricing-savings-pct">({{ product.discount_percentage|floatformat:1 }}% OFF)</span>
-                {% endif %}
-              </dd>
-            </div>
-            {% endif %}
-            {% if effective_price_per_unit %}
-            <div class="product-pricing-breakdown__row product-pricing-breakdown__row--muted">
-              <dt>Effective rate</dt>
-              <dd>₹{{ effective_price_per_unit }} per {% if product.unit == 'pcs' %}piece{% else %}{{ product.unit }}{% endif %}</dd>
-            </div>
-            {% endif %}
           </dl>
         </div>
         {% endif %}
@@ -128,15 +100,8 @@
           {% endif %}
         </div>
 
-        {% if product.description %}
-          {% if use_packet_pricing %}
-        <blockquote class="product-customer-note">
-          <span class="product-customer-note__label">For customers</span>
-          <p class="product-customer-note__text">{{ product.description }}</p>
-        </blockquote>
-          {% else %}
+        {% if product.description and not use_packet_pricing %}
         <p class="product-description">{{ product.description }}</p>
-          {% endif %}
         {% endif %}
 
         <!-- Floating Pricing Cards -->
@@ -208,7 +173,7 @@
 
           <button class="btn btn-primary btn-lg btn-full btn-cart-premium" id="add-to-cart-btn"
                   data-product-id="{{ product.pk }}" data-moq="{{ product.moq }}" data-stock="{{ product.stock }}">
-            🛒 Add to Cart
+            🛒 Add to Cart <span id="add-to-cart-btn-price"></span>
           </button>
         </div>
         {% else %}

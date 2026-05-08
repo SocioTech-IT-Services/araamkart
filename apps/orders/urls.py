@@ -2,7 +2,7 @@
 from django.urls import path
 from .views import (
     cart_view, add_to_cart, update_cart, remove_from_cart,
-    checkout_view, order_success, order_history, order_detail,
+    checkout_view, order_success, order_quotation, order_history, order_detail,
     admin_dashboard, admin_products, admin_orders,
     admin_product_add, admin_product_edit, admin_product_delete,
     admin_bulk_import_products,
@@ -21,6 +21,7 @@ urlpatterns = [
     # Checkout & Orders
     path("checkout/", checkout_view, name="checkout"),
     path("success/<str:order_number>/", order_success, name="order_success"),
+    path("success/<str:order_number>/quotation/", order_quotation, name="order_quotation"),
     path("history/", order_history, name="order_history"),
     path("detail/<str:order_number>/", order_detail, name="order_detail"),
     # Admin Panel

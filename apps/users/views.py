@@ -29,8 +29,8 @@ def _safe_next(raw):
     return raw
 
 
-def _redirect_open_login_modal(request):
-    """After failed login — return user to the page they were on and reopen the modal."""
+def _redirect_login_failed(request):
+    """After failed login — send to sign-in page with optional next preserved."""
     n = _safe_next(request.POST.get("next", ""))
     if not n:
         ref = request.META.get("HTTP_REFERER", "")
@@ -40,12 +40,13 @@ def _redirect_open_login_modal(request):
             p = urlparse(ref)
             if p.path.startswith("/") and not p.path.startswith("//"):
                 n = p.path + (("?" + p.query) if p.query else "")
-    if not n:
-        n = "/"
-    sep = "&" if "?" in n else "?"
-    if "open_login=1" in n:
-        return redirect(n)
-    return redirect(f"{n}{sep}open_login=1")
+    q = {}
+    if n:
+        q["next"] = n
+    url = reverse("login")
+    if q:
+        url = f"{url}?{urlencode(q)}"
+    return redirect(url)
 
 
 def _get_user_by_normalized_phone(norm_digits):
@@ -71,19 +72,20 @@ def _normalize_phone_digits(phone_raw):
 # ── Auth Views ────────────────────────────────────────────────────────────────
 
 class LoginView(View):
-    """POST-only entry for the login modal; GET redirects to home with ?open_login=1."""
+    """Single sign-in page and POST handler: redirect staff to admin dashboard, others to storefront (or next)."""
+
+    template_name = "auth/login.html"
 
     def get(self, request):
         if request.user.is_authenticated:
             nxt = _safe_next(request.GET.get("next"))
             if nxt:
                 return redirect(nxt)
+            if request.user.is_staff or request.user.is_admin:
+                return redirect("admin_dashboard")
             return redirect("home")
-        q = {"open_login": "1"}
-        nxt = _safe_next(request.GET.get("next"))
-        if nxt:
-            q["next"] = nxt
-        return redirect(reverse("home") + "?" + urlencode(q))
+        ctx = {"next": _safe_next(request.GET.get("next")) or ""}
+        return render(request, self.template_name, ctx)
 
     def post(self, request):
         phone = request.POST.get("phone", "").strip()
@@ -91,44 +93,40 @@ class LoginView(View):
 
         if not phone:
             messages.error(request, "Please enter your phone number.")
-            return _redirect_open_login_modal(request)
+            return _redirect_login_failed(request)
         if not password:
             messages.error(request, "Please enter your password.")
-            return _redirect_open_login_modal(request)
+            return _redirect_login_failed(request)
 
         norm_phone = _normalize_phone_digits(phone)
         if len(norm_phone) != 10:
             messages.error(request, "Enter a valid 10-digit Indian mobile number.")
-            return _redirect_open_login_modal(request)
+            return _redirect_login_failed(request)
 
         user = _get_user_by_normalized_phone(norm_phone)
         if not user:
             messages.error(request, "No account found for this phone number.")
-            return _redirect_open_login_modal(request)
+            return _redirect_login_failed(request)
         if not user.check_password(password):
             messages.error(request, "Invalid password.")
-            return _redirect_open_login_modal(request)
+            return _redirect_login_failed(request)
 
         display_name = user.full_name or user.phone or user.email or "there"
-
-        login_mode = request.POST.get("login_mode", "shopkeeper")
         next_ok = _safe_next(request.POST.get("next", ""))
+        # Treat "/" as no deep link so staff still land on admin when signing in from the home page.
+        follow_next = bool(next_ok and next_ok != "/")
 
-        if login_mode == "admin":
-            if not (user.is_staff or user.is_admin):
-                messages.error(
-                    request,
-                    "This account does not have admin access. Use customer sign-in, or use a staff account.",
-                )
-                return _redirect_open_login_modal(request)
-            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+
+        if follow_next:
+            messages.success(request, f"Welcome back, {display_name}!")
+            return redirect(next_ok)
+
+        if user.is_staff or user.is_admin:
             messages.success(request, f"Welcome, {display_name}.")
             return redirect("admin_dashboard")
 
-        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         messages.success(request, f"Welcome back, {display_name}!")
-        if next_ok:
-            return redirect(next_ok)
         return redirect("home")
 
 
@@ -183,10 +181,10 @@ class RegisterView(View):
         # Match login modal: same email + phone + password
         if User.objects.filter(phone=norm_phone).exists():
             messages.error(request, "An account with this phone already exists. Please sign in.")
-            return redirect(reverse("home") + "?" + urlencode({"open_login": "1"}))
+            return redirect(reverse("login"))
         if User.objects.filter(email__iexact=email).exists():
             messages.error(request, "An account with this email already exists. Please sign in.")
-            return redirect(reverse("home") + "?" + urlencode({"open_login": "1"}))
+            return redirect(reverse("login"))
 
         try:
             user = User.objects.create_user(
@@ -224,8 +222,6 @@ class ProfileView(View):
     def get(self, request):
         if not request.user.is_authenticated:
             return redirect(
-                reverse("home")
-                + "?"
-                + urlencode({"open_login": "1", "next": request.get_full_path()})
+                reverse("login") + "?" + urlencode({"next": request.get_full_path()})
             )
         return render(request, self.template_name, {"user": request.user})

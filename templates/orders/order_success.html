@@ -1,13 +1,306 @@
 {% extends 'base.html' %}
 {% block title %}Order Placed! — AaramKart{% endblock %}
 
+{% block extra_head %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Public+Sans:wght@400;600;700;800&display=swap');
+  .success-page, .success-page * { font-family: "Inter", "Public Sans", "Segoe UI", Arial, sans-serif; }
+  .success-page {
+    background: #ffffff;
+  }
+  .success-shell {
+    background: #f8f9fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 1rem;
+  }
+  .success-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.05);
+    padding: 1.05rem;
+  }
+  .success-icon { color: #10B981; font-size: 2rem; line-height: 1; }
+  .success-card h1 { color: #1A365D; margin-bottom: .35rem; }
+  .order-number-display { margin: .55rem 0 .7rem; }
+  .order-number-display strong {
+    color: #0F172A;
+    font-weight: 900;
+    letter-spacing: .02em;
+    font-size: clamp(1.12rem, 2.4vw, 1.45rem);
+  }
+  .summary-row.total-row strong:last-child { color: #2F855A; font-weight: 900; }
+  .order-summary-box,
+  .items-summary {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: .82rem .9rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  .items-summary { margin-top: .72rem; }
+  .summary-row {
+    display: grid;
+    grid-template-columns: minmax(120px, .9fr) minmax(0, 1.3fr);
+    column-gap: 24px;
+    align-items: start;
+    padding: .32rem 0;
+  }
+  .summary-row > :first-child {
+    text-align: right;
+    color: #64748B;
+    font-weight: 700;
+  }
+  .summary-row > :last-child {
+    text-align: left;
+    color: #1E293B;
+    font-weight: 800;
+  }
+  .summary-row.total-row {
+    border-top: 1px dashed #e2e8f0;
+    margin-top: .28rem;
+    padding-top: .48rem;
+  }
+  .summary-row.total-row strong:first-child {
+    text-align: right;
+    color: #64748B;
+    font-weight: 700;
+  }
+  .summary-row.total-row strong:last-child {
+    text-align: left;
+    color: #1E293B;
+    font-size: 1.38rem;
+    line-height: 1;
+    font-weight: 900;
+  }
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155;
+    padding: .15rem .55rem;
+    font-size: .72rem;
+    font-weight: 800;
+  }
+  .success-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .55rem;
+    margin-bottom: .85rem;
+  }
+  .success-step {
+    border-radius: 12px;
+    border: 1px solid #dbe3ee;
+    background: #fff;
+    text-align: center;
+    padding: .45rem .4rem;
+    color: #475569;
+    font-weight: 700;
+    font-size: .78rem;
+  }
+  .success-step.is-done {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, #1A365D, #2F855A);
+  }
+  .trust-strip {
+    margin: .75rem 0 .25rem;
+    border: 1px solid #dbe7f8;
+    border-radius: 12px;
+    background: #fff;
+    padding: .65rem .75rem;
+    display: grid;
+    gap: .45rem;
+  }
+  .trust-row { display: flex; align-items: center; gap: .45rem; color: #334155; font-size: .84rem; font-weight: 700; }
+  .trust-row svg { color: #2F855A; width: 16px; height: 16px; flex: 0 0 auto; }
+  .checkout-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .6rem;
+    padding: .38rem 0;
+  }
+  .checkout-item span:first-child {
+    text-align: left;
+    color: #1E293B;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+  }
+  .checkout-item span:first-child::after {
+    content: "";
+    border-bottom: 1px dotted #cbd5e1;
+    flex: 1 1 auto;
+    transform: translateY(1px);
+  }
+  .checkout-item span:last-child {
+    text-align: right;
+    color: #1E293B;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    min-width: 84px;
+  }
+  .quotation-cta {
+    margin: .9rem 0 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .quotation-download-btn {
+    width: auto;
+    min-width: 320px;
+    max-width: 100%;
+    border: 1px solid rgba(255,255,255,.45);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(26,54,93,.92) 0%, rgba(43,74,124,.9) 100%);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    padding: .7rem .9rem;
+    font-weight: 700;
+    letter-spacing: .005em;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 18px rgba(26,54,93,.2);
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+  }
+  .quotation-download-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -130%;
+    width: 55%;
+    height: 100%;
+    background: linear-gradient(115deg, transparent 0%, rgba(255,255,255,.42) 50%, transparent 100%);
+    animation: btnShimmer 5s linear infinite;
+  }
+  .quotation-download-btn:hover {
+    transform: translateY(-1px) scale(1.02);
+    filter: brightness(1.03);
+    box-shadow: 0 10px 22px rgba(26,54,93,.28), 0 0 0 3px rgba(255,255,255,.12);
+  }
+  @keyframes btnShimmer {
+    0%, 70% { left: -130%; }
+    100% { left: 165%; }
+  }
+  .quotation-download-btn__icon { width: 16px; height: 16px; animation: pdfPulse 1.6s ease-in-out infinite; }
+  @keyframes pdfPulse { 0%,100% { transform: scale(1);} 50% { transform: scale(1.12);} }
+  .quotation-download-btn.is-loading { pointer-events: none; opacity: .94; }
+  .quotation-download-btn.is-loading .quotation-download-btn__text { opacity: .85; }
+  .quotation-download-btn__spinner {
+    width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.45);
+    border-top-color: #fff; border-radius: 50%; display: none; animation: spin .7s linear infinite;
+  }
+  .quotation-download-btn__check { display: none; font-weight: 900; }
+  .quotation-download-btn.is-loading .quotation-download-btn__spinner { display: inline-block; }
+  .quotation-download-btn.is-done .quotation-download-btn__spinner { display: none; }
+  .quotation-download-btn.is-done .quotation-download-btn__check { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .quotation-cta__sub { margin: .35rem 0 0; color: #64748b; font-size: .78rem; max-width: 560px; text-align: center; }
+  .success-actions {
+    margin-top: .9rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .55rem;
+  }
+  .success-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: .55rem .75rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: .84rem;
+    font-weight: 800;
+    border: 1px solid #cfd8e3;
+    color: #1A365D;
+    background: #fff;
+    transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
+  }
+  .success-action-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(26,54,93,.12); }
+  .success-action-btn--primary {
+    color: #fff;
+    border-color: #1A365D;
+    background: linear-gradient(135deg, #1A365D, #274c77);
+  }
+  .success-action-btn--primary:hover { box-shadow: 0 10px 20px rgba(26,54,93,.25); }
+  .mobile-total-bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 60;
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #dbe3ee;
+    padding: .55rem .75rem;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: .55rem;
+  }
+  .mobile-total-bar__amt { color: #1A365D; font-weight: 900; font-size: 1rem; }
+  .mobile-whatsapp-btn {
+    border: 1px solid #2F855A;
+    background: #2F855A;
+    color: #fff;
+    border-radius: 10px;
+    padding: .5rem .75rem;
+    text-decoration: none;
+    font-size: .8rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  @media (max-width: 760px) {
+    .success-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .success-actions { grid-template-columns: 1fr; }
+    .mobile-total-bar { display: flex; }
+    .page-section { padding-bottom: 78px; }
+  }
+  @media (max-width: 600px) {
+    .order-summary-box,
+    .items-summary { padding-left: 12px; padding-right: 12px; }
+    .summary-row {
+      grid-template-columns: 1fr;
+      row-gap: .15rem;
+      column-gap: 0;
+    }
+    .summary-row > span:first-child,
+    .summary-row > :first-child,
+    .summary-row.total-row strong:first-child { text-align: left; }
+    .summary-row > span:last-child,
+    .summary-row > :last-child,
+    .summary-row.total-row strong:last-child { text-align: left; }
+    .quotation-download-btn { width: 100%; min-width: 0; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="page-section">
+<section class="page-section success-page">
   <div class="section-container narrow">
-    <div class="success-card">
+    <div class="success-shell">
+      <div class="success-stepper" aria-label="Order flow status">
+        <div class="success-step is-done">Cart</div>
+        <div class="success-step is-done">Shipping</div>
+        <div class="success-step is-done">Payment</div>
+        <div class="success-step is-done">Success</div>
+      </div>
+      <div class="success-card">
       <div class="success-icon">✅</div>
       <h1>Order Placed Successfully!</h1>
-      <p class="success-sub">Thank you, <strong>{{ order.customer_name }}</strong>!</p>
+      <p class="success-sub">Thank you, <strong>{{ order.customer_name|title }}</strong>!</p>
 
       <div class="order-number-display">
         <span>Order Number</span>
@@ -15,10 +308,10 @@
       </div>
 
       <div class="order-summary-box">
-        <div class="summary-row"><span>Business</span><span>{{ order.business_name }}</span></div>
+        <div class="summary-row"><span>Business</span><span>{{ order.business_name|title }}</span></div>
         <div class="summary-row"><span>Phone</span><span>{{ order.phone }}</span></div>
-        <div class="summary-row"><span>Address</span><span>{{ order.address }}{% if order.city %}, {{ order.city }}{% endif %}</span></div>
-        <div class="summary-row"><span>Payment</span><span>Cash on Delivery</span></div>
+        <div class="summary-row"><span>Address</span><span>{{ order.address|title }}{% if order.city %}, {{ order.city|title }}{% endif %}</span></div>
+        <div class="summary-row"><span>Payment</span><span class="status-badge">Cash on Delivery</span></div>
         <div class="summary-row total-row"><strong>Total</strong><strong>₹{{ order.total_amount }}</strong></div>
       </div>
 
@@ -26,7 +319,7 @@
         <h4>Items Ordered</h4>
         {% for item in order.items.all %}
         <div class="checkout-item">
-          <span>{{ item.product_name }} × {{ item.quantity }}</span>
+          <span>{{ item.product_name|title }} × {{ item.quantity }}</span>
           <span>₹{{ item.line_total }}</span>
         </div>
         {% endfor %}
@@ -37,11 +330,73 @@
         {% if order.email %}<p>📧 A confirmation email has been sent to <strong>{{ order.email }}</strong>.</p>{% endif %}
       </div>
 
+      <div class="quotation-cta">
+        <a href="{% url 'order_quotation' order.order_number %}?download=1"
+           class="quotation-download-btn"
+           id="quotation-download-btn"
+           target="_blank"
+           rel="noopener">
+          <svg class="quotation-download-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 3v12"></path>
+            <path d="M7.5 10.5L12 15l4.5-4.5"></path>
+            <path d="M4 20h16"></path>
+          </svg>
+          <span class="quotation-download-btn__text">Download Official Quotation (PDF)</span>
+          <span class="quotation-download-btn__spinner" aria-hidden="true"></span>
+          <span class="quotation-download-btn__check" aria-hidden="true">✓</span>
+        </a>
+        <p class="quotation-cta__sub">Your official proforma invoice is ready. Click to save a copy for your records.</p>
+      </div>
+
+      <div class="trust-strip" aria-label="Trust highlights">
+        <div class="trust-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>100% Genuine Products</span>
+        </div>
+        <div class="trust-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h13v8H3z"/><path d="M16 10h3l2 2v3h-5z"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="18.5" cy="17.5" r="1.5"/></svg>
+          <span>Free Delivery in Shillong</span>
+        </div>
+      </div>
+
       <div class="success-actions">
-        <a href="{% url 'order_history' %}" class="btn btn-primary" id="view-orders-btn">View My Orders</a>
-        <a href="{% url 'home' %}" class="btn btn-outline" id="continue-shopping-btn">Continue Shopping</a>
+        <a href="{% url 'order_quotation' order.order_number %}" class="success-action-btn" target="_blank" rel="noopener">View Quotation</a>
+        <a href="{% url 'order_history' %}" class="success-action-btn success-action-btn--primary" id="view-orders-btn">View My Orders</a>
+        <a href="{% url 'home' %}" class="success-action-btn" id="continue-shopping-btn">Continue Shopping</a>
+      </div>
       </div>
     </div>
   </div>
 </section>
+
+{% with wa_text="Order "|add:order.order_number|add:" confirmed on AaramKart. Total: ₹"|add:order.total_amount|stringformat:"s" %}
+<div class="mobile-total-bar">
+  <div>
+    <div style="font-size:.72rem;color:#64748b;">Total Amount</div>
+    <div class="mobile-total-bar__amt">₹{{ order.total_amount }}</div>
+  </div>
+  <a class="mobile-whatsapp-btn" target="_blank" rel="noopener" href="https://wa.me/?text={{ wa_text|urlencode }}">Share via WhatsApp</a>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var btn = document.getElementById('quotation-download-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var url = btn.getAttribute('href');
+      btn.classList.add('is-loading');
+      btn.classList.remove('is-done');
+      window.setTimeout(function () {
+        btn.classList.remove('is-loading');
+        btn.classList.add('is-done');
+        window.open(url, '_blank', 'noopener');
+        window.setTimeout(function () { btn.classList.remove('is-done'); }, 900);
+      }, 1200);
+    });
+  })();
+</script>
 {% endblock %}

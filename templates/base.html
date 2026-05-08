@@ -33,6 +33,11 @@
 <!-- ── MAIN NAVBAR ────────────────────────────────────────────── -->
 <nav class="navbar-main">
   <div class="nav-container navbar-main-inner">
+    <button type="button" id="mobile-menu-toggle" class="mobile-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="site-nav-actions">
+      <span class="mobile-nav-toggle__bar" aria-hidden="true"></span>
+      <span class="mobile-nav-toggle__bar" aria-hidden="true"></span>
+      <span class="mobile-nav-toggle__bar" aria-hidden="true"></span>
+    </button>
     <a href="{% url 'home' %}" class="nav-logo">
       <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="logo-img" width="300" height="90">
     </a>
@@ -60,7 +65,9 @@
       </div>
     </div>
 
-    <div class="nav-meta-actions">
+    <div class="nav-meta-actions nav-actions" id="site-nav-actions">
+      <button type="button" class="nav-mobile-backdrop js-nav-mobile-close" aria-label="Close menu" tabindex="-1"></button>
+      <div class="nav-mobile-panel">
       {% if user.is_authenticated %}
         <a href="{% url 'order_history' %}" class="cart-meta-item">
           <div class="cart-icon-wrap" aria-hidden="true">
@@ -120,6 +127,7 @@
           <span class="meta-value">₹{{ cart_total_display }}</span>
         </div>
       </a>
+      </div>
     </div>
   </div>
 </nav>
