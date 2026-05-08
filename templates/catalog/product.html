@@ -130,11 +130,13 @@
         {% if user.is_authenticated %}
         {% if use_packet_pricing and packets_available == 0 and product.stock > 0 %}
         <div class="out-of-stock-msg">
-          <p>There is not enough stock to make a full pack ({{ product.stock }} {{ product.unit }} on hand). Please try a smaller quantity or another SKU.</p>
+          <p>Out of stock.</p>
+          <a class="btn btn-ghost" href="https://wa.me/919774365127?text={{ 'Notify me when '|add:product.name|add:' is back in stock'|urlencode }}" target="_blank" rel="noopener">Notify Me</a>
         </div>
         {% elif use_packet_pricing and product.stock > 0 and not can_order_packets %}
         <div class="out-of-stock-msg">
-          <p>Minimum order is {{ product.moq }} {{ product.unit }}, but available full packets ({{ packets_available }}×{{ product.pack_quantity }} {{ product.unit }}) do not reach that total. Please contact us for this SKU.</p>
+          <p>Out of stock.</p>
+          <a class="btn btn-ghost" href="https://wa.me/919774365127?text={{ 'Notify me when '|add:product.name|add:' is back in stock'|urlencode }}" target="_blank" rel="noopener">Notify Me</a>
         </div>
         {% elif product.stock > 0 %}
         <div class="add-to-cart-section" id="add-to-cart-section">

@@ -248,7 +248,7 @@ function initConversionTrustSection() {
 
     const renderSellingCards = (items) => {
         sellingTrack.innerHTML = items.map((item) => `
-            <article class="most-selling-card">
+            <a class="most-selling-card ${item.product_id ? '' : 'is-disabled'}" href="${item.product_id ? `/product/${item.product_id}/` : '#'}" ${item.product_id ? '' : 'aria-disabled="true" tabindex="-1"'}>
               <div class="most-selling-img-wrap">
                 <span class="trending-badge">🔥 Trending</span>
                 <img src="${item.image || ''}" alt="${item.product_name}" loading="lazy" />
@@ -259,14 +259,19 @@ function initConversionTrustSection() {
                   <span class="most-selling-tab">${item.category || 'General'}</span>
                   <span class="most-selling-tab">${item.subcategory || 'Popular'}</span>
                 </div>
-                <p class="most-selling-price">₹${item.wholesale_price}</p>
+                <p class="most-selling-price">₹${item.packet_price || item.wholesale_price}</p>
+                ${item.packet_price ? `<p class="most-selling-price-note">per packet</p>` : ''}
+                ${(item.discount_percentage || 0) > 0 ? `<p class="most-selling-price-strike">₹${item.single_product_price || item.wholesale_price}</p>` : ''}
                 <p class="most-selling-volume">${item.quantity_sold || 0} sold</p>
                 <div class="most-selling-meta">
                   <span class="discount-chip">${item.discount_percentage || 0}% OFF</span>
                   <span class="stock-pill ${stockClass(item.stock_status)}">${item.stock_status || 'In Stock'}</span>
                 </div>
+                <button type="button" class="most-selling-add-btn js-most-selling-add" data-product-id="${item.product_id || ''}" data-moq="${item.moq || 1}" data-pack-qty="${item.pack_quantity || 0}" data-stock="${item.stock || 0}">
+                  Add to Cart
+                </button>
               </div>
-            </article>
+            </a>
         `).join('');
     };
 
@@ -339,10 +344,15 @@ function initConversionTrustSection() {
     const mapApiProduct = (p) => ({
         product_name: p.product_name || p.name || 'AaramKart Bestseller',
         wholesale_price: p.wholesale_price ?? p.base_price ?? p.price ?? 0,
+        packet_price: p.packet_price ?? null,
+        single_product_price: p.single_product_price ?? p.wholesale_price ?? p.base_price ?? p.price ?? 0,
         discount_percentage: p.discount_percentage ?? p.discount ?? 0,
         stock_status: p.stock_status || ((p.stock ?? 1) > 10 ? 'In Stock' : (p.stock > 0 ? 'Low Stock' : 'Out of Stock')),
         image: p.image || p.image_url || '',
         quantity_sold: p.quantity_sold ?? 0,
+        moq: p.moq ?? 1,
+        pack_quantity: p.pack_quantity ?? 0,
+        stock: p.stock ?? 0,
         category: p.category || '',
         subcategory: p.subcategory || '',
     });
@@ -363,6 +373,54 @@ function initConversionTrustSection() {
     const step = 260;
     leftArrow?.addEventListener('click', () => sellingCarousel.scrollBy({ left: -step, behavior: 'smooth' }));
     rightArrow?.addEventListener('click', () => sellingCarousel.scrollBy({ left: step, behavior: 'smooth' }));
+
+    sellingTrack.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.js-most-selling-add');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (document.body.dataset.auth !== '1') {
+            window.location.href = '/auth/login/?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+            return;
+        }
+        const productId = Number(btn.dataset.productId || 0);
+        const moq = Number(btn.dataset.moq || 1);
+        const packQty = Number(btn.dataset.packQty || 0);
+        const stock = Number(btn.dataset.stock || 0);
+        if (!productId || stock <= 0) {
+            showToast('Out of stock.', 'error');
+            return;
+        }
+        const qty = packQty > 0 ? packQty : moq;
+        btn.disabled = true;
+        btn.textContent = 'Adding...';
+        try {
+            const res = await fetch('/orders/cart/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ product_id: productId, quantity: qty }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                showToast(data.error || 'Could not add to cart', 'error');
+            } else {
+                const badge = document.querySelector('.cart-count-badge');
+                const totalEl = document.querySelector('.cart-count-badge')?.closest('.cart-meta-item')?.querySelector('.meta-value');
+                if (badge && data.cart_count != null) badge.textContent = String(data.cart_count);
+                if (totalEl && data.cart_total != null) totalEl.textContent = `₹${Number(data.cart_total).toFixed(2)}`;
+                showToast('Added to cart', 'success');
+            }
+        } catch {
+            showToast('Network error', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Add to Cart';
+        }
+    });
 
     renderSellingSkeleton();
     renderReviewSkeleton();

@@ -1,47 +1,225 @@
 {% extends 'base.html' %}
 {% block title %}My Orders — AaramKart{% endblock %}
 
+{% block extra_head %}
+<style>
+  .orders-premium {
+    background: linear-gradient(180deg, #f8fbff 0%, #f4f8ff 100%);
+  }
+  .orders-premium * {
+    font-family: "Inter", "Montserrat", "Segoe UI", Arial, sans-serif;
+  }
+  .orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .7rem;
+    margin-bottom: .9rem;
+  }
+  .btn-ghost-premium {
+    border: 1px solid #cbd5e1;
+    background: transparent;
+    color: #1e293b;
+    border-radius: 10px;
+    padding: .52rem .86rem;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all .3s ease;
+  }
+  .btn-ghost-premium:hover {
+    background: #1A365D;
+    color: #fff;
+    border-color: #1A365D;
+  }
+  .orders-list-premium {
+    display: grid;
+    gap: .85rem;
+  }
+  .order-card-premium {
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, .26);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .12);
+    padding: 1rem 1.05rem;
+    animation: orderIn .45s ease both;
+    animation-delay: calc(var(--stagger, 0) * 80ms);
+    transition: all .3s ease;
+  }
+  .order-card-premium:hover {
+    transform: scale(1.02) translateY(-2px);
+    box-shadow: 0 20px 36px rgba(15, 23, 42, .2);
+  }
+  @keyframes orderIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .order-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) minmax(0, .8fr);
+    gap: 1rem 1.1rem;
+    align-items: center;
+  }
+  .order-id {
+    margin: 0;
+    color: #0f172a;
+    font-weight: 900;
+    letter-spacing: .01em;
+  }
+  .order-date {
+    margin: .2rem 0 0;
+    color: #64748b;
+    font-size: .8rem;
+    font-weight: 600;
+  }
+  .status-chip {
+    margin-top: .4rem;
+    display: inline-flex;
+    border-radius: 999px;
+    padding: .2rem .56rem;
+    font-size: .72rem;
+    font-weight: 800;
+    border: 1px solid transparent;
+  }
+  .status-chip.status-pending {
+    color: #92400e;
+    background: rgba(251, 191, 36, .17);
+    border-color: rgba(245, 158, 11, .4);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, .12);
+  }
+  .status-chip.status-cancelled {
+    color: #334155;
+    background: rgba(148, 163, 184, .18);
+    border-color: rgba(148, 163, 184, .42);
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, .12);
+  }
+  .status-chip.status-confirmed,
+  .status-chip.status-processing,
+  .status-chip.status-shipped,
+  .status-chip.status-delivered {
+    color: #065f46;
+    background: rgba(16, 185, 129, .16);
+    border-color: rgba(16, 185, 129, .4);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, .1);
+  }
+  .item-stack {
+    display: grid;
+    gap: .35rem;
+  }
+  .item-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .65rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: rgba(255,255,255,.72);
+    padding: .35rem .52rem;
+  }
+  .item-name {
+    color: #1e293b;
+    font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .qty-badge {
+    color: #fff;
+    font-weight: 800;
+    font-size: .72rem;
+    border-radius: 999px;
+    padding: .18rem .55rem;
+    background: linear-gradient(135deg, #1A365D, #274c77);
+    flex: 0 0 auto;
+  }
+  .item-more {
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 700;
+  }
+  .order-right {
+    text-align: right;
+    display: grid;
+    gap: .5rem;
+    justify-items: end;
+  }
+  .order-total-premium {
+    color: #0f172a;
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1;
+    margin: 0;
+    letter-spacing: -.01em;
+  }
+  .btn-view-gradient {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 10px;
+    padding: .55rem .86rem;
+    background: linear-gradient(135deg, #0061ff, #60efff);
+    color: #fff;
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 800;
+    box-shadow: 0 10px 22px rgba(0, 97, 255, .24);
+    transition: all .3s ease;
+  }
+  .btn-view-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0, 97, 255, .35), 0 0 0 4px rgba(96, 239, 255, .2);
+  }
+  @media (max-width: 880px) {
+    .order-grid {
+      grid-template-columns: 1fr;
+      gap: .7rem;
+    }
+    .order-right {
+      justify-items: start;
+      text-align: left;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="page-section">
+<section class="page-section orders-premium">
   <div class="section-container">
-    <div class="page-header">
+    <div class="orders-header">
       <h1 class="page-title">My Orders</h1>
-      <a href="{% url 'home' %}" class="btn btn-outline">Continue Shopping</a>
+      <a href="{% url 'home' %}" class="btn-ghost-premium">Continue Shopping</a>
     </div>
 
     {% if orders %}
-    <div class="orders-list" id="orders-list">
+    <div class="orders-list-premium" id="orders-list">
       {% for order in orders %}
-      <div class="order-card" id="order-card-{{ order.order_number }}">
-        <div class="order-card-header">
-          <div class="order-id-block">
-            <span class="order-label">Order</span>
-            <strong class="order-number">#{{ order.order_number }}</strong>
+      <div class="order-card-premium" id="order-card-{{ order.order_number }}" style="--stagger:{{ forloop.counter0 }};">
+        <div class="order-grid">
+          <div>
+            <p class="order-id">#{{ order.order_number }}</p>
+            <p class="order-date">{{ order.created_at|date:"d M Y, H:i" }}</p>
+            <span class="status-chip status-{{ order.status }}">{{ order.get_status_display }}</span>
           </div>
-          <span class="status-pill status-{{ order.status }}">{{ order.get_status_display }}</span>
-          <div class="order-date">{{ order.created_at|date:"d M Y, H:i" }}</div>
-        </div>
-
-        <div class="order-card-body">
-          <div class="order-items-preview">
+          <div class="item-stack">
             {% for item in order.items.all|slice:":3" %}
-            <span class="order-item-chip">{{ item.product_name }} ×{{ item.quantity }}</span>
+            <div class="item-line">
+              <span class="item-name">{{ item.product_name|title }}</span>
+              <span class="qty-badge">x{{ item.quantity }}</span>
+            </div>
             {% endfor %}
             {% if order.items.count > 3 %}
-            <span class="order-item-chip more">+{{ order.items.count|add:"-3" }} more</span>
+            <span class="item-more">+{{ order.items.count|add:"-3" }} more item(s)</span>
             {% endif %}
           </div>
-          <div class="order-meta">
-            <span>{{ order.city }}</span>
-            <span class="payment-chip">{{ order.payment_method|upper }}</span>
+          <div class="order-right">
+            <p class="order-total-premium">₹{{ order.total_amount }}</p>
+            <a href="{% url 'order_detail' order.order_number %}" class="btn-view-gradient" id="view-{{ order.order_number }}">
+              View Details
+            </a>
           </div>
-        </div>
-
-        <div class="order-card-footer">
-          <strong class="order-total">₹{{ order.total_amount }}</strong>
-          <a href="{% url 'order_detail' order.order_number %}" class="btn btn-outline btn-sm" id="view-{{ order.order_number }}">
-            View Details →
-          </a>
         </div>
       </div>
       {% endfor %}

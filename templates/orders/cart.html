@@ -253,6 +253,16 @@
     filter: brightness(1.03);
     box-shadow: 0 16px 34px rgba(16, 185, 129, .44), 0 0 0 4px rgba(16,185,129,.18);
   }
+  #checkout-btn.is-disabled {
+    background: #94a3b8;
+    box-shadow: none;
+    filter: none;
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: .75;
+    transform: none;
+    animation: none;
+  }
   #checkout-btn {
     animation: checkoutPulse 2.2s ease-in-out infinite;
   }
@@ -278,6 +288,167 @@
     .cart-item-qty small { text-align: left; }
     .cart-item-price { text-align: left; flex-basis: auto; align-items: flex-start; }
     .cart-item-remove { position: static; align-self: end; margin-top: -.2rem; }
+  }
+  .cart-empty-premium {
+    max-width: 760px;
+    margin: 1rem auto 0;
+    border-radius: 20px;
+    border: 1px solid #dbe7f8;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, .14);
+    padding: 1.2rem 1.25rem;
+  }
+  .cart-empty-premium__head {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .7rem;
+  }
+  .cart-empty-premium__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #0f172a, #1e3a8a);
+    color: #fff;
+    font-size: 1.3rem;
+    box-shadow: 0 10px 22px rgba(30,58,138,.35);
+  }
+  .cart-empty-premium h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.15rem;
+    letter-spacing: -.01em;
+  }
+  .cart-empty-premium p {
+    margin: .15rem 0 0;
+    color: #475569;
+    line-height: 1.55;
+    font-size: .92rem;
+  }
+  .cart-empty-premium__actions {
+    margin-top: .9rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .55rem;
+  }
+  .cart-empty-premium__trust {
+    margin-top: .85rem;
+    display: grid;
+    gap: .35rem;
+    color: #334155;
+    font-size: .82rem;
+    font-weight: 700;
+  }
+  .cart-empty-premium__trust span {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .cart-remove-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, .45);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+  .cart-remove-modal.is-open { display: flex; }
+  .cart-remove-modal__dialog {
+    width: min(420px, 100%);
+    border-radius: 16px;
+    border: 1px solid #dbe7f8;
+    background: #fff;
+    box-shadow: 0 22px 42px rgba(15,23,42,.25);
+    padding: 1rem;
+    animation: cartRemoveIn .34s cubic-bezier(.22, 1.35, .3, 1) both;
+  }
+  @keyframes cartRemoveIn {
+    from { opacity: 0; transform: translateY(10px) scale(.94); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .cart-remove-modal__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    color: #ef4444;
+    background: rgba(239, 68, 68, .12);
+    margin-bottom: .55rem;
+  }
+  .cart-remove-modal__title {
+    margin: 0;
+    color: #1E293B;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+  .cart-remove-modal__text {
+    margin: .4rem 0 .9rem;
+    color: #475569;
+    font-size: .88rem;
+    line-height: 1.5;
+  }
+  .cart-remove-modal__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .55rem;
+  }
+  #cart-remove-cancel,
+  #cart-remove-confirm {
+    min-width: 120px;
+    min-height: 40px;
+    justify-content: center;
+  }
+  #cart-remove-cancel {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+  }
+  #cart-remove-cancel:hover {
+    background: #f8fafc;
+  }
+  #cart-remove-confirm {
+    border: 1px solid #ef4444;
+    background: #ef4444;
+    color: #fff;
+  }
+  #cart-remove-confirm:hover { filter: brightness(1.02); }
+  #cart-remove-confirm.is-loading { opacity: .95; }
+  .cart-remove-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,.5);
+    border-top-color: #fff;
+    border-radius: 50%;
+    display: none;
+    animation: cartRemoveSpin .7s linear infinite;
+    margin-right: .35rem;
+  }
+  @keyframes cartRemoveSpin { to { transform: rotate(360deg); } }
+  @media (max-width: 760px) {
+    .cart-remove-modal {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .cart-remove-modal__dialog {
+      width: 100%;
+      border-radius: 16px 16px 0 0;
+      border-left: 0;
+      border-right: 0;
+      border-bottom: 0;
+      animation: cartRemoveDrawer .28s ease both;
+      padding: 1rem .95rem calc(1rem + env(safe-area-inset-bottom));
+    }
+    @keyframes cartRemoveDrawer {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   }
 </style>
 {% endblock %}
@@ -389,19 +560,46 @@
     </div>
 
     {% else %}
-    <div class="empty-state">
-      <div class="empty-icon">🛒</div>
-      <h3>Your cart is empty</h3>
-      <p>Browse our wholesale categories and add products to get started.</p>
-      <a href="{% url 'home' %}" class="btn btn-primary">Browse Categories</a>
+    <div class="cart-empty-premium">
+      <div class="cart-empty-premium__head">
+        <div class="cart-empty-premium__icon">🛒</div>
+        <div>
+          <h3>Your Cart Is Empty</h3>
+          <p>Browse our wholesale categories and add products to get started.</p>
+        </div>
+      </div>
+      <div class="cart-empty-premium__actions">
+        <a href="{% url 'home' %}" class="btn btn-primary">Browse Categories</a>
+        <a href="{% url 'order_history' %}" class="btn btn-ghost">View Previous Orders</a>
+      </div>
+      <div class="cart-empty-premium__trust">
+        <span>✔ Verified wholesale pricing</span>
+        <span>🚚 Free delivery support in Shillong</span>
+      </div>
     </div>
     {% endif %}
   </div>
 </section>
+<div class="cart-remove-modal" id="cart-remove-modal" aria-hidden="true">
+  <div class="cart-remove-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="cart-remove-title">
+    <div class="cart-remove-modal__icon" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+    </div>
+    <h3 class="cart-remove-modal__title" id="cart-remove-title">Remove item from cart?</h3>
+    <p class="cart-remove-modal__text">This item will be removed from your wholesale cart. You can add it again later.</p>
+    <div class="cart-remove-modal__actions">
+      <button type="button" class="btn btn-ghost" id="cart-remove-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="cart-remove-confirm">
+        <span class="cart-remove-spinner" id="cart-remove-spinner" aria-hidden="true"></span>
+        <span id="cart-remove-confirm-label">Remove</span>
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{% static 'js/cart.js' %}"></script>
+<script src="{% static 'js/cart.js' %}?v={{ STATIC_CACHE_BUSTER }}"></script>
 {% if login_prompt %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {

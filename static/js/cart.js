@@ -318,35 +318,106 @@ function toggleQtyButtons(itemId) {
 }
 
 async function removeCartItem(itemId) {
-    if (!confirm('Remove this item from cart?')) return;
+    await confirmCartRemoval(async () => {
+        try {
+            const response = await fetch('/orders/cart/remove/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ item_id: itemId })
+            });
 
-    try {
-        const response = await fetch('/orders/cart/remove/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({ item_id: itemId })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            const row = document.getElementById(`cart-item-${itemId}`);
-            if (row) {
-                row.classList.add('is-removing');
-                window.setTimeout(() => row.remove(), 260);
+            const data = await response.json();
+            if (data.success) {
+                const row = document.getElementById(`cart-item-${itemId}`);
+                if (row) {
+                    row.classList.add('is-removing');
+                    window.setTimeout(() => row.remove(), 260);
+                }
+                animateRollTotal('cart-total', data.cart_total);
+                animateRollTotal('grand-total', data.cart_total);
+                document.getElementById('cart-badge').textContent = data.cart_count;
+                if (data.cart_count === 0) {
+                    window.setTimeout(() => location.reload(), 280); // Show empty state after animation
+                }
+                return true;
             }
-            animateRollTotal('cart-total', data.cart_total);
-            animateRollTotal('grand-total', data.cart_total);
-            document.getElementById('cart-badge').textContent = data.cart_count;
-            if (data.cart_count === 0) {
-                window.setTimeout(() => location.reload(), 280); // Show empty state after animation
-            }
+            showToast('Failed to remove item.', 'error');
+            return false;
+        } catch (err) {
+            showToast('Failed to remove item.', 'error');
+            return false;
         }
-    } catch (err) {
-        showToast('Failed to remove item.', 'error');
-    }
+    });
+}
+
+function confirmCartRemoval(onConfirmAsync) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('cart-remove-modal');
+        const confirmBtn = document.getElementById('cart-remove-confirm');
+        const cancelBtn = document.getElementById('cart-remove-cancel');
+        const spinner = document.getElementById('cart-remove-spinner');
+        const confirmLabel = document.getElementById('cart-remove-confirm-label');
+        if (!modal || !confirmBtn || !cancelBtn) {
+            showToast('Custom remove popup is unavailable. Please refresh the page.', 'error');
+            resolve(false);
+            return;
+        }
+
+        let loading = false;
+        const close = (accepted) => {
+            if (loading) return;
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            confirmBtn.classList.remove('is-loading');
+            confirmBtn.disabled = false;
+            cancelBtn.disabled = false;
+            if (spinner) spinner.style.display = 'none';
+            if (confirmLabel) confirmLabel.textContent = 'Remove';
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            modal.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKeydown);
+            resolve(accepted);
+        };
+
+        const onConfirm = async () => {
+            loading = true;
+            confirmBtn.classList.add('is-loading');
+            confirmBtn.disabled = true;
+            cancelBtn.disabled = true;
+            if (spinner) spinner.style.display = 'inline-block';
+            if (confirmLabel) confirmLabel.textContent = 'Removing...';
+            await new Promise((r) => window.setTimeout(r, 400));
+            const ok = typeof onConfirmAsync === 'function' ? await onConfirmAsync() : true;
+            loading = false;
+            if (ok) {
+                close(true);
+            } else {
+                confirmBtn.classList.remove('is-loading');
+                confirmBtn.disabled = false;
+                cancelBtn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+                if (confirmLabel) confirmLabel.textContent = 'Remove';
+            }
+        };
+        const onCancel = () => close(false);
+        const onBackdrop = (e) => {
+            if (e.target === modal) close(false);
+        };
+        const onKeydown = (e) => {
+            if (e.key === 'Escape') close(false);
+        };
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKeydown);
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+    });
 }
 
 function animateRollTotal(id, value) {
