@@ -24,18 +24,34 @@
       <h3 class="product-name">{{ product.name }}</h3>
       {% if product.subcategory %}<p class="product-cat-tag">{{ product.subcategory.name }}</p>{% elif product.category %}<p class="product-cat-tag">{{ product.category.name }}</p>{% endif %}
       <div class="product-pricing">
-        {% with product.base_price as bp %}
-        {% if bp %}
-        <span class="price-from">from</span>
-        <span class="price-main">₹{{ bp }}</span>
-        <span class="price-unit">/ {{ product.unit }}</span>
+        {% with product.packet_price|default:product.base_price as packet_display_price %}
+        {% if packet_display_price %}
+        <span class="price-main">₹{{ packet_display_price }}</span>
+        <span class="price-unit">per packet</span>
+        {% if product.single_product_price %}
+        <span class="price-strike">₹{{ product.single_product_price }}</span>
+        {% endif %}
+        {% if product.discount_percentage %}
+        <span class="discount-badge">{{ product.discount_percentage|floatformat:0 }}% OFF</span>
+        {% endif %}
         {% else %}
-        <span class="price-main">—</span>
+          {% with product.base_price as bp %}
+          {% if bp %}
+          <span class="price-main">₹{{ bp }}</span>
+          <span class="price-unit">/ {{ product.unit }}</span>
+          {% else %}
+          <span class="price-main">—</span>
+          {% endif %}
+          {% endwith %}
         {% endif %}
         {% endwith %}
       </div>
       <div class="product-meta">
+        {% if product.pack_quantity %}
+        <span class="pack-qty-tag">{{ product.pack_quantity }} Pcs per Box</span>
+        {% else %}
         <span class="moq-tag">MOQ: {{ product.moq }} {{ product.unit }}</span>
+        {% endif %}
         {% if product.pricing_tiers.count > 1 %}
         <span class="bulk-tag">Bulk savings</span>
         {% endif %}
@@ -50,8 +66,8 @@
     data-stock="{{ product.stock }}"
     data-unit="{{ product.unit }}"
   >
-    <button type="button" class="btn-bulk-add js-bulk-add" {% if product.stock == 0 %}disabled{% endif %}>Bulk add</button>
-    <div class="bulk-qty-controls js-bulk-qty hidden" aria-live="polite">
+    <button type="button" class="btn-bulk-add js-bulk-add" {% if product.stock == 0 %}disabled{% endif %}>Add to Cart</button>
+    <div class="bulk-qty-controls js-bulk-qty" aria-live="polite">
       <button type="button" class="bulk-qty-btn js-bulk-dec" aria-label="Decrease quantity">−</button>
       <span class="bulk-qty-val js-bulk-val">{{ product.moq }}</span>
       <button type="button" class="bulk-qty-btn js-bulk-inc" aria-label="Increase quantity">+</button>

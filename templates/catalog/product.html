@@ -3,7 +3,7 @@
 {% block title %}{{ product.name }} — {{ product.brand }} | AaramKart{% endblock %}
 
 {% block content %}
-<section class="page-section">
+<section class="page-section product-page-premium" aria-label="Product details">
   <div class="section-container">
 
     <!-- Breadcrumb -->
@@ -51,7 +51,11 @@
         <div class="product-badges product-badges--icon">
           <span class="badge badge-icon" data-tip="Direct from trusted sellers">🛡 Trusted</span>
           {% if product.stock > 0 %}
-          <span class="badge badge-green badge-icon" data-tip="Ready stock available now">📦 In Stock ({{ product.stock }} {{ product.unit }})</span>
+            {% if use_packet_pricing and packets_available is not None %}
+            <span class="badge badge-green badge-icon" data-tip="Full packs ready to ship">📦 In Stock ({{ packets_available }} Packets Available)</span>
+            {% else %}
+            <span class="badge badge-green badge-icon" data-tip="Ready stock available now">📦 In Stock ({{ product.stock }} {{ product.unit }})</span>
+            {% endif %}
           {% else %}
           <span class="badge badge-red badge-icon" data-tip="Currently unavailable">⛔ Out of Stock</span>
           {% endif %}
@@ -62,15 +66,78 @@
       <div class="product-detail-info">
         <p class="product-brand-tag">{{ product.brand }}</p>
         <h1 class="product-detail-title">{{ product.name }}</h1>
-        {% if product.description %}
-        <p class="product-description">{{ product.description }}</p>
+
+        {% if use_packet_pricing %}
+        <div class="product-pricing-card" aria-label="Pricing">
+          <p class="product-pricing-card__sales-unit"><span class="product-pricing-card__label">Sales unit</span> <strong>1 Packet</strong></p>
+          <div class="product-pricing-card__hero-row">
+            <div class="product-pricing-card__packet-price">
+              <span class="product-pricing-card__hint">Packet price</span>
+              <span class="product-pricing-card__amount">₹{{ product.packet_price }}</span>
+            </div>
+            {% if product.discount_percentage %}
+            <span class="discount-badge discount-badge--large">{{ product.discount_percentage|floatformat:1 }}% OFF</span>
+            {% endif %}
+          </div>
+          <dl class="product-pricing-breakdown">
+            <div class="product-pricing-breakdown__row">
+              <dt>Quantity per packet</dt>
+              <dd><strong>{{ product.pack_quantity }}</strong> {{ product.unit }}</dd>
+            </div>
+            {% if product.single_product_price %}
+            <div class="product-pricing-breakdown__row">
+              <dt>Single MRP</dt>
+              <dd>₹{{ product.single_product_price }}</dd>
+            </div>
+            {% endif %}
+            {% if list_price_total %}
+            <div class="product-pricing-breakdown__row">
+              <dt>Actual total MRP</dt>
+              <dd><span class="price-strike">₹{{ list_price_total }}</span></dd>
+            </div>
+            {% endif %}
+            {% if packet_savings_amount is not None %}
+            <div class="product-pricing-breakdown__row product-pricing-breakdown__row--savings">
+              <dt>Your savings</dt>
+              <dd>
+                <span class="product-pricing-savings">₹{{ packet_savings_amount }}</span>
+                {% if product.discount_percentage %}
+                <span class="product-pricing-savings-pct">({{ product.discount_percentage|floatformat:1 }}% OFF)</span>
+                {% endif %}
+              </dd>
+            </div>
+            {% endif %}
+            {% if effective_price_per_unit %}
+            <div class="product-pricing-breakdown__row product-pricing-breakdown__row--muted">
+              <dt>Effective rate</dt>
+              <dd>₹{{ effective_price_per_unit }} per {% if product.unit == 'pcs' %}piece{% else %}{{ product.unit }}{% endif %}</dd>
+            </div>
+            {% endif %}
+          </dl>
+        </div>
         {% endif %}
 
-        <!-- MOQ Notice -->
+        <!-- MOQ / pack info -->
         <div class="moq-notice">
+          {% if use_packet_pricing %}
+          <span class="pack-of-label">Pack of <strong>{{ product.pack_quantity }}</strong></span>
+          <span class="moq-detail">{{ product.pack_quantity }} {{ product.unit }} per packet{% if product.moq > 1 %} · Minimum order {{ product.moq }} {{ product.unit }}{% endif %}</span>
+          {% else %}
           <span class="moq-label">📦 Minimum Order:</span>
           <strong>{{ product.moq }} {{ product.unit }}</strong>
+          {% endif %}
         </div>
+
+        {% if product.description %}
+          {% if use_packet_pricing %}
+        <blockquote class="product-customer-note">
+          <span class="product-customer-note__label">For customers</span>
+          <p class="product-customer-note__text">{{ product.description }}</p>
+        </blockquote>
+          {% else %}
+        <p class="product-description">{{ product.description }}</p>
+          {% endif %}
+        {% endif %}
 
         <!-- Floating Pricing Cards -->
         {% if tiers %}
@@ -96,9 +163,30 @@
 
         <!-- Add to Cart -->
         {% if user.is_authenticated %}
-        {% if product.stock > 0 %}
+        {% if use_packet_pricing and packets_available == 0 and product.stock > 0 %}
+        <div class="out-of-stock-msg">
+          <p>There is not enough stock to make a full pack ({{ product.stock }} {{ product.unit }} on hand). Please try a smaller quantity or another SKU.</p>
+        </div>
+        {% elif use_packet_pricing and product.stock > 0 and not can_order_packets %}
+        <div class="out-of-stock-msg">
+          <p>Minimum order is {{ product.moq }} {{ product.unit }}, but available full packets ({{ packets_available }}×{{ product.pack_quantity }} {{ product.unit }}) do not reach that total. Please contact us for this SKU.</p>
+        </div>
+        {% elif product.stock > 0 %}
         <div class="add-to-cart-section" id="add-to-cart-section">
           <div class="qty-selector">
+            {% if use_packet_pricing %}
+            <label for="qty-input">Quantity (packets)</label>
+            <div class="qty-controls">
+              <button type="button" class="qty-btn" id="qty-minus" onclick="changeQty(-1)">−</button>
+              <input type="number" id="qty-input" value="{{ min_packets }}" min="{{ min_packets }}" max="{{ packets_available }}" />
+              <button type="button" class="qty-btn" id="qty-plus" onclick="changeQty(1)">+</button>
+            </div>
+            <div class="stock-meter-wrap" aria-label="Stock level">
+              <div class="stock-meter"><span class="stock-meter-fill" id="stock-meter-fill"></span></div>
+              <small class="stock-meter-text" id="stock-meter-text">Available: {{ packets_available }} packets ({{ product.stock }} {{ product.unit }})</small>
+            </div>
+            <small class="qty-hint">Each packet = {{ product.pack_quantity }} {{ product.unit }} · Up to {{ packets_available }} packets ({{ product.stock }} {{ product.unit }} total)</small>
+            {% else %}
             <label for="qty-input">Quantity ({{ product.unit }})</label>
             <div class="qty-controls">
               <button type="button" class="qty-btn" id="qty-minus" onclick="changeQty(-1)">−</button>
@@ -110,6 +198,7 @@
               <small class="stock-meter-text" id="stock-meter-text">In Stock: {{ product.stock }} {{ product.unit }}</small>
             </div>
             <small class="qty-hint">Min: {{ product.moq }} {{ product.unit }} | Available: {{ product.stock }} {{ product.unit }}</small>
+            {% endif %}
           </div>
 
           <div class="price-preview" id="price-preview">
@@ -151,13 +240,19 @@
   </div>
 </section>
 {% if user.is_authenticated and product.stock > 0 %}
+  {% if not use_packet_pricing or packets_available > 0 and can_order_packets %}
 <div class="mobile-sticky-cart-bar" id="mobile-sticky-cart-bar">
   <div class="mobile-sticky-cart-meta">
     <span class="mobile-sticky-cart-total" id="sticky-preview-price">₹0</span>
+    {% if use_packet_pricing %}
+    <small>Pack of {{ product.pack_quantity }} · up to {{ packets_available }} packets</small>
+    {% else %}
     <small>{{ product.moq }}+ {{ product.unit }} minimum</small>
+    {% endif %}
   </div>
   <button class="btn btn-primary btn-cart-premium" id="sticky-add-to-cart-btn" type="button">Add to Cart</button>
 </div>
+  {% endif %}
 {% endif %}
 {% endblock %}
 
@@ -186,6 +281,13 @@
         }
         main.classList.remove('is-hidden');
         main.src = src;
+        var hero = document.getElementById('product-hero-media');
+        if (hero) {
+          hero.classList.remove('product-hero-media--flash');
+          void hero.offsetWidth;
+          hero.classList.add('product-hero-media--flash');
+          window.setTimeout(function () { hero.classList.remove('product-hero-media--flash'); }, 500);
+        }
       }
       document.querySelectorAll('.product-gallery-thumb').forEach(function (b) {
         b.classList.remove('is-active');
@@ -204,6 +306,16 @@ const PRICING_TIERS = [
 const productId = {{ product.pk }};
 const moq = {{ product.moq }};
 const stock = {{ product.stock }};
+{% if use_packet_pricing and min_packets and packets_available %}
+initProductPage(PRICING_TIERS, productId, moq, stock, {
+  packQuantity: {{ product.pack_quantity }},
+  packetPrice: Number('{{ product.packet_price }}'),
+  minPackets: {{ min_packets }},
+  maxPackets: {{ packets_available }},
+  unitLabel: '{{ product.unit|escapejs }}'
+});
+{% else %}
 initProductPage(PRICING_TIERS, productId, moq, stock);
+{% endif %}
 </script>
 {% endblock %}

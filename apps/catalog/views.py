@@ -1,5 +1,7 @@
 """Catalog app — Template Views"""
 import json
+import math
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
@@ -137,17 +139,49 @@ def category_detail(request, slug):
 
 def product_detail(request, pk):
     product = get_object_or_404(
-        Product.objects.prefetch_related("gallery_images"),
+        Product.objects.select_related("category", "brand_obj", "subcategory")
+        .prefetch_related("gallery_images"),
         pk=pk,
         is_active=True,
     )
     tiers = product.pricing_tiers.all().order_by("min_qty")
     related = Product.objects.filter(category=product.category, is_active=True).exclude(pk=pk)[:4]
+
+    pack_qty = product.pack_quantity
+    packet_price = product.packet_price
+    use_packet_pricing = bool(pack_qty and packet_price)
+    list_price_total = None
+    packet_savings_amount = None
+    effective_price_per_unit = None
+    if use_packet_pricing and product.single_product_price is not None:
+        list_price_total = product.single_product_price * pack_qty
+    if use_packet_pricing and list_price_total is not None and packet_price is not None:
+        packet_savings_amount = list_price_total - packet_price
+    if use_packet_pricing and pack_qty and packet_price is not None:
+        effective_price_per_unit = (Decimal(packet_price) / Decimal(pack_qty)).quantize(Decimal("0.01"))
+
+    packets_available = None
+    min_packets = None
+    can_order_packets = True
+    if use_packet_pricing and pack_qty:
+        packets_available = product.stock // pack_qty
+        if packets_available > 0:
+            min_packets = max(1, math.ceil(product.moq / pack_qty))
+            min_packets = min(min_packets, packets_available)
+            can_order_packets = product.moq <= packets_available * pack_qty
+
     return render(request, "catalog/product.html", {
         "product": product,
-        "tiers": tiers,
+        "tiers": tiers if not use_packet_pricing else [],
         "related": related,
         "gallery_images": product.gallery_images.all(),
+        "use_packet_pricing": use_packet_pricing,
+        "list_price_total": list_price_total,
+        "packet_savings_amount": packet_savings_amount,
+        "effective_price_per_unit": effective_price_per_unit,
+        "packets_available": packets_available,
+        "min_packets": min_packets,
+        "can_order_packets": can_order_packets,
     })
 
 

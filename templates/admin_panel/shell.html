@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="{% block meta_description %}AaramKart — Admin{% endblock %}" />
+  <title>{% block title %}AaramKart Admin{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/jpeg" href="{% static 'img/logo.jpeg' %}">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}?v={{ STATIC_CACHE_BUSTER }}" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="admin-shell" data-auth="{% if user.is_authenticated %}1{% else %}0{% endif %}">
+{% csrf_token %}
+
+{% if messages %}
+<div class="messages-container">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main class="{% block main_class %}{% endblock %}">
+  {% block content %}{% endblock %}
+</main>
+
+<script src="{% static 'js/main.js' %}?v={{ STATIC_CACHE_BUSTER }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

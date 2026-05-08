@@ -542,7 +542,8 @@ function initBulkAddGrid() {
                 showToast('Available stock is below MOQ for this product.', 'error');
                 return;
             }
-            const qty = Math.min(moq, stock);
+            const uiQty = parseInt(bar.dataset.qty || '', 10) || parseInt(bar.querySelector('.js-bulk-val')?.textContent || '', 10) || moq;
+            const qty = Math.max(moq, Math.min(uiQty, stock));
             try {
                 const res = await fetch('/api/cart/', {
                     method: 'POST',
@@ -562,12 +563,11 @@ function initBulkAddGrid() {
                 const line = findLine(data, pid);
                 bar.dataset.itemId = line ? line.id : '';
                 bar.dataset.qty = String(line ? line.quantity : qty);
-                addBtn.classList.add('hidden');
                 const qtyUi = bar.querySelector('.js-bulk-qty');
                 const valEl = bar.querySelector('.js-bulk-val');
                 if (qtyUi) qtyUi.classList.remove('hidden');
                 if (valEl) valEl.textContent = String(line ? line.quantity : qty);
-                showToast('Added to bulk cart', 'success');
+                showToast('Added to cart', 'success');
             } catch {
                 showToast('Network error', 'error');
             }
@@ -580,13 +580,17 @@ function initBulkAddGrid() {
         const bar = e.target.closest('.product-bulk-bar');
         if (!bar) return;
         const itemId = bar.dataset.itemId;
-        const pid = bar.dataset.productId;
         const moq = parseInt(bar.dataset.moq, 10) || 1;
         const stock = parseInt(bar.dataset.stock, 10) || 0;
-        if (!itemId) return;
-        let qty = parseInt(bar.dataset.qty, 10) || moq;
+        let qty = parseInt(bar.dataset.qty, 10) || parseInt(bar.querySelector('.js-bulk-val')?.textContent || '', 10) || moq;
         qty += inc ? 1 : -1;
         qty = Math.max(moq, Math.min(qty, stock));
+        if (!itemId) {
+            bar.dataset.qty = String(qty);
+            const valEl = bar.querySelector('.js-bulk-val');
+            if (valEl) valEl.textContent = String(qty);
+            return;
+        }
         if (qty === parseInt(bar.dataset.qty, 10) && dec) return;
         try {
             const res = await fetch('/api/cart/', {

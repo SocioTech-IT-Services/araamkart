@@ -8,12 +8,15 @@ let currentPricingTiers = [];
 let currentProductId = null;
 let currentMoq = 1;
 let currentStock = 0;
+/** @type {{ packQuantity: number, packetPrice: number, minPackets: number, maxPackets: number, unitLabel: string } | null} */
+let packetPricing = null;
 
-function initProductPage(tiers, productId, moq, stock) {
+function initProductPage(tiers, productId, moq, stock, packetPricingOpts) {
     currentPricingTiers = tiers;
     currentProductId = productId;
     currentMoq = moq;
     currentStock = stock;
+    packetPricing = packetPricingOpts || null;
 
     const qtyInput = document.getElementById('qty-input');
     if (qtyInput) {
@@ -40,9 +43,15 @@ function changeQty(delta) {
     const input = document.getElementById('qty-input');
     if (!input) return;
     
-    let val = parseInt(input.value) + delta;
-    if (val < currentMoq) val = currentMoq;
-    if (val > currentStock) val = currentStock;
+    let val = parseInt(input.value, 10) + delta;
+    if (packetPricing) {
+        const { minPackets, maxPackets } = packetPricing;
+        if (isNaN(val)) val = minPackets;
+        val = Math.max(minPackets, Math.min(val, maxPackets));
+    } else {
+        if (val < currentMoq) val = currentMoq;
+        if (val > currentStock) val = currentStock;
+    }
     
     input.value = val;
     if (window.navigator && typeof window.navigator.vibrate === 'function') {
@@ -57,7 +66,20 @@ function updatePricePreview() {
     const preview = document.getElementById('preview-price');
     if (!input || !preview) return;
 
-    const qty = parseInt(input.value);
+    if (packetPricing) {
+        const packets = parseInt(input.value, 10);
+        if (isNaN(packets) || packets < packetPricing.minPackets) {
+            preview.textContent = '—';
+            syncStickyTotal();
+            return;
+        }
+        const total = packets * packetPricing.packetPrice;
+        preview.textContent = `₹${total.toLocaleString('en-IN')}`;
+        syncStickyTotal();
+        return;
+    }
+
+    const qty = parseInt(input.value, 10);
     if (isNaN(qty) || qty < 1) {
         preview.textContent = '—';
         return;
@@ -86,7 +108,10 @@ function getPriceForQty(qty) {
 }
 
 async function handleAddToCart() {
-    const qty = parseInt(document.getElementById('qty-input').value);
+    let qty = parseInt(document.getElementById('qty-input').value, 10);
+    if (packetPricing) {
+        qty *= packetPricing.packQuantity;
+    }
     
     try {
         const response = await fetch('/orders/cart/add/', {
@@ -149,6 +174,17 @@ function updateStockMeter() {
     const text = document.getElementById('stock-meter-text');
     const qtyInput = document.getElementById('qty-input');
     if (!fill || !text || !qtyInput || !currentStock) return;
+
+    if (packetPricing) {
+        const packets = parseInt(qtyInput.value || '0', 10);
+        const { maxPackets, unitLabel } = packetPricing;
+        const ratio = maxPackets
+            ? Math.min(100, Math.max(0, Math.round((packets / maxPackets) * 100)))
+            : 0;
+        fill.style.width = `${ratio}%`;
+        text.textContent = `Available: ${maxPackets} packets (${currentStock} ${unitLabel}) · Selected: ${packets} packet(s)`;
+        return;
+    }
 
     const qty = parseInt(qtyInput.value || '0', 10);
     const ratio = Math.min(100, Math.max(0, Math.round((qty / currentStock) * 100)));
