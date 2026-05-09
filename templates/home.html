@@ -78,7 +78,7 @@
             <a href="{% url 'category_detail' category.slug %}" class="cat-card-idea-link">
               <div class="cat-circle">
                 {% if category.generated_image %}
-                  <img src="{% static category.generated_image %}" alt="{{ category.name }}">
+                  <img src="{% static category.generated_image %}" alt="{{ category.name }}" width="280" height="280" loading="lazy" decoding="async">
                 {% else %}
                   <span class="cat-emoji-fallback">{{ category.icon }}</span>
                 {% endif %}
@@ -95,7 +95,7 @@
             <a href="{% url 'category_detail' category.slug %}" class="cat-card-idea-link" tabindex="-1">
               <div class="cat-circle">
                 {% if category.generated_image %}
-                  <img src="{% static category.generated_image %}" alt="{{ category.name }}">
+                  <img src="{% static category.generated_image %}" alt="{{ category.name }}" width="280" height="280" loading="lazy" decoding="async">
                 {% else %}
                   <span class="cat-emoji-fallback">{{ category.icon }}</span>
                 {% endif %}

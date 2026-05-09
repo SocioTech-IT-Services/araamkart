@@ -134,14 +134,14 @@ class AdminProductForm(forms.ModelForm):
         if self.instance.pk and self.instance.category_id:
             self.fields["subcategory"].queryset = SubCategory.objects.filter(
                 category_id=self.instance.category_id, is_active=True
-            ).order_by("order", "name")
+            ).order_by("parent__order", "parent__name", "order", "name")
 
         category_id = self.data.get("category")
         if category_id:
             try:
                 self.fields["subcategory"].queryset = SubCategory.objects.filter(
                     category_id=int(category_id), is_active=True
-                ).order_by("order", "name")
+                ).order_by("parent__order", "parent__name", "order", "name")
             except (TypeError, ValueError):
                 pass
 

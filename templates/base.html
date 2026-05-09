@@ -156,9 +156,9 @@
       {% if c.slug == 'personal-care-hygiene' or c.slug == 'household-essentials' or c.slug == 'utilities' or c.slug == 'games' or c.slug == 'baby-care' or c.slug == 'stationery' or c.slug == 'female-hygiene' %}
       <div class="nav-category-item">
         <a href="{% url 'category_detail' c.slug %}" class="nav-category-pill">{{ c.name }}</a>
-        {% if c.subcategories.all %}
+        {% if c.root_subcategories %}
         <div class="nav-subcategory-pop" role="menu" aria-label="{{ c.name }} subcategories">
-          {% for sc in c.subcategories.all %}
+          {% for sc in c.root_subcategories %}
           {% if sc.is_active %}
           <a href="{% url 'category_detail' c.slug %}?subcategory={{ sc.slug }}" class="nav-subcategory-link" role="menuitem">{{ sc.name }}</a>
           {% endif %}

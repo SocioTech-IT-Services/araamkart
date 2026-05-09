@@ -6,31 +6,45 @@
 <section class="page-section">
   <div class="section-container">
 
-    <!-- Breadcrumb -->
-    <nav class="breadcrumb">
-      <a href="{% url 'home' %}">Home</a> / <span>{{ category.name }}</span>
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'home' %}">Home</a>
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
+      {% if breadcrumb_chain %}
+      <a href="{% url 'category_detail' category.slug %}">{{ category.name }}</a>
+      {% for node in breadcrumb_chain %}
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
+      {% if not forloop.last %}
+      <a href="{% url 'category_detail' category.slug %}?subcategory={{ node.slug }}">{{ node.name }}</a>
+      {% else %}
+      <span>{{ node.name }}</span>
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      <span>{{ category.name }}</span>
+      {% endif %}
     </nav>
 
     <div class="category-layout category-layout--full">
       <div class="products-area products-area--full">
         <div class="products-top-bar">
           <div>
-            <h1 class="page-title">{{ category.name }}</h1>
-            {% if not subcategories %}
+            <h1 class="page-title">
+              {% if selected_subcategory_obj %}{{ selected_subcategory_obj.name }}{% else %}{{ category.name }}{% endif %}
+            </h1>
             <p class="result-count">{{ products|length }} product{{ products|length|pluralize }} found</p>
-            {% endif %}
           </div>
         </div>
 
-        {% if subcategories %}
-        <section class="premium-subtopic-band" aria-label="{{ category.name }} subtopics">
+        {% if top_subcategories %}
+        <section class="premium-subtopic-band" aria-label="{{ category.name }} departments">
           <div class="premium-subtopic-head premium-subtopic-head--actions-only">
             <a href="{% url 'category_detail' category.slug %}" class="premium-subtopic-reset">All</a>
           </div>
           <div class="premium-subtopic-grid">
-            {% for sc in subcategories %}
+            {% for sc in top_subcategories %}
             <a href="{% url 'category_detail' category.slug %}?subcategory={{ sc.slug }}"
-               class="premium-subtopic-pill{% if selected_subcategory == sc.slug %} is-active{% endif %}">
+               class="premium-subtopic-pill{% if selected_root and sc.slug == selected_root.slug %} is-active{% endif %}"
+               {% if sc.has_children %}data-scroll-to-refine="1"{% endif %}>
               <span class="premium-subtopic-pill__media" aria-hidden="true">
                 {% if sc.generated_image %}
                 <img src="{% static sc.generated_image %}" alt="{{ sc.name }}" width="280" height="280" loading="lazy" />
@@ -45,20 +59,33 @@
         </section>
         {% endif %}
 
-        {% if not subcategories %}
+        {% if secondary_subcategories %}
+        <section id="sub-sub-grid" class="premium-subtopic-band premium-subtopic-band--nested" aria-label="Refine subcategory" tabindex="-1">
+          <h3 class="premium-subtopic-nested-title">Refine</h3>
+          <div class="premium-subtopic-grid">
+            {% for sc in secondary_subcategories %}
+            <a href="{% url 'category_detail' category.slug %}?subcategory={{ sc.slug }}"
+               class="premium-subtopic-pill{% if selected_subcategory_obj and sc.slug == selected_subcategory_obj.slug %} is-active{% endif %}">
+              <span class="premium-subtopic-pill__media" aria-hidden="true">
+                {% if sc.generated_image %}
+                <img src="{% static sc.generated_image %}" alt="{{ sc.name }}" width="280" height="280" loading="lazy" />
+                {% else %}
+                <img src="https://source.unsplash.com/280x280/?{{ sc.name|urlencode }}" alt="{{ sc.name }}" width="280" height="280" loading="lazy" />
+                {% endif %}
+              </span>
+              <span class="premium-subtopic-pill__label">{{ sc.name }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+
         {% if products %}
         <div class="products-grid" id="products-grid">
           {% for product in products %}
           {% include "catalog/_product_card.html" with product=product card_id_prefix="prod" show_stock_badge=True %}
           {% endfor %}
         </div>
-        {% else %}
-        <div class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <h3>No products found</h3>
-          <p>Try another subtopic or <a href="{% url 'category_detail' category.slug %}">view all products</a>.</p>
-        </div>
-        {% endif %}
         {% endif %}
       </div>
     </div>

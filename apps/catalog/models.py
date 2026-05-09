@@ -27,22 +27,64 @@ class Category(models.Model):
 
 class SubCategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="subcategories")
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
     name = models.CharField(max_length=120)
     slug = models.SlugField(blank=True)
     is_active = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
 
+    def _unique_slug_base(self):
+        base = slugify(self.name)[:95] or "item"
+        slug = base
+        n = 2
+        qs = SubCategory.objects.filter(category=self.category, parent=self.parent, slug=slug)
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        while qs.exists():
+            slug = f"{base}-{n}"
+            n += 1
+            qs = SubCategory.objects.filter(category=self.category, parent=self.parent, slug=slug)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+        return slug
+
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = self._unique_slug_base()
         super().save(*args, **kwargs)
+
+    def ancestor_chain(self):
+        """Root → … → self (for breadcrumbs)."""
+        chain = []
+        node = self
+        while node:
+            chain.append(node)
+            node = node.parent
+        return list(reversed(chain))
 
     def __str__(self):
         return f"{self.category.name} / {self.name}"
 
     class Meta:
         ordering = ["category__order", "order", "name"]
-        unique_together = [("category", "slug")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["category", "slug"],
+                condition=models.Q(parent__isnull=True),
+                name="catalog_subcat_root_slug",
+            ),
+            models.UniqueConstraint(
+                fields=["category", "parent", "slug"],
+                condition=models.Q(parent__isnull=False),
+                name="catalog_subcat_nested_slug",
+            ),
+        ]
         verbose_name = "Subcategory"
         verbose_name_plural = "Subcategories"
 

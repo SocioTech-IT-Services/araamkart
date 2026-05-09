@@ -3,13 +3,15 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
+from django.urls import reverse
+from urllib.parse import urlencode
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import Category, Product, PricingTier
+from .models import Category, Product, PricingTier, SubCategory
 from .serializers import (
     CategorySerializer, ProductListSerializer,
     ProductDetailSerializer, ProductWriteSerializer, PricingTierSerializer,
@@ -42,6 +44,104 @@ class CategoryListAPIView(APIView):
         return Response(CategorySerializer(cats, many=True).data)
 
 
+class SearchTaxonomySuggestAPIView(APIView):
+    """
+    Suggest category > subcategory paths from active products matching the query
+    (e.g. brand/name/subcategory text), for smart search navigation.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        q = request.GET.get("q", "").strip()
+        if len(q) < 2:
+            return Response([])
+        try:
+            limit = int(request.GET.get("limit", "5"))
+        except ValueError:
+            limit = 5
+        limit = max(1, min(limit, 10))
+
+        name_q = (
+            Q(name__icontains=q)
+            | Q(brand__icontains=q)
+            | Q(brand_obj__name__icontains=q)
+            | Q(subcategory__name__icontains=q)
+            | Q(subcategory__parent__name__icontains=q)
+            | Q(category__name__icontains=q)
+        )
+        base = Product.objects.filter(is_active=True).filter(name_q)
+
+        out = []
+        seen_urls = set()
+
+        sub_rows = (
+            base.filter(subcategory__isnull=False)
+            .values("subcategory_id")
+            .annotate(matches=Count("id", distinct=True))
+            .order_by("-matches")[: limit * 2]
+        )
+        ids = [r["subcategory_id"] for r in sub_rows if r["subcategory_id"]]
+        subs_by_id = {
+            s.id: s
+            for s in SubCategory.objects.filter(pk__in=ids).select_related(
+                "category", "parent"
+            )
+        }
+
+        for row in sub_rows:
+            sid = row["subcategory_id"]
+            sub = subs_by_id.get(sid)
+            if not sub:
+                continue
+            cat_name = sub.category.name
+            chain_names = [n.name for n in sub.ancestor_chain()]
+            path = " > ".join([cat_name] + chain_names)
+            rel = (
+                reverse("category_detail", kwargs={"slug": sub.category.slug})
+                + "?"
+                + urlencode({"subcategory": sub.slug})
+            )
+            if rel in seen_urls:
+                continue
+            seen_urls.add(rel)
+            out.append(
+                {
+                    "path": path,
+                    "url": rel,
+                    "matches": row["matches"],
+                    "kind": "subcategory",
+                }
+            )
+            if len(out) >= limit:
+                break
+
+        remaining = limit - len(out)
+        if remaining > 0:
+            cat_rows = (
+                base.filter(subcategory__isnull=True)
+                .values("category__name", "category__slug")
+                .annotate(matches=Count("id", distinct=True))
+                .order_by("-matches", "category__name")[:remaining]
+            )
+            for row in cat_rows:
+                path = f"{row['category__name']} > Browse category"
+                rel = reverse("category_detail", kwargs={"slug": row["category__slug"]})
+                if rel in seen_urls:
+                    continue
+                seen_urls.add(rel)
+                out.append(
+                    {
+                        "path": path,
+                        "url": rel,
+                        "matches": row["matches"],
+                        "kind": "category",
+                    }
+                )
+
+        return Response(out[:limit])
+
+
 class ProductListAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -60,6 +160,7 @@ class ProductListAPIView(APIView):
                 | Q(brand__icontains=q)
                 | Q(brand_obj__name__icontains=q)
                 | Q(subcategory__name__icontains=q)
+                | Q(subcategory__parent__name__icontains=q)
                 | Q(category__name__icontains=q)
             ).distinct()
         try:

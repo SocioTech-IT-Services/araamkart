@@ -7,7 +7,7 @@ from pathlib import Path
 
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from .models import Category, Product, SubCategory, Brand
 
 
@@ -61,23 +61,76 @@ def policies(request):
     return render(request, "pages/policies.html")
 
 
+def _leaf_subcategory_ids(subcat):
+    """Return leaf SubCategory PKs under `subcat` (includes `subcat` if it has no children)."""
+    children = SubCategory.objects.filter(
+        parent=subcat, category=subcat.category, is_active=True
+    )
+    if not children.exists():
+        return [subcat.pk]
+    ids = []
+    for ch in children.order_by("order", "name"):
+        ids.extend(_leaf_subcategory_ids(ch))
+    return ids
+
+
 def category_detail(request, slug):
     category = get_object_or_404(Category, slug=slug, is_active=True)
-    products = (
-        Product.objects.filter(category=category, is_active=True)
-        .select_related("subcategory", "brand_obj")
-        .prefetch_related("pricing_tiers")
-    )
 
-    # Filters
     brand = request.GET.get("brand", "").strip()
     subcategory_slug = request.GET.get("subcategory", "").strip()
     min_price = request.GET.get("min_price", "")
     max_price = request.GET.get("max_price", "")
     search = request.GET.get("q", "").strip()
 
+    top_subcategories = list(
+        category.subcategories.filter(parent__isnull=True, is_active=True)
+        .prefetch_related(
+            Prefetch(
+                "children",
+                queryset=SubCategory.objects.filter(is_active=True).order_by("order", "name"),
+            )
+        )
+        .order_by("order", "name")
+    )
+
+    selected_subcategory_obj = None
     if subcategory_slug:
-        products = products.filter(subcategory__slug=subcategory_slug)
+        selected_subcategory_obj = SubCategory.objects.filter(
+            category=category, slug=subcategory_slug, is_active=True
+        ).first()
+        if selected_subcategory_obj is None:
+            subcategory_slug = ""
+
+    secondary_subcategories = []
+    if selected_subcategory_obj:
+        if selected_subcategory_obj.parent_id:
+            secondary_subcategories = list(
+                SubCategory.objects.filter(
+                    parent_id=selected_subcategory_obj.parent_id,
+                    category=category,
+                    is_active=True,
+                ).order_by("order", "name")
+            )
+        else:
+            secondary_subcategories = list(
+                selected_subcategory_obj.children.filter(is_active=True).order_by("order", "name")
+            )
+
+    breadcrumb_chain = []
+    selected_root = None
+    if selected_subcategory_obj:
+        breadcrumb_chain = selected_subcategory_obj.ancestor_chain()
+        selected_root = breadcrumb_chain[0] if breadcrumb_chain else None
+
+    products = (
+        Product.objects.filter(category=category, is_active=True)
+        .select_related("subcategory", "subcategory__parent", "brand_obj")
+        .prefetch_related("pricing_tiers")
+    )
+    if subcategory_slug and selected_subcategory_obj:
+        leaf_ids = _leaf_subcategory_ids(selected_subcategory_obj)
+        products = products.filter(subcategory_id__in=leaf_ids)
     if brand:
         products = products.filter(Q(brand__icontains=brand) | Q(brand_obj__name__icontains=brand))
     if search:
@@ -86,9 +139,9 @@ def category_detail(request, slug):
             | Q(brand__icontains=search)
             | Q(brand_obj__name__icontains=search)
             | Q(subcategory__name__icontains=search)
+            | Q(subcategory__parent__name__icontains=search)
         )
 
-    # Brand list for filter sidebar
     all_brands = (
         Product.objects.filter(category=category, is_active=True)
         .values_list("brand", flat=True)
@@ -96,13 +149,15 @@ def category_detail(request, slug):
         .order_by("brand")
     )
     all_brand_objs = Brand.objects.filter(products__category=category, is_active=True).distinct().order_by("name")
-    subcategories = list(category.subcategories.filter(is_active=True).order_by("order", "name"))
     category_manifest = _catalog_image_manifest().get(category.name, {})
     subcategory_images = category_manifest.get("subcategories", {})
-    for subcategory in subcategories:
-        subcategory.generated_image = subcategory_images.get(subcategory.name)
 
-    # Price filter (approximate via base_price)
+    for sc in top_subcategories:
+        sc.generated_image = subcategory_images.get(sc.name)
+        sc.has_children = bool(sc.children.all())
+    for sc in secondary_subcategories:
+        sc.generated_image = subcategory_images.get(sc.name)
+
     filtered_products = []
     for p in products:
         bp = p.base_price
@@ -128,8 +183,12 @@ def category_detail(request, slug):
         "products": filtered_products,
         "all_brands": all_brands,
         "selected_brand": brand,
-        "subcategories": subcategories,
+        "top_subcategories": top_subcategories,
+        "secondary_subcategories": secondary_subcategories,
         "selected_subcategory": subcategory_slug,
+        "selected_subcategory_obj": selected_subcategory_obj,
+        "breadcrumb_chain": breadcrumb_chain,
+        "selected_root": selected_root,
         "all_brand_objs": all_brand_objs,
         "min_price": min_price,
         "max_price": max_price,
@@ -139,7 +198,9 @@ def category_detail(request, slug):
 
 def product_detail(request, pk):
     product = get_object_or_404(
-        Product.objects.select_related("category", "brand_obj", "subcategory")
+        Product.objects.select_related(
+            "category", "brand_obj", "subcategory", "subcategory__parent"
+        )
         .prefetch_related("gallery_images"),
         pk=pk,
         is_active=True,
@@ -200,7 +261,12 @@ def search_results(request):
     if category_id:
         products = products.filter(category__slug=category_id)
     if subcategory_id:
-        products = products.filter(subcategory__slug=subcategory_id)
+        sc = SubCategory.objects.filter(slug=subcategory_id).first()
+        if sc:
+            leaf_ids = _leaf_subcategory_ids(sc)
+            products = products.filter(subcategory_id__in=leaf_ids)
+        else:
+            products = products.filter(subcategory__slug=subcategory_id)
     if brand:
         products = products.filter(Q(brand__icontains=brand) | Q(brand_obj__name__icontains=brand))
 

@@ -7,9 +7,17 @@
   <div class="section-container">
 
     <!-- Breadcrumb -->
-    <nav class="breadcrumb">
-      <a href="{% url 'home' %}">Home</a> /
-      <a href="{% url 'category_detail' product.category.slug %}">{{ product.category.name }}</a> /
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'home' %}">Home</a>
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
+      <a href="{% url 'category_detail' product.category.slug %}">{{ product.category.name }}</a>
+      {% if product.subcategory %}
+      {% for node in product.subcategory.ancestor_chain %}
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
+      <a href="{% url 'category_detail' product.category.slug %}?subcategory={{ node.slug }}">{{ node.name }}</a>
+      {% endfor %}
+      {% endif %}
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
       <span>{{ product.name }}</span>
     </nav>
 

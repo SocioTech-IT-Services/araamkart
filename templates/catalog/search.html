@@ -4,6 +4,11 @@
 {% block content %}
 <section class="page-section">
   <div class="section-container">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'home' %}">Home</a>
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
+      <span>Search{% if query %}: {{ query }}{% endif %}</span>
+    </nav>
     <div class="search-header">
       <h1>Search Results {% if query %}for "<em>{{ query }}</em>"{% endif %}</h1>
       <p class="result-count">{{ products|length }} result{{ products|length|pluralize }} found</p>

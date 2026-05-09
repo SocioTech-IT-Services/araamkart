@@ -2,13 +2,20 @@
 from django.conf import settings
 import time
 
-from .models import Category
+from django.db.models import Prefetch
+
+from .models import Category, SubCategory
 
 
 def nav_categories(request):
+    root_subs = SubCategory.objects.filter(
+        parent__isnull=True, is_active=True
+    ).order_by("order", "name")
     return {
         "nav_categories": Category.objects.filter(is_active=True)
-        .prefetch_related("subcategories")
+        .prefetch_related(
+            Prefetch("subcategories", queryset=root_subs, to_attr="root_subcategories")
+        )
         .order_by("order", "name"),
     }
 

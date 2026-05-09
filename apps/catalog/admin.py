@@ -31,8 +31,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(SubCategory)
 class SubCategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "is_active", "order")
-    list_filter = ("category", "is_active")
+    list_display = ("name", "category", "parent", "is_active", "order")
+    list_filter = ("category", "parent", "is_active")
     list_editable = ("is_active", "order")
     search_fields = ("name", "category__name")
 

@@ -53,6 +53,9 @@
     font-size: .82rem;
     font-weight: 800;
     transition: all .3s ease;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
   }
   .od-btn:hover {
     transform: translateY(-2px);
@@ -201,7 +204,10 @@
         </div>
         <div class="od-actions">
           <a href="{% url 'order_quotation' order.order_number %}?download=1" class="od-btn od-btn-invoice" target="_blank" rel="noopener">📄 Download Invoice</a>
-          <a href="{% url 'home' %}" class="od-btn od-btn-reorder">Reorder</a>
+          <form method="post" action="{% url 'order_reorder' order.order_number %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="od-btn od-btn-reorder">Reorder</button>
+          </form>
           <a href="https://wa.me/919774365127?text={{ 'Need help with order '|add:order.order_number|urlencode }}" class="od-btn od-btn-support" target="_blank" rel="noopener">Help / Support</a>
         </div>
       </div>

@@ -2,7 +2,7 @@
 import json
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
-from django.db.models import Sum
+from django.db.models import Prefetch, Sum
 from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -28,6 +28,47 @@ def _packet_rules(product):
         return None
     min_multiple_qty = pack_qty * 1
     return {"pack_qty": pack_qty, "min_multiple_qty": min_multiple_qty}
+
+
+def _merge_product_into_cart(user, product, quantity):
+    """
+    Add `quantity` units of `product` into the user's cart (merges with an existing line).
+    Returns (True, None) on success, (False, error_message) on validation failure.
+    """
+    packet_rules = _packet_rules(product)
+    if not packet_rules and quantity < product.moq:
+        return False, f"Minimum order quantity is {product.moq} {product.unit}."
+
+    if packet_rules:
+        pack_qty = packet_rules["pack_qty"]
+        min_multiple_qty = packet_rules["min_multiple_qty"]
+        if quantity % pack_qty != 0:
+            return False, (
+                f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}."
+            )
+        if quantity < min_multiple_qty:
+            return False, (
+                f"Minimum packet order is {min_multiple_qty} {product.unit} "
+                f"({min_multiple_qty // pack_qty} packet(s))."
+            )
+
+    if quantity > product.stock:
+        return False, "Not enough stock available."
+
+    cart, _ = Cart.objects.get_or_create(user=user)
+    item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+    if not created:
+        item.quantity += quantity
+    else:
+        item.quantity = quantity
+
+    if packet_rules and item.quantity % packet_rules["pack_qty"] != 0:
+        return False, f"This item is sold in full packets of {packet_rules['pack_qty']}."
+
+    if item.quantity > product.stock:
+        item.quantity = product.stock
+    item.save()
+    return True, None
 
 
 def cart_view(request):
@@ -61,44 +102,11 @@ def add_to_cart(request):
 
     product = get_object_or_404(Product, pk=product_id, is_active=True)
 
-    packet_rules = _packet_rules(product)
-    if not packet_rules and quantity < product.moq:
-        return JsonResponse({"success": False, "error": f"Minimum order quantity is {product.moq} {product.unit}."})
-
-    if packet_rules:
-        pack_qty = packet_rules["pack_qty"]
-        min_multiple_qty = packet_rules["min_multiple_qty"]
-        if quantity % pack_qty != 0:
-            return JsonResponse({
-                "success": False,
-                "error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}.",
-            })
-        if quantity < min_multiple_qty:
-            return JsonResponse({
-                "success": False,
-                "error": f"Minimum packet order is {min_multiple_qty} {product.unit} ({min_multiple_qty // pack_qty} packet(s)).",
-            })
-
-    if quantity > product.stock:
-        return JsonResponse({"success": False, "error": "Not enough stock available."})
+    ok, err = _merge_product_into_cart(request.user, product, quantity)
+    if not ok:
+        return JsonResponse({"success": False, "error": err})
 
     cart, _ = Cart.objects.get_or_create(user=request.user)
-    item, created = CartItem.objects.get_or_create(cart=cart, product=product)
-    if not created:
-        item.quantity += quantity
-    else:
-        item.quantity = quantity
-
-    if packet_rules and item.quantity % packet_rules["pack_qty"] != 0:
-        return JsonResponse({
-            "success": False,
-            "error": f"This item is sold in full packets of {packet_rules['pack_qty']}.",
-        })
-
-    if item.quantity > product.stock:
-        item.quantity = product.stock
-    item.save()
-
     cart_total = cart.get_total()
     return JsonResponse({
         "success": True,
@@ -323,6 +331,52 @@ def order_detail(request, order_number):
     return render(request, "orders/order_detail.html", {"order": order})
 
 
+@login_required
+@require_POST
+def reorder_from_order(request, order_number):
+    order = get_object_or_404(
+        Order.objects.prefetch_related(
+            Prefetch("items", queryset=OrderItem.objects.select_related("product"))
+        ),
+        order_number=order_number,
+        user=request.user,
+    )
+    added = 0
+    skipped = []
+    out_of_stock = []
+    for oi in order.items.all():
+        if not oi.product or not oi.product.is_active:
+            skipped.append(f"{oi.product_name} (no longer available)")
+            continue
+        ok, err = _merge_product_into_cart(request.user, oi.product, oi.quantity)
+        if ok:
+            added += 1
+        else:
+            if err == "Not enough stock available.":
+                out_of_stock.append(oi.product_name)
+            else:
+                skipped.append(f"{oi.product_name}: {err}")
+
+    if added:
+        messages.success(
+            request,
+            f"Added {added} line(s) from this order to your cart.",
+        )
+    if out_of_stock:
+        messages.error(
+            request,
+            "Out of stock: " + ", ".join(out_of_stock),
+        )
+    if skipped:
+        messages.warning(
+            request,
+            "Some items could not be added: " + "; ".join(skipped),
+        )
+    if not added and not skipped and not out_of_stock:
+        messages.info(request, "This order has no items to reorder.")
+    return redirect("cart")
+
+
 # ── Admin Panel ───────────────────────────────────────────────────────────────
 
 def _save_gallery_uploads(product, request):
@@ -453,7 +507,10 @@ def admin_bulk_import_products(request):
 
             category, _ = Category.objects.get_or_create(name=category_name, defaults={"is_active": True})
             subcategory, _ = SubCategory.objects.get_or_create(
-                category=category, name=subcategory_name, defaults={"is_active": True}
+                category=category,
+                parent=None,
+                name=subcategory_name,
+                defaults={"is_active": True},
             )
             brand_obj, _ = Brand.objects.get_or_create(name=brand_name, defaults={"is_active": True})
 

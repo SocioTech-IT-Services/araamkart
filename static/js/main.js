@@ -433,7 +433,90 @@ function initConversionTrustSection() {
     }, 420);
 }
 
+const AK_SCROLL_TO_REFINE_KEY = 'akScrollToSubSub';
+
+function wireCategoryRefineScrollIntent() {
+    document.body.addEventListener(
+        'click',
+        (e) => {
+            const a = e.target.closest('a[data-scroll-to-refine]');
+            if (!a || !a.getAttribute('href')) return;
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            if (a.target === '_blank' || a.getAttribute('download')) return;
+            try {
+                sessionStorage.setItem(AK_SCROLL_TO_REFINE_KEY, '1');
+            } catch (_) {
+                /* private mode */
+            }
+        },
+        true
+    );
+}
+
+function categoryPageStickyHeaderOffset() {
+    const nav = document.querySelector('.navbar-main');
+    if (!nav) return 20;
+    return Math.ceil(nav.getBoundingClientRect().height) + 12;
+}
+
+function smoothScrollToDocumentY(targetY, durationMs, onDone) {
+    const startY = window.scrollY;
+    const delta = targetY - startY;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || durationMs <= 0 || Math.abs(delta) < 2) {
+        window.scrollTo(0, targetY);
+        if (typeof onDone === 'function') requestAnimationFrame(onDone);
+        return;
+    }
+    const t0 = performance.now();
+    const easeInOutCubic = (t) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    function tick(now) {
+        const t = Math.min(1, (now - t0) / durationMs);
+        const y = startY + delta * easeInOutCubic(t);
+        window.scrollTo(0, y);
+        if (t < 1) {
+            requestAnimationFrame(tick);
+        } else if (typeof onDone === 'function') {
+            onDone();
+        }
+    }
+    requestAnimationFrame(tick);
+}
+
+function initCategoryRefineAutoScroll() {
+    const el = document.getElementById('sub-sub-grid');
+    if (!el) return;
+
+    let shouldScroll = false;
+    try {
+        shouldScroll = sessionStorage.getItem(AK_SCROLL_TO_REFINE_KEY) === '1';
+        if (shouldScroll) sessionStorage.removeItem(AK_SCROLL_TO_REFINE_KEY);
+    } catch (_) {}
+
+    if (!shouldScroll) return;
+
+    const run = () => {
+        const pad = categoryPageStickyHeaderOffset();
+        const rect = el.getBoundingClientRect();
+        const y = Math.max(0, rect.top + window.scrollY - pad);
+        const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 520;
+        smoothScrollToDocumentY(y, duration, () => {
+            try {
+                el.focus({ preventScroll: true });
+            } catch (_) {
+                /* older browsers */
+            }
+            el.classList.add('category-refine--pulse');
+            window.setTimeout(() => el.classList.remove('category-refine--pulse'), 1150);
+        });
+    };
+
+    requestAnimationFrame(() => requestAnimationFrame(run));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    wireCategoryRefineScrollIntent();
     // ── DROPDOWNS (optional legacy ids) ──
     const userBtn = document.getElementById('nav-user-btn');
     const userDropdown = document.getElementById('nav-dropdown');
@@ -495,6 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminSidebar();
     initCategorySlider();
     initConversionTrustSection();
+    initCategoryRefineAutoScroll();
 
     const alerts = document.querySelectorAll('.messages-container .alert');
     alerts.forEach((alert) => {
@@ -542,17 +626,42 @@ function initNavSearchSuggest() {
           </div>`;
     };
 
-    const renderResults = (items) => {
-        if (!items.length) {
+    const renderResults = (taxonomy, productItems) => {
+        if (!taxonomy.length && !productItems.length) {
             hide();
             return;
         }
-        panel.innerHTML = items
-            .map((p) => {
-                const thumb = p.image
-                    ? `<img src="${String(p.image).replace(/"/g, '&quot;')}" alt="" width="44" height="44" />`
-                    : '<span class="nav-search-suggest-item__ph" aria-hidden="true"></span>';
-                return `
+        const blocks = [];
+        if (taxonomy.length) {
+            blocks.push('<div class="nav-search-suggest-section-label">Browse categories</div>');
+            blocks.push(
+                taxonomy
+                    .map((t) => {
+                        const href = String(t.url || '').replace(/"/g, '&quot;');
+                        const matches =
+                            t.matches != null ? `${escapeHtml(String(t.matches))} match${Number(t.matches) === 1 ? '' : 'es'}` : '';
+                        return `
+          <a role="option" class="nav-search-suggest-item nav-search-suggest-item--taxonomy" href="${href}">
+            <span class="nav-search-suggest-item__ph" aria-hidden="true">📂</span>
+            <div class="nav-search-suggest-item__meta">
+              <div class="nav-search-suggest-item__name">${escapeHtml(t.path)}</div>
+              <div class="nav-search-suggest-item__sub">Open filtered category view</div>
+            </div>
+            <div class="nav-search-suggest-item__price">${matches}</div>
+          </a>`;
+                    })
+                    .join('')
+            );
+        }
+        if (productItems.length) {
+            blocks.push('<div class="nav-search-suggest-section-label">Products</div>');
+            blocks.push(
+                productItems
+                    .map((p) => {
+                        const thumb = p.image
+                            ? `<img src="${String(p.image).replace(/"/g, '&quot;')}" alt="" width="44" height="44" />`
+                            : '<span class="nav-search-suggest-item__ph" aria-hidden="true"></span>';
+                        return `
           <a role="option" class="nav-search-suggest-item" href="/product/${p.id}/">
             ${thumb}
             <div class="nav-search-suggest-item__meta">
@@ -561,8 +670,11 @@ function initNavSearchSuggest() {
             </div>
             <div class="nav-search-suggest-item__price">${p.base_price != null ? '₹' + escapeHtml(String(p.base_price)) : '—'}</div>
           </a>`;
-            })
-            .join('');
+                    })
+                    .join('')
+            );
+        }
+        panel.innerHTML = blocks.join('');
     };
 
     let debounce = null;
@@ -576,10 +688,21 @@ function initNavSearchSuggest() {
         debounce = setTimeout(async () => {
             renderLoading();
             try {
-                const res = await fetch(`/api/products/?q=${encodeURIComponent(q)}&limit=3`);
-                if (!res.ok) throw new Error('bad');
-                const data = await res.json();
-                renderResults(Array.isArray(data) ? data : []);
+                const [taxRes, prodRes] = await Promise.all([
+                    fetch(`/api/search/suggest/?q=${encodeURIComponent(q)}&limit=5`),
+                    fetch(`/api/products/?q=${encodeURIComponent(q)}&limit=4`),
+                ]);
+                let taxonomy = [];
+                let products = [];
+                if (taxRes.ok) {
+                    const tdata = await taxRes.json();
+                    taxonomy = Array.isArray(tdata) ? tdata : [];
+                }
+                if (prodRes.ok) {
+                    const pdata = await prodRes.json();
+                    products = Array.isArray(pdata) ? pdata : [];
+                }
+                renderResults(taxonomy, products);
             } catch {
                 hide();
             }

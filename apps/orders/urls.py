@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     cart_view, add_to_cart, update_cart, remove_from_cart,
     checkout_view, order_success, order_quotation, order_history, order_detail,
+    reorder_from_order,
     admin_dashboard, admin_products, admin_orders,
     admin_product_add, admin_product_edit, admin_product_delete,
     admin_bulk_import_products,
@@ -24,6 +25,7 @@ urlpatterns = [
     path("success/<str:order_number>/quotation/", order_quotation, name="order_quotation"),
     path("history/", order_history, name="order_history"),
     path("detail/<str:order_number>/", order_detail, name="order_detail"),
+    path("detail/<str:order_number>/reorder/", reorder_from_order, name="order_reorder"),
     # Admin Panel
     path("admin-panel/", admin_dashboard, name="admin_dashboard"),
     path("admin-panel/products/", admin_products, name="admin_products"),
