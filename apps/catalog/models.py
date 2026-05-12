@@ -218,6 +218,46 @@ class Product(models.Model):
         ordering = ["name"]
 
 
+class ProductPlacement(models.Model):
+    """
+    Extra category/subcategory paths where the same Product appears (one SKU / one inventory row).
+    Product.category / Product.subcategory remain the canonical storefront defaults;
+    placements list every browse path including additional categories.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="placements",
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="product_placements",
+    )
+    subcategory = models.ForeignKey(
+        SubCategory,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="product_placements",
+    )
+
+    class Meta:
+        verbose_name = "product placement"
+        verbose_name_plural = "product placements"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "category", "subcategory"],
+                name="catalog_productplacement_unique_cat_sub",
+            ),
+        ]
+
+    def __str__(self):
+        sub = f" / {self.subcategory.name}" if self.subcategory_id else ""
+        return f"{self.product_id} → {self.category.name}{sub}"
+
+
 class ProductImage(models.Model):
     """Extra photos for a product (primary hero remains Product.image)."""
 

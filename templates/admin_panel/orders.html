@@ -49,7 +49,10 @@
               <td><strong>₹{{ order.total_amount }}</strong></td>
               <td>
                 <select class="status-select" id="status-{{ order.pk }}"
-                        onchange="updateOrderStatus({{ order.pk }}, this.value)">
+                        data-phone="{{ order.phone|default:''|escape }}"
+                        data-prev-value="{{ order.status }}"
+                        onfocus="this.dataset.prevValue=this.value"
+                        onchange="updateOrderStatus({{ order.pk }}, this.value, this.dataset.phone, this)">
                   {% for s, label in status_choices %}
                   <option value="{{ s }}" {% if order.status == s %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
@@ -58,6 +61,10 @@
               <td>{{ order.created_at|date:"d M, H:i" }}</td>
               <td>
                 <a href="{% url 'admin_order_detail' order.order_number %}" class="btn btn-outline btn-xs">View</a>
+                <button type="button"
+                        class="btn btn-danger btn-xs js-order-delete-trigger"
+                        data-order-number="{{ order.order_number }}"
+                        data-delete-url="{% url 'admin_order_delete' order.order_number %}">Delete</button>
               </td>
             </tr>
             {% endfor %}
@@ -73,20 +80,157 @@
 </section>
 
 <div class="toast" id="order-toast"></div>
+
+<div class="order-delete-modal" id="order-delete-modal" hidden>
+  <div class="order-delete-modal__panel" role="dialog" aria-modal="true" aria-labelledby="order-delete-title">
+    <h2 id="order-delete-title">Delete order?</h2>
+    <p>Enter your admin login password to permanently delete order <strong id="delete-order-number">#</strong>.</p>
+    <form method="post" id="order-delete-form">
+      {% csrf_token %}
+      <label for="admin-delete-password">Admin password</label>
+      <input type="password" name="admin_password" id="admin-delete-password" autocomplete="current-password" required>
+      <div class="order-delete-modal__actions">
+        <button type="button" class="btn btn-outline" id="order-delete-cancel">Cancel</button>
+        <button type="submit" class="btn btn-danger">Delete permanently</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock admin_main %}
 
 {% block extra_scripts %}
+<style>
+.btn-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+.btn-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+.order-delete-modal[hidden] {
+  display: none;
+}
+.order-delete-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+.order-delete-modal__panel {
+  width: min(100%, 420px);
+  border-radius: 18px;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+.order-delete-modal__panel h2 {
+  margin: 0 0 0.35rem;
+  color: #111827;
+  font-size: 1.15rem;
+}
+.order-delete-modal__panel p {
+  margin: 0 0 1rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+.order-delete-modal__panel label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+.order-delete-modal__panel input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 0.72rem 0.85rem;
+  outline: none;
+}
+.order-delete-modal__panel input:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+.order-delete-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+</style>
 <script>
-function updateOrderStatus(orderId, newStatus) {
+const deleteModal = document.getElementById('order-delete-modal');
+const deleteForm = document.getElementById('order-delete-form');
+const deletePassword = document.getElementById('admin-delete-password');
+const deleteOrderNumber = document.getElementById('delete-order-number');
+document.querySelectorAll('.js-order-delete-trigger').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const orderNumber = btn.dataset.orderNumber;
+    deleteOrderNumber.textContent = '#' + orderNumber;
+    deleteForm.action = btn.dataset.deleteUrl;
+    deletePassword.value = '';
+    deleteModal.hidden = false;
+    deletePassword.focus();
+  });
+});
+document.getElementById('order-delete-cancel').addEventListener('click', () => {
+  deleteModal.hidden = true;
+});
+deleteModal.addEventListener('click', (event) => {
+  if (event.target === deleteModal) deleteModal.hidden = true;
+});
+
+function updateOrderStatus(orderId, newStatus, defaultPhone, selectEl) {
+  const prev = selectEl.dataset.prevValue !== undefined && selectEl.dataset.prevValue !== ""
+    ? selectEl.dataset.prevValue
+    : selectEl.getAttribute("data-prev-value") || "";
+  let deliveryPhone = "";
+  if (newStatus === "delivered") {
+    deliveryPhone = prompt(
+      "Confirm customer phone before marking delivered (required):",
+      defaultPhone || ""
+    );
+    if (deliveryPhone === null) {
+      selectEl.value = prev;
+      return;
+    }
+    const digits = deliveryPhone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      alert("Enter a valid phone number (at least 10 digits).");
+      selectEl.value = prev;
+      return;
+    }
+  }
   fetch('{% url "admin_update_order_status" %}', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-    body: JSON.stringify({order_id: orderId, status: newStatus})
+    body: JSON.stringify({
+      order_id: orderId,
+      status: newStatus,
+      delivery_phone: deliveryPhone
+    })
   })
   .then(r => r.json())
   .then(data => {
-    if (data.success) showToast('Status updated ✓', 'success');
-    else showToast('Update failed', 'error');
+    if (data.success) {
+      selectEl.dataset.prevValue = newStatus;
+      selectEl.setAttribute("data-prev-value", newStatus);
+      selectEl.dataset.phone = deliveryPhone ? deliveryPhone.trim() : selectEl.dataset.phone;
+      showToast('Status updated ✓', 'success');
+    } else {
+      selectEl.value = prev;
+      showToast(data.error || 'Update failed', 'error');
+    }
+  })
+  .catch(() => {
+    selectEl.value = prev;
+    showToast('Update failed', 'error');
   });
 }
 

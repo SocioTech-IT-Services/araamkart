@@ -30,6 +30,18 @@ def seed_subcategories(apps, schema_editor) -> None:
     Product.objects.all().update(subcategory_id=None)
     SubCategory.objects.all().delete()
 
+    # Plan keys are canonical (post–0011 names). Also match legacy names from 0005 for
+    # migrations that run seed before category rename (e.g. 0008).
+    category_lookup_names: dict[str, list[str]] = {
+        "Personal care and hygiene": ["Personal Care & Hygiene", "Personal care and hygiene"],
+        "Household essentials": ["Household Essentials", "Household essentials"],
+        "Utilities": ["Utilities"],
+        "Baby care": ["Baby Care", "Baby care"],
+        "Stationery": ["Stationery"],
+        "Female hygiene": ["Female Hygiene", "Female hygiene"],
+        "Games": ["Games"],
+    }
+
     personal_care = [
         (
             "Hair Care",
@@ -122,7 +134,6 @@ def seed_subcategories(apps, schema_editor) -> None:
                 "Clothes detergent",
                 "Naphthalin balls",
                 "Insence sticks",
-                "Candles",
             ],
         ),
         ("Shoes brush and polish", []),
@@ -145,6 +156,7 @@ def seed_subcategories(apps, schema_editor) -> None:
         "Mirrors",
         "Saftty pin",
         "Lighters",
+        "Candles",
         "Clothe clips",
         "Bandages",
         "Toilet paper",
@@ -212,20 +224,24 @@ def seed_subcategories(apps, schema_editor) -> None:
 
     games_flat = ["Playing Cards", "Housie Books", "Tennis Balls", "Balloons"]
 
+    # Category names must match `0011_categories_six_only` / home page exactly.
     plan: list[tuple[str, list[tuple[str, list[str]]] | list[str]]] = [
-        ("Personal Care & Hygiene", personal_care),
-        ("Household Essentials", household),
+        ("Personal care and hygiene", personal_care),
+        ("Household essentials", household),
         ("Utilities", utilities_flat),
-        ("Baby Care", baby_flat),
-        ("Stationery", stationery_flat),
-        ("Female Hygiene", female_flat),
         ("Games", games_flat),
+        ("Baby care", baby_flat),
+        ("Stationery", stationery_flat),
+        ("Female hygiene", female_flat),
     ]
 
     for cat_name, spec in plan:
-        try:
-            cat = Category.objects.get(name=cat_name)
-        except Category.DoesNotExist:
+        cat = None
+        for try_name in category_lookup_names.get(cat_name, [cat_name]):
+            cat = Category.objects.filter(name=try_name).first()
+            if cat:
+                break
+        if not cat:
             cat = Category.objects.create(
                 name=cat_name,
                 slug=slugify(cat_name)[:100],

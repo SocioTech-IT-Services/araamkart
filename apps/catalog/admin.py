@@ -1,6 +1,12 @@
 """Catalog app — Django Admin"""
 from django.contrib import admin
-from .models import Category, SubCategory, Brand, Product, PricingTier, ProductImage, ProductVariant
+from .models import Category, SubCategory, Brand, Product, PricingTier, ProductImage, ProductVariant, ProductPlacement
+
+
+class ProductPlacementInline(admin.TabularInline):
+    model = ProductPlacement
+    extra = 0
+    fields = ("category", "subcategory")
 
 
 class ProductImageInline(admin.TabularInline):
@@ -61,7 +67,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ("category", "subcategory", "brand_obj", "is_active", "brand")
     list_editable = ("stock", "is_active", "subcategory")
     search_fields = ("name", "brand", "sku")
-    inlines = [PricingTierInline, ProductImageInline, ProductVariantInline]
+    inlines = [ProductPlacementInline, PricingTierInline, ProductImageInline, ProductVariantInline]
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
         (

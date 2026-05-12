@@ -95,7 +95,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+    ("product-images", BASE_DIR / "product image"),
+]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Bump this (or set STATIC_CACHE_BUSTER in .env) when CSS/JS changes don’t show — browsers cache /static/ aggressively.
 STATIC_CACHE_BUSTER = config("STATIC_CACHE_BUSTER", default="20260530")

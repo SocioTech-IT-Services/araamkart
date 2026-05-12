@@ -17,7 +17,11 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "slug", "icon", "description", "product_count"]
 
     def get_product_count(self, obj):
-        return obj.products.filter(is_active=True).count()
+        return (
+            Product.objects.filter(placements__category=obj, is_active=True)
+            .distinct()
+            .count()
+        )
 
 
 class ProductListSerializer(serializers.ModelSerializer):

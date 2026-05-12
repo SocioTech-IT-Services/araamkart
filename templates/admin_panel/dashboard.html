@@ -1,96 +1,520 @@
 {% extends 'admin_panel/base.html' %}
-{% block title %}Admin Dashboard — AaramKart{% endblock %}
+{% block title %}Dashboard — AaramKart{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        fontFamily: {
+          inter: ["Inter", "sans-serif"],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  .premium-shell {
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 35%),
+      radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 30%);
+  }
+  .premium-card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.66);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.05);
+  }
+  .stat-glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+  .dark .premium-card {
+    background: rgba(15, 23, 42, 0.55);
+  }
+  .stagger-card {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    animation: staggerIn 0.55s ease forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes staggerIn {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stagger-card {
+      opacity: 1 !important;
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+  .premium-btn {
+    transition: transform 0.18s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  .premium-btn:active {
+    transform: scale(0.96);
+  }
+  .icon-bounce {
+    transition: transform 0.2s ease;
+  }
+  .group:hover .icon-bounce {
+    transform: translateY(-2px) scale(1.08);
+  }
+  .chart-shell {
+    min-height: 275px;
+    position: relative;
+  }
+  .chart-target {
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .chart-target.is-ready {
+    opacity: 1;
+  }
+  .chart-shimmer {
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(90deg, rgba(226, 232, 240, 0.35) 0%, rgba(148, 163, 184, 0.22) 50%, rgba(226, 232, 240, 0.35) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+  }
+  .chart-shimmer[hidden] { display: none; }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  .status-glow {
+    position: relative;
+  }
+  .status-glow::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-right: 6px;
+    background: currentColor;
+    box-shadow: 0 0 10px currentColor;
+    animation: statusPulse 1.2s ease infinite;
+  }
+  @keyframes statusPulse {
+    0%, 100% { opacity: 0.55; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+  .click-row { cursor: pointer; }
+  .magnetic-btn {
+    transition: transform 0.16s ease, box-shadow 0.2s ease;
+    will-change: transform;
+  }
+  .hero-title-gradient {
+    background: linear-gradient(90deg, #4f46e5, #7c3aed);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: #10b981;
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0.55);
+    animation: livePulse 1.5s ease infinite;
+  }
+  @keyframes livePulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+  .action-glow-btn {
+    --color-primary: 99, 102, 241;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 15px rgba(var(--color-primary), 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    will-change: transform;
+  }
+  .action-glow-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+    transition: transform 0.35s ease;
+  }
+  .action-glow-btn:hover {
+    transform: translate3d(0, -4px, 0);
+    box-shadow: 0 0 22px rgba(var(--color-primary), 0.52);
+  }
+  .action-glow-btn:hover::before { transform: translateX(130%); }
+  .stat-trend {
+    position: absolute;
+    inset: auto 8px 10px 8px;
+    height: 42px;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .nav-icon-duo {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+  }
+  .nav-icon-inventory { background-image: linear-gradient(135deg, #22c55e, #14b8a6); }
+  .nav-icon-marketing { background-image: linear-gradient(135deg, #ec4899, #8b5cf6); }
+  .nav-icon-analytics { background-image: linear-gradient(135deg, #3b82f6, #6366f1); }
+  .nav-icon-customers { background-image: linear-gradient(135deg, #0ea5e9, #10b981); }
+  .nav-icon-discounts { background-image: linear-gradient(135deg, #f59e0b, #ef4444); }
+  .nav-icon-settings { background-image: linear-gradient(135deg, #64748b, #334155); }
+  .stagger-nav { animation-delay: 0.1s !important; }
+  .stagger-header { animation-delay: 0.2s !important; }
+  .theme-ripple {
+    position: fixed;
+    border-radius: 999px;
+    transform: scale(0);
+    animation: rippleExpand 620ms ease-out forwards;
+    background: radial-gradient(circle, rgba(99,102,241,0.25), rgba(99,102,241,0.05));
+    pointer-events: none;
+    z-index: 60;
+  }
+  @keyframes rippleExpand {
+    to { transform: scale(1); opacity: 0; }
+  }
+  .liquid-btn {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .liquid-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-102%);
+    transition: transform 0.34s ease;
+    z-index: -1;
+  }
+  .liquid-btn:hover::before {
+    transform: translateX(0);
+  }
+  .liquid-btn-emerald::before { background: linear-gradient(90deg, #10b981, #059669); }
+  .liquid-btn-neutral::before { background: linear-gradient(90deg, #334155, #1e293b); }
+  .liquid-btn:hover { color: #fff !important; border-color: transparent !important; }
+  .mega-item { position: relative; }
+  .mega-menu {
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .mega-item:hover .mega-menu {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .slide-down {
+    animation: slideDown 0.2s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in {
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .fab-plus {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45);
+    animation: fabPulse 2.2s infinite;
+  }
+  .fab-plus:hover {
+    transform: rotate(90deg) scale(1.08) translate3d(0, 0, 0);
+  }
+  @keyframes fabPulse {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.42); }
+    70% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  }
+  .icon-gradient {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .icon-sales { background-image: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+  .icon-units { background-image: linear-gradient(135deg, #10b981, #14b8a6); }
+  .icon-orders { background-image: linear-gradient(135deg, #f59e0b, #ef4444); }
+  .status-delivered-glass {
+    background: rgba(16, 185, 129, 0.16);
+    color: #047857;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 0 14px rgba(16, 185, 129, 0.2);
+  }
+  .status-pending-glass {
+    background: rgba(245, 158, 11, 0.18);
+    color: #b45309;
+    animation: amberBreathe 2.6s ease-in-out infinite;
+  }
+  @keyframes amberBreathe {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2), 0 0 0 rgba(245, 158, 11, 0.05); }
+    50% { box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.32), 0 0 16px rgba(245, 158, 11, 0.22); }
+  }
+</style>
+{% endblock %}
 
 {% block admin_main %}
-<section class="page-section admin-section">
-  <div class="section-container">
-    <div class="admin-header admin-header--compact">
-      <h1>Dashboard</h1>
-    </div>
-
-    <!-- ── STAT CARDS ── -->
-    <div class="stats-grid">
-      <div class="stat-card stat-revenue" id="stat-sales">
-        <div class="stat-icon">₹</div>
-        <div class="stat-value">₹{{ total_sales_rs|floatformat:0 }}</div>
-        <div class="stat-label">Total sales (excl. cancelled)</div>
-      </div>
-      <div class="stat-card stat-success" id="stat-units">
-        <div class="stat-icon">📊</div>
-        <div class="stat-value">{{ units_sold }}</div>
-        <div class="stat-label">Units sold</div>
-      </div>
-      <div class="stat-card" id="stat-total-orders">
-        <div class="stat-icon">📋</div>
-        <div class="stat-value">{{ total_orders }}</div>
-        <div class="stat-label">Total orders</div>
-      </div>
-      <div class="stat-card stat-warning" id="stat-pending">
-        <div class="stat-icon">⏳</div>
-        <div class="stat-value">{{ pending_orders }}</div>
-        <div class="stat-label">Pending orders</div>
-      </div>
-      <div class="stat-card stat-success" id="stat-products">
-        <div class="stat-icon">📦</div>
-        <div class="stat-value">{{ total_products }}</div>
-        <div class="stat-label">Active products</div>
-      </div>
-      <div class="stat-card {% if low_stock > 0 %}stat-danger{% endif %}" id="stat-low-stock">
-        <div class="stat-icon">⚠️</div>
-        <div class="stat-value">{{ low_stock }}</div>
-        <div class="stat-label">Low stock (≤10)</div>
-      </div>
-    </div>
-
-    {% if product_stock_chart %}
-    <div class="admin-section-card admin-chart-card" aria-label="Product stock levels">
-      <div class="section-card-header">
-        <h2>Stock by product</h2>
-        <span class="admin-chart-sub">Top {{ product_stock_chart|length }} by quantity on hand · max {{ product_stock_chart_max }}</span>
-      </div>
-      <div class="admin-bar-chart" role="img" aria-label="Bar chart of stock per product">
-        {% for row in product_stock_chart %}
-        <div class="admin-bar-row">
-          <span class="admin-bar-label" title="{{ row.name }}">{{ row.name|truncatechars:32 }}</span>
-          <div class="admin-bar-track">
-            <div class="admin-bar-fill" style="width: {{ row.bar_pct }}%;"></div>
-          </div>
-          <span class="admin-bar-value">{{ row.stock }}</span>
+<section class="page-section admin-section premium-shell text-slate-900 dark:text-slate-100">
+  <div class="section-container font-inter">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 stagger-card stagger-header">
+      <div>
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight hero-title-gradient">Dashboard</h1>
+        <div class="mt-1 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span class="font-medium text-emerald-600 dark:text-emerald-400">Store Live</span>
+          <span>Performance cockpit for sales, demand, and operations</span>
         </div>
-        {% endfor %}
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="stats-source" class="premium-btn rounded-xl border border-slate-300/70 bg-white/70 px-3 py-2 text-sm dark:bg-slate-800/70 dark:border-slate-700">
+          <option value="combined" {% if selected_source == 'combined' %}selected{% endif %}>Combined</option>
+          <option value="online" {% if selected_source == 'online' %}selected{% endif %}>Online</option>
+          <option value="offline" {% if selected_source == 'offline' %}selected{% endif %}>Offline</option>
+        </select>
+        <select id="date-range" class="premium-btn rounded-xl border border-slate-300/70 bg-white/70 px-3 py-2 text-sm dark:bg-slate-800/70 dark:border-slate-700">
+          <option value="today">Today</option>
+          <option value="7days" selected>Last 7 Days</option>
+          <option value="30days">Last 30 Days</option>
+          <option value="custom">Custom</option>
+        </select>
+        <button type="button" id="theme-toggle" class="premium-btn rounded-xl border border-slate-300/70 bg-white/70 px-3 py-2 text-sm dark:bg-slate-800/70 dark:border-slate-700">Toggle Theme</button>
       </div>
     </div>
-    {% endif %}
 
-    <!-- ── RECENT ORDERS ── -->
-    <div class="admin-section-card">
-      <div class="section-card-header">
-        <h2>Recent Orders</h2>
-        <a href="{% url 'admin_orders' %}" class="btn btn-outline btn-sm">View All →</a>
+    <div class="mb-6 flex flex-wrap items-center gap-2 stagger-card" style="animation-delay:0.25s;">
+      <button class="action-glow-btn premium-btn rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100" style="--color-primary:99,102,241;">Generate Report</button>
+      <button class="action-glow-btn premium-btn rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100" style="--color-primary:16,185,129;">Sync Inventory</button>
+      <button class="action-glow-btn premium-btn rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100" style="--color-primary:236,72,153;">Flash Sale Mode</button>
+    </div>
+
+    <div class="sticky top-0 z-20 mb-6 rounded-2xl border border-slate-200 bg-slate-50/95 px-3 py-3 backdrop-blur stagger-card stagger-nav">
+      <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="open-global-search" class="premium-btn flex-1 min-w-[260px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-100">
+              Search Orders, Products, Customers... <span class="float-right text-xs text-slate-400">Ctrl+K</span>
+            </button>
+
+            <button type="button" id="open-notifications" class="premium-btn relative rounded-xl border border-slate-200 bg-white p-2 hover:bg-slate-100">
+              <i data-lucide="bell" class="h-4 w-4 text-slate-700"></i>
+              <span class="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"></span>
+            </button>
+          </div>
+
+          <nav class="flex flex-wrap items-center gap-1">
+            <div class="mega-item">
+              <button class="premium-btn magnetic-btn rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                <i data-lucide="boxes" class="h-4 w-4 nav-icon-duo nav-icon-inventory"></i>Inventory
+              </button>
+              <div class="mega-menu slide-down absolute left-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                <a href="{% url 'admin_products' %}" class="block rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Bulk Upload</a>
+                <a href="{% url 'admin_products' %}" class="block rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Categories</a>
+                <a href="{% url 'admin_products' %}" class="block rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Low Stock Alerts</a>
+              </div>
+            </div>
+            <div class="mega-item">
+              <button class="premium-btn magnetic-btn rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                <i data-lucide="megaphone" class="h-4 w-4 nav-icon-duo nav-icon-marketing"></i>Marketing
+              </button>
+              <div class="mega-menu slide-down absolute left-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                <a href="#" class="block rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Email Campaigns</a>
+                <a href="#" class="block rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Coupon Codes</a>
+                <a href="#" class="block rounded-lg px-3 py-2 text-sm hover:bg-slate-50">Banner Management</a>
+              </div>
+            </div>
+            <button class="premium-btn magnetic-btn rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2"><i data-lucide="line-chart" class="h-4 w-4 nav-icon-duo nav-icon-analytics"></i>Analytics</button>
+            <button class="premium-btn magnetic-btn rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2"><i data-lucide="users" class="h-4 w-4 nav-icon-duo nav-icon-customers"></i>Customers</button>
+            <button class="premium-btn magnetic-btn rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2"><i data-lucide="badge-percent" class="h-4 w-4 nav-icon-duo nav-icon-discounts"></i>Discounts</button>
+            <button class="premium-btn magnetic-btn rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2"><i data-lucide="settings-2" class="h-4 w-4 nav-icon-duo nav-icon-settings"></i>Settings</button>
+          </nav>
+      </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
+      <div class="premium-card stat-glass stagger-card group rounded-2xl p-5 relative overflow-hidden border-blue-200/60 bg-blue-50/45" style="animation-delay:0.3s;">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-300">
+          <span class="text-xs tracking-[0.2em] uppercase">Total Sales</span>
+          <i data-lucide="indian-rupee" class="icon-bounce icon-gradient icon-sales h-4 w-4"></i>
+        </div>
+        <p class="mt-3 text-2xl font-semibold tracking-wide relative z-10">₹{{ total_sales_rs|floatformat:0 }}</p>
+        <p class="mt-1 text-xs text-emerald-500">Revenue excluding cancelled orders</p>
+        <div id="spark-sales" class="stat-trend"></div>
+      </div>
+      <div class="premium-card stat-glass stagger-card group rounded-2xl p-5 relative overflow-hidden border-emerald-200/60 bg-emerald-50/45" style="animation-delay:0.4s;">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-300">
+          <span class="text-xs tracking-[0.2em] uppercase">Units Sold</span>
+          <i data-lucide="activity" class="icon-bounce icon-gradient icon-units h-4 w-4"></i>
+        </div>
+        <p class="mt-3 text-2xl font-semibold tracking-wide relative z-10">{{ units_sold }}</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Volume trend stays healthy</p>
+        <div id="spark-units" class="stat-trend"></div>
+      </div>
+      <div class="premium-card stat-glass stagger-card group rounded-2xl p-5 relative overflow-hidden border-orange-200/60 bg-orange-50/45" style="animation-delay:0.5s;">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-300">
+          <span class="text-xs tracking-[0.2em] uppercase">Total Orders</span>
+          <i data-lucide="clipboard-list" class="icon-bounce icon-gradient icon-orders h-4 w-4"></i>
+        </div>
+        <p class="mt-3 text-2xl font-semibold tracking-wide relative z-10">{{ total_orders }}</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">All channels combined</p>
+        <div id="spark-orders" class="stat-trend"></div>
+      </div>
+      <div class="premium-card stagger-card group rounded-2xl p-5" style="animation-delay:0.4s;">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-300">
+          <span class="text-xs tracking-[0.2em] uppercase">Pending</span>
+          <i data-lucide="clock-3" class="icon-bounce h-4 w-4"></i>
+        </div>
+        <p class="mt-3 text-2xl font-semibold tracking-wide">{{ pending_orders }}</p>
+        <p class="mt-1 text-xs text-amber-500">Needs fulfillment attention</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mb-6">
+      <article class="premium-card stagger-card col-span-12 xl:col-span-8 rounded-2xl p-5" style="animation-delay:0.5s;">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold tracking-wide">Interactive Sales Graph</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Revenue vs projected growth</p>
+          </div>
+        </div>
+        <div class="chart-shell mt-3">
+          <div class="chart-shimmer" data-shimmer="monthly-sales"></div>
+          <div id="monthly-sales-chart" class="chart-target"></div>
+        </div>
+      </article>
+
+      <article class="premium-card stagger-card col-span-12 md:col-span-6 xl:col-span-4 rounded-2xl p-5" style="animation-delay:0.6s;">
+        <h2 class="text-lg font-semibold tracking-wide">Live Feed</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Real-time incoming order pulse</p>
+        <div class="chart-shell mt-3" style="min-height:180px;">
+          <div class="chart-shimmer" data-shimmer="live-feed"></div>
+          <div id="live-feed-chart" class="chart-target"></div>
+        </div>
+      </article>
+
+      <article class="premium-card stagger-card col-span-12 md:col-span-7 xl:col-span-6 rounded-2xl p-5" style="animation-delay:0.7s;">
+        <h2 class="text-lg font-semibold tracking-wide">Weekly Sales Volume</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Total vs delivered sales this week</p>
+        <div class="chart-shell mt-3">
+          <div class="chart-shimmer" data-shimmer="weekly-sales"></div>
+          <div id="weekly-sales-chart" class="chart-target"></div>
+        </div>
+      </article>
+
+      <article class="premium-card stagger-card col-span-12 md:col-span-5 xl:col-span-6 rounded-2xl p-5" style="animation-delay:0.8s;">
+        <h2 class="text-lg font-semibold tracking-wide">Category Breakdown</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Radial stock completion view</p>
+        <div class="chart-shell mt-3">
+          <div class="chart-shimmer" data-shimmer="stock-radial"></div>
+          <div id="stock-radial-chart" class="chart-target"></div>
+        </div>
+      </article>
+    </div>
+
+    <div class="premium-card stagger-card rounded-2xl p-5 mb-6" style="animation-delay:0.9s;">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <h2 class="text-lg font-semibold tracking-wide">Most Demanding Products</h2>
+        <span class="text-xs rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-600 dark:text-emerald-300">Demand Intelligence</span>
+      </div>
+      {% if most_demanding_product %}
+      <div class="grid grid-cols-12 gap-4">
+        <div class="col-span-12 lg:col-span-4 rounded-xl border border-slate-200/70 dark:border-slate-700/70 p-4">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Top Product</p>
+          <p class="mt-2 text-lg font-semibold">{{ most_demanding_product.name }}</p>
+          <div class="mt-3 flex flex-wrap gap-2 text-xs">
+            <span class="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-600">{{ most_demanding_product.total_qty }} Units</span>
+            <span class="rounded-full bg-blue-500/15 px-3 py-1 text-blue-600">{{ most_demanding_product.orders_count }} Orders</span>
+          </div>
+        </div>
+        <div class="col-span-12 lg:col-span-8 overflow-auto">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Rank</th><th>Product</th><th>Units Sold</th><th>Orders</th></tr>
+            </thead>
+            <tbody>
+              {% for item in top_demand_products %}
+              <tr><td>#{{ item.rank }}</td><td>{{ item.name|truncatechars:46 }}</td><td>{{ item.total_qty }}</td><td>{{ item.orders_count }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-sm text-slate-500">No demand stats available yet.</div>
+      {% endif %}
+    </div>
+
+    <article class="premium-card stagger-card mb-6 rounded-2xl p-5" style="animation-delay:1s;">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold tracking-wide">Order status mix</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Order counts by stage — follows Combined / Online / Offline filter above</p>
+        </div>
+      </div>
+      <div class="chart-shell mt-3">
+        <div class="chart-shimmer" data-shimmer="order-status"></div>
+        <div id="order-status-chart" class="chart-target"></div>
+      </div>
+    </article>
+
+    {{ monthly_sales_labels|json_script:"monthly-sales-labels" }}
+    {{ monthly_sales_values|json_script:"monthly-sales-values" }}
+    {{ weekly_labels|json_script:"weekly-labels" }}
+    {{ weekly_total_sales|json_script:"weekly-total-sales" }}
+    {{ weekly_delivered_sales|json_script:"weekly-delivered-sales" }}
+    {{ order_status_labels|json_script:"order-status-labels" }}
+    {{ order_status_counts|json_script:"order-status-series" }}
+    <script id="stock-distribution-data" type="application/json">
+      {"labels":["Active Products","Low Stock Items"],"series":[{{ healthy_stock }},{{ low_stock }}]}
+    </script>
+
+    <div class="premium-card stagger-card rounded-2xl p-5" style="animation-delay:1.1s;">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <h2 class="text-lg font-semibold tracking-wide">Recent Orders</h2>
+        <div class="flex items-center gap-2">
+          <button type="button" class="premium-btn liquid-btn liquid-btn-emerald rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-600 dark:text-emerald-300" id="export-orders-csv">Export to CSV</button>
+          <a href="{% url 'admin_orders' %}" class="premium-btn liquid-btn liquid-btn-neutral rounded-xl border border-slate-300/70 bg-white/70 px-3 py-2 text-xs dark:bg-slate-800/70 dark:border-slate-700">View All</a>
+        </div>
       </div>
       {% if recent_orders %}
-      <div class="table-responsive">
+      <div class="overflow-auto">
         <table class="admin-table" id="recent-orders-table">
           <thead>
-            <tr>
-              <th>Order #</th>
-              <th>Business</th>
-              <th>Customer</th>
-              <th>Phone</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Date</th>
-            </tr>
+            <tr><th>Order #</th><th>Business</th><th>Customer</th><th>Phone</th><th>Total</th><th>Status</th><th>Date</th></tr>
           </thead>
           <tbody>
             {% for order in recent_orders %}
-            <tr>
-              <td><a href="{% url 'admin_order_detail' order.order_number %}">#{{ order.order_number }}</a></td>
+            <tr class="click-row hover:bg-slate-100/70 dark:hover:bg-slate-700/40 transition-colors" data-href="{% url 'admin_order_detail' order.order_number %}">
+              <td><a href="{% url 'admin_order_detail' order.order_number %}" class="font-medium">#{{ order.order_number }}</a></td>
               <td>{{ order.business_name|truncatechars:20 }}</td>
               <td>{{ order.customer_name }}</td>
               <td>{{ order.phone }}</td>
               <td>₹{{ order.total_amount }}</td>
-              <td><span class="status-pill status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+              <td>
+                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
+                  {% if order.status == 'delivered' %}status-delivered-glass status-glow{% elif order.status == 'pending' %}status-pending-glass status-glow{% elif order.status == 'cancelled' %}bg-rose-500/15 text-rose-600{% else %}bg-blue-500/15 text-blue-600{% endif %}">
+                  {{ order.get_status_display }}
+                </span>
+              </td>
               <td>{{ order.created_at|date:"d M, H:i" }}</td>
             </tr>
             {% endfor %}
@@ -98,10 +522,409 @@
         </table>
       </div>
       {% else %}
-      <div class="empty-state-sm">No orders yet.</div>
+      <div class="text-sm text-slate-500">No orders yet.</div>
       {% endif %}
     </div>
-
   </div>
+
+  <div class="fixed bottom-6 right-6 z-30">
+    <details id="quick-actions-menu" class="group">
+      <summary class="premium-btn fab-plus list-none h-14 w-14 rounded-full bg-indigo-600 text-white grid place-items-center shadow-xl cursor-pointer">
+        <i data-lucide="plus" class="h-6 w-6 transition-transform group-open:rotate-45"></i>
+      </summary>
+      <div class="mt-2 w-48 rounded-xl border border-white/10 bg-white/90 dark:bg-slate-900/85 backdrop-blur p-2 text-sm">
+        <a href="{% url 'admin_product_add' %}" class="block rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">Add New Product</a>
+        <a href="{% url 'admin_orders' %}" class="block rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">Quick Order Review</a>
+      </div>
+    </details>
+  </div>
+
+  <div id="search-focus-dim" class="pointer-events-none fixed inset-0 z-10 hidden bg-slate-900/15 backdrop-blur-[1px]"></div>
+  <div id="global-search-overlay" class="hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="fade-in mx-auto mt-20 max-w-2xl rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl">
+      <div class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+        <i data-lucide="search" class="h-4 w-4 text-slate-400"></i>
+        <input id="global-search-input" type="text" placeholder="Search orders, products, customers..." class="w-full bg-transparent text-sm outline-none" />
+        <button id="close-global-search" type="button" class="text-xs text-slate-500">Esc</button>
+      </div>
+      <div class="mt-2 rounded-xl bg-slate-50 p-2 text-xs text-slate-500">
+        Quick suggestions: <span class="font-medium">AK0001</span>, <span class="font-medium">Colgate</span>, <span class="font-medium">Ravi Traders</span>
+      </div>
+    </div>
+  </div>
+
+  <aside id="notification-drawer" class="fixed right-0 top-0 z-40 h-full w-full max-w-sm translate-x-full border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300">
+    <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+      <h3 class="text-sm font-semibold tracking-wide">Recent Activity</h3>
+      <button id="close-notifications" type="button" class="rounded-md p-1 hover:bg-slate-100"><i data-lucide="x" class="h-4 w-4"></i></button>
+    </div>
+    <div class="space-y-2 p-3 text-sm">
+      <div class="rounded-lg border border-slate-200 p-3">
+        <p class="font-medium">New order received</p>
+        <p class="text-xs text-slate-500">Order #AK10293 placed 2 min ago</p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-3">
+        <p class="font-medium">Low stock alert</p>
+        <p class="text-xs text-slate-500">3 products reached low inventory threshold</p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-3">
+        <p class="font-medium">Payment captured</p>
+        <p class="text-xs text-slate-500">₹12,480 received for order #AK10288</p>
+      </div>
+    </div>
+  </aside>
 </section>
 {% endblock admin_main %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  (function () {
+    function fromJsonScript(id) {
+      const el = document.getElementById(id);
+      if (!el) return [];
+      try { return JSON.parse(el.textContent || "[]"); } catch (err) { return []; }
+    }
+    function formatRs(v) {
+      return "₹" + Number(v || 0).toLocaleString();
+    }
+    function movingAverage(values) {
+      const out = [];
+      for (let i = 0; i < values.length; i += 1) {
+        const prev = values[i - 1] || values[i];
+        const curr = values[i] || 0;
+        const next = values[i + 1] || values[i];
+        out.push(Math.round((prev + curr + next) / 3));
+      }
+      return out;
+    }
+    function showChart(targetId, shimmerKey, renderChart) {
+      const target = document.getElementById(targetId);
+      const shimmer = document.querySelector('[data-shimmer="' + shimmerKey + '"]');
+      if (!target) return;
+      setTimeout(function () {
+        renderChart(target);
+        if (shimmer) shimmer.hidden = true;
+        target.classList.add("is-ready");
+      }, 420);
+    }
+
+    const labelsMonthly = fromJsonScript("monthly-sales-labels");
+    const valuesMonthly = fromJsonScript("monthly-sales-values");
+    const labelsWeekly = fromJsonScript("weekly-labels");
+    const valuesWeeklyTotal = fromJsonScript("weekly-total-sales");
+    const valuesWeeklyDelivered = fromJsonScript("weekly-delivered-sales");
+    const stockData = fromJsonScript("stock-distribution-data");
+    const orderStatusLabels = fromJsonScript("order-status-labels");
+    const orderStatusSeries = fromJsonScript("order-status-series");
+
+    const baseMonthly = valuesMonthly.slice();
+    const projectedSeries = movingAverage(valuesMonthly);
+    const liveFeedSeries = valuesWeeklyTotal.map(function (v, i) { return Math.round((v / 1000) + (i * 2)); });
+
+    showChart("monthly-sales-chart", "monthly-sales", function (target) {
+      const options = {
+        chart: { type: "area", height: 290, toolbar: { show: false }, animations: { speed: 700 } },
+        series: [
+          { name: "Revenue", data: valuesMonthly },
+          { name: "Projected Growth", data: projectedSeries }
+        ],
+        colors: ["#3b82f6", "#10b981"],
+        stroke: { width: [3, 2], curve: "smooth", dashArray: [0, 6] },
+        fill: {
+          type: "gradient",
+          gradient: { shadeIntensity: 1, opacityFrom: 0.34, opacityTo: 0.03, stops: [0, 100] }
+        },
+        dataLabels: { enabled: false },
+        xaxis: { categories: labelsMonthly, labels: { style: { colors: "#64748b" } } },
+        yaxis: { labels: { formatter: formatRs } },
+        legend: { position: "top" },
+        tooltip: {
+          custom: function ({ series, seriesIndex, dataPointIndex, w }) {
+            const label = w.globals.categoryLabels[dataPointIndex] || "";
+            const metric = w.globals.seriesNames[seriesIndex] || "";
+            const value = formatRs(series[seriesIndex][dataPointIndex]);
+            return '<div style="padding:10px 12px;border-radius:10px;background:#0f172a;color:#f8fafc;font-size:12px;">' +
+              '<div style="font-weight:600;margin-bottom:4px;">' + label + "</div>" +
+              '<div style="opacity:.85">' + metric + ': <strong>' + value + "</strong></div></div>";
+          }
+        },
+        grid: { borderColor: "rgba(148,163,184,0.25)" }
+      };
+      new ApexCharts(target, options).render();
+    });
+
+    showChart("weekly-sales-chart", "weekly-sales", function (target) {
+      const options = {
+        chart: { type: "bar", height: 275, toolbar: { show: false } },
+        series: [
+          { name: "Total Sales", data: valuesWeeklyTotal },
+          { name: "Delivered Sales", data: valuesWeeklyDelivered }
+        ],
+        colors: ["#1e293b", "#10b981"],
+        plotOptions: { bar: { borderRadius: 6, columnWidth: "52%" } },
+        dataLabels: { enabled: false },
+        xaxis: { categories: labelsWeekly },
+        yaxis: { labels: { formatter: formatRs } },
+        legend: { position: "top" },
+        tooltip: { y: { formatter: formatRs } },
+        grid: { borderColor: "rgba(148,163,184,0.2)" }
+      };
+      new ApexCharts(target, options).render();
+    });
+
+    showChart("stock-radial-chart", "stock-radial", function (target) {
+      const total = (stockData.series || [0, 0]).reduce(function (a, b) { return a + b; }, 0) || 1;
+      const activePct = Math.round(((stockData.series[0] || 0) / total) * 100);
+      const lowPct = Math.round(((stockData.series[1] || 0) / total) * 100);
+      const options = {
+        chart: { type: "radialBar", height: 275 },
+        series: [activePct, lowPct],
+        labels: stockData.labels || ["Active Products", "Low Stock Items"],
+        colors: ["#10b981", "#f59e0b"],
+        plotOptions: {
+          radialBar: {
+            hollow: { size: "28%" },
+            dataLabels: {
+              name: { fontSize: "12px" },
+              value: { fontSize: "18px", formatter: function (v) { return v + "%"; } },
+              total: { show: true, label: "Stock Health", formatter: function () { return activePct + "%"; } }
+            }
+          }
+        },
+        legend: { show: true, position: "bottom" }
+      };
+      new ApexCharts(target, options).render();
+    });
+
+    showChart("order-status-chart", "order-status", function (target) {
+      const labels = orderStatusLabels.length ? orderStatusLabels : [];
+      const series = orderStatusSeries.length ? orderStatusSeries : [];
+      const sum = series.reduce(function (a, b) { return a + Number(b || 0); }, 0);
+      const options = {
+        chart: { type: "donut", height: 320, toolbar: { show: false }, animations: { speed: 600 } },
+        labels: labels,
+        series: sum > 0 ? series : [1],
+        colors: ["#f59e0b", "#3b82f6", "#6366f1", "#8b5cf6", "#10b981", "#ef4444"],
+        legend: { position: "bottom", fontSize: "12px" },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: "70%",
+              labels: {
+                show: true,
+                total: {
+                  show: true,
+                  label: "Orders",
+                  formatter: function () {
+                    return sum > 0 ? String(sum) : "0";
+                  }
+                }
+              }
+            }
+          }
+        },
+        dataLabels: { enabled: sum > 0 },
+        tooltip: {
+          y: {
+            formatter: function (val) {
+              return val + " orders";
+            }
+          }
+        },
+        states: {
+          hover: { filter: { type: "darken", value: 0.92 } }
+        }
+      };
+      if (sum === 0) {
+        options.labels = ["No orders"];
+        options.colors = ["#cbd5e1"];
+      }
+      new ApexCharts(target, options).render();
+    });
+
+    showChart("live-feed-chart", "live-feed", function (target) {
+      const options = {
+        chart: {
+          type: "line",
+          height: 170,
+          sparkline: { enabled: true },
+          animations: { enabled: true, easing: "linear", dynamicAnimation: { speed: 800 } }
+        },
+        series: [{ name: "Live Orders", data: liveFeedSeries.length ? liveFeedSeries : [3, 5, 4, 7, 6, 8, 7] }],
+        stroke: { curve: "smooth", width: 3 },
+        colors: ["#6366f1"],
+        fill: { type: "gradient", gradient: { opacityFrom: 0.35, opacityTo: 0.05 } },
+        tooltip: { y: { formatter: function (v) { return Math.round(v) + " live events"; } } }
+      };
+      new ApexCharts(target, options).render();
+    });
+
+    function renderStatSparkline(targetId, data, color) {
+      const target = document.getElementById(targetId);
+      if (!target) return;
+      const options = {
+        chart: { type: "area", height: 42, sparkline: { enabled: true }, animations: { enabled: true, speed: 600 } },
+        series: [{ data: data }],
+        stroke: { curve: "smooth", width: 2 },
+        fill: { type: "gradient", gradient: { opacityFrom: 0.35, opacityTo: 0.02 } },
+        colors: [color],
+        tooltip: { enabled: false }
+      };
+      new ApexCharts(target, options).render();
+    }
+    renderStatSparkline("spark-sales", [9, 13, 11, 15, 14, 18, 16, 20], "#3b82f6");
+    renderStatSparkline("spark-units", [5, 6, 8, 7, 10, 9, 11, 13], "#10b981");
+    renderStatSparkline("spark-orders", [3, 4, 6, 5, 7, 8, 9, 11], "#f97316");
+
+    const rangeSelect = document.getElementById("date-range");
+    if (rangeSelect) {
+      rangeSelect.addEventListener("change", function () {
+        const choice = rangeSelect.value;
+        if (choice === "custom") {
+          alert("Custom range picker can be wired to your backend next.");
+        }
+        if (choice === "today") {
+          valuesMonthly.splice(0, valuesMonthly.length, baseMonthly[baseMonthly.length - 1] || 0);
+        } else if (choice === "7days") {
+          valuesMonthly.splice(0, valuesMonthly.length, ...baseMonthly.slice(-7));
+        } else {
+          valuesMonthly.splice(0, valuesMonthly.length, ...baseMonthly);
+        }
+      });
+    }
+
+    const sourceSelect = document.getElementById("stats-source");
+    if (sourceSelect) {
+      sourceSelect.addEventListener("change", function () {
+        const url = new URL(window.location.href);
+        url.searchParams.set("source", sourceSelect.value || "combined");
+        window.location.href = url.toString();
+      });
+    }
+
+    const toggle = document.getElementById("theme-toggle");
+    const root = document.documentElement;
+    const key = "aaramkart-theme";
+    const currentTheme = localStorage.getItem(key);
+    if (currentTheme === "dark") root.classList.add("dark");
+    if (toggle) {
+      toggle.addEventListener("click", function (e) {
+        const ripple = document.createElement("span");
+        ripple.className = "theme-ripple";
+        const rect = toggle.getBoundingClientRect();
+        const size = Math.max(window.innerWidth, window.innerHeight) * 2;
+        ripple.style.width = size + "px";
+        ripple.style.height = size + "px";
+        ripple.style.left = (rect.left + rect.width / 2 - size / 2) + "px";
+        ripple.style.top = (rect.top + rect.height / 2 - size / 2) + "px";
+        document.body.appendChild(ripple);
+        setTimeout(function () { ripple.remove(); }, 650);
+        root.classList.toggle("dark");
+        localStorage.setItem(key, root.classList.contains("dark") ? "dark" : "light");
+      });
+    }
+
+    const rows = document.querySelectorAll(".click-row[data-href]");
+    rows.forEach(function (row) {
+      row.addEventListener("click", function (e) {
+        const anchor = row.querySelector("a");
+        if (e.target && e.target.tagName === "A") return;
+        if (anchor) window.location.href = anchor.href;
+      });
+    });
+
+    const exportBtn = document.getElementById("export-orders-csv");
+    const table = document.getElementById("recent-orders-table");
+    if (exportBtn && table) {
+      exportBtn.addEventListener("click", function () {
+        const rows = Array.from(table.querySelectorAll("tr")).map(function (tr) {
+          return Array.from(tr.querySelectorAll("th, td")).map(function (cell) {
+            return '"' + (cell.textContent || "").trim().replace(/\s+/g, " ").replace(/"/g, '""') + '"';
+          }).join(",");
+        });
+        const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "recent_orders.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    const searchOverlay = document.getElementById("global-search-overlay");
+    const searchFocusDim = document.getElementById("search-focus-dim");
+    const openSearchBtn = document.getElementById("open-global-search");
+    const closeSearchBtn = document.getElementById("close-global-search");
+    const searchInput = document.getElementById("global-search-input");
+    function openSearch() {
+      if (!searchOverlay) return;
+      searchOverlay.classList.remove("hidden");
+      if (searchFocusDim) searchFocusDim.classList.add("hidden");
+      setTimeout(function () { if (searchInput) searchInput.focus(); }, 10);
+    }
+    function closeSearch() {
+      if (!searchOverlay) return;
+      searchOverlay.classList.add("hidden");
+      if (searchFocusDim) searchFocusDim.classList.add("hidden");
+    }
+    if (openSearchBtn) openSearchBtn.addEventListener("click", openSearch);
+    if (closeSearchBtn) closeSearchBtn.addEventListener("click", closeSearch);
+    if (openSearchBtn) {
+      openSearchBtn.addEventListener("focus", function () {
+        if (searchFocusDim) searchFocusDim.classList.remove("hidden");
+      });
+      openSearchBtn.addEventListener("blur", function () {
+        if (searchFocusDim) searchFocusDim.classList.add("hidden");
+      });
+    }
+
+    const drawer = document.getElementById("notification-drawer");
+    const openNotifications = document.getElementById("open-notifications");
+    const closeNotifications = document.getElementById("close-notifications");
+    function openDrawer() {
+      if (drawer) drawer.classList.remove("translate-x-full");
+    }
+    function closeDrawer() {
+      if (drawer) drawer.classList.add("translate-x-full");
+    }
+    if (openNotifications) openNotifications.addEventListener("click", openDrawer);
+    if (closeNotifications) closeNotifications.addEventListener("click", closeDrawer);
+
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        openSearch();
+      }
+      if (e.key === "Escape") {
+        closeSearch();
+        closeDrawer();
+      }
+    });
+    if (searchOverlay) {
+      searchOverlay.addEventListener("click", function (e) {
+        if (e.target === searchOverlay) closeSearch();
+      });
+    }
+
+    const magneticButtons = document.querySelectorAll(".magnetic-btn");
+    magneticButtons.forEach(function (btn) {
+      btn.addEventListener("mousemove", function (e) {
+        const rect = btn.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width - 0.5) * 10;
+        const y = ((e.clientY - rect.top) / rect.height - 0.5) * 8;
+        btn.style.transform = "translate3d(" + x.toFixed(2) + "px," + y.toFixed(2) + "px,0)";
+      });
+      btn.addEventListener("mouseleave", function () {
+        btn.style.transform = "translate3d(0,0,0)";
+      });
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+  })();
+</script>
+{% endblock %}

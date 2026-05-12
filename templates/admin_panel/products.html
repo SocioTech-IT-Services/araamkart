@@ -3,22 +3,386 @@
 
 {% block title %}Manage Products — AaramKart Admin{% endblock %}
 
+{% block admin_extra_head %}
+<style>
+  .premium-inventory {
+    --pi-green: #2d5a27;
+    --pi-green-soft: rgba(45, 90, 39, 0.12);
+    --pi-slate: #1a1a1b;
+    --pi-muted: #64748b;
+    --pi-border: rgba(148, 163, 184, 0.22);
+    --pi-card: #ffffff;
+    --pi-bg: #f8fafc;
+    --pi-shadow: 18px 18px 40px rgba(15, 23, 42, 0.06), -10px -10px 28px rgba(255,255,255,0.9);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at top right, rgba(45, 90, 39, 0.09), transparent 34rem),
+      var(--pi-bg);
+    margin: -1rem -1rem 0;
+    padding: 1.5rem 1rem 3rem;
+  }
+  .premium-inventory .section-container {
+    max-width: 1320px;
+  }
+  .premium-inventory .admin-header h1 {
+    color: var(--pi-slate);
+    font-size: clamp(1.7rem, 3vw, 2.35rem);
+    letter-spacing: -0.045em;
+  }
+  .premium-inventory .admin-header p {
+    max-width: 42rem;
+    color: var(--pi-muted);
+  }
+  .premium-add-product {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-width: 14rem;
+    border: 0 !important;
+    border-radius: 16px !important;
+    background: linear-gradient(135deg, #2d5a27, #3f7c35) !important;
+    color: #fff !important;
+    box-shadow: 0 18px 32px rgba(45, 90, 39, 0.22);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease !important;
+  }
+  .premium-add-product:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 46px rgba(45, 90, 39, 0.28);
+    filter: brightness(1.03);
+  }
+  .premium-search-card,
+  .premium-inventory-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--pi-card);
+    border: 1px solid var(--pi-border);
+    border-radius: 16px;
+    box-shadow: var(--pi-shadow);
+  }
+  .premium-search-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.8rem 1rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .premium-search-field {
+    position: relative;
+    flex: 1 1 24rem;
+  }
+  .premium-search-field svg {
+    position: absolute;
+    left: 0.95rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.05rem;
+    height: 1.05rem;
+    color: var(--pi-muted);
+    pointer-events: none;
+  }
+  .premium-search-field .inventory-search-input {
+    width: 100%;
+    min-width: 0;
+    border-radius: 14px;
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    background: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  }
+  .premium-search-field:focus-within .inventory-search-input {
+    border-color: rgba(45, 90, 39, 0.65);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(45, 90, 39, 0.11);
+  }
+  .premium-simple-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--pi-muted);
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .premium-simple-toggle input {
+    width: 0;
+    height: 0;
+    opacity: 0;
+    position: absolute;
+  }
+  .premium-toggle-track {
+    width: 44px;
+    height: 25px;
+    border-radius: 999px;
+    background: #cbd5e1;
+    position: relative;
+    transition: background 0.25s ease;
+  }
+  .premium-toggle-track::after {
+    content: "";
+    position: absolute;
+    width: 19px;
+    height: 19px;
+    left: 3px;
+    top: 3px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 3px 8px rgba(15,23,42,0.18);
+    transition: transform 0.25s ease;
+  }
+  .premium-simple-toggle input:checked + .premium-toggle-track,
+  .premium-switch input:checked + .premium-switch-track {
+    background: #10b981;
+  }
+  .premium-simple-toggle input:checked + .premium-toggle-track::after,
+  .premium-switch input:checked + .premium-switch-track::after {
+    transform: translateX(19px);
+  }
+  .premium-inventory-card {
+    padding: 1rem;
+  }
+  .premium-inventory-card.is-filtering::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.66), transparent);
+    transform: translateX(-120%);
+    animation: inventoryShimmer 0.55s ease;
+  }
+  @keyframes inventoryShimmer {
+    to { transform: translateX(120%); }
+  }
+  .premium-import-strip {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: #f8fafc;
+    margin-bottom: 1rem;
+  }
+  .premium-products-table {
+    border-collapse: separate;
+    border-spacing: 0 0.55rem;
+  }
+  .premium-products-table thead th {
+    border: 0;
+    color: #64748b;
+    padding: 0.6rem 0.7rem;
+  }
+  .premium-product-row {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  }
+  .premium-product-row td {
+    background: #fff;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    padding: 0.8rem 0.7rem;
+  }
+  .premium-product-row td:first-child {
+    border-left: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 16px 0 0 16px;
+  }
+  .premium-product-row td:last-child {
+    border-right: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 0 16px 16px 0;
+  }
+  .premium-product-row:hover {
+    transform: translateY(-1px);
+  }
+  .premium-product-row:hover td {
+    background: #f8fbff;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.045);
+  }
+  .premium-thumb-frame {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: #f1f5f9;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    overflow: hidden;
+  }
+  .premium-thumb-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .premium-product-name {
+    color: var(--pi-slate);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+  }
+  .premium-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .premium-pill--category {
+    color: #1f3f1c;
+    background: rgba(45, 90, 39, 0.1);
+    border: 1px solid rgba(45, 90, 39, 0.18);
+  }
+  .premium-pill--sub {
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+  .stock-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    margin-top: 0.25rem;
+  }
+  .stock-status-pill::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .stock-status-pill--in {
+    background: #dcfce7;
+    color: #166534;
+  }
+  .stock-status-pill--low {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .premium-product-row.is-low-stock .stock-status-pill::before {
+    animation: lowStockPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes lowStockPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(153, 27, 27, 0.42); }
+    50% { box-shadow: 0 0 0 7px rgba(153, 27, 27, 0); }
+  }
+  .premium-stock-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem;
+    border-radius: 999px;
+    background: rgba(248,250,252,0.9);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+  }
+  .premium-stock-btn {
+    width: 31px;
+    height: 31px;
+    min-width: 31px;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    border: 1px solid rgba(148, 163, 184, 0.28) !important;
+    background: rgba(255,255,255,0.7) !important;
+    backdrop-filter: blur(10px);
+    color: #1e293b !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+  }
+  .premium-stock-btn:hover {
+    transform: translateY(-1px);
+    background: #fff !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.11);
+  }
+  .premium-stock-input {
+    width: 4.5rem;
+    text-align: center;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: #fff;
+    font-weight: 800;
+    color: var(--pi-slate);
+  }
+  .premium-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+  .premium-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .premium-switch-track {
+    width: 44px;
+    height: 25px;
+    border-radius: 999px;
+    background: #cbd5e1;
+    position: relative;
+    transition: background 0.25s ease;
+  }
+  .premium-switch-track::after {
+    content: "";
+    position: absolute;
+    width: 19px;
+    height: 19px;
+    top: 3px;
+    left: 3px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+    transition: transform 0.25s ease;
+  }
+  .premium-switch-label {
+    color: #475569;
+    font-weight: 800;
+    font-size: 0.78rem;
+  }
+  .premium-row-actions {
+    opacity: 0.42;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .premium-product-row:hover .premium-row-actions {
+    opacity: 1;
+    transform: translateX(-2px);
+  }
+  .premium-row-actions .btn {
+    transition: all 0.3s ease-in-out !important;
+  }
+  .premium-row-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
+  }
+  @media (max-width: 900px) {
+    .premium-row-actions { opacity: 1; }
+  }
+</style>
+{% endblock %}
+
 {% block admin_main %}
-<section class="page-section admin-section">
+<section class="page-section admin-section premium-inventory">
   <div class="section-container">
     <div class="admin-header">
       <div>
         <h1>Inventory &amp; stock</h1>
-        <p>{{ products|length }} product{{ products|length|pluralize }} — use <strong>Add product</strong>, update stock with ±, and use <strong>Edit details</strong> or <strong>Delete</strong> anytime.</p>
+        <p>{{ products|length }} product{{ products|length|pluralize }} managed in one polished control center. Update stock, visibility, and product details without leaving the flow.</p>
       </div>
       <div class="admin-header-actions">
-        <a href="{% url 'admin_product_add' %}" class="btn btn-primary">+ Add product with image</a>
+        <a href="{% url 'admin_product_add' %}" class="btn btn-primary premium-add-product">
+          <span aria-hidden="true">＋</span>
+          Add Product
+        </a>
       </div>
     </div>
 
-    <div class="admin-section-card">
-      <div class="inventory-easy-tools">
-        <label for="inventory-search" class="inventory-easy-tools__label">Find item quickly</label>
+    <div class="premium-search-card">
+      <div class="premium-search-field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
         <input
           id="inventory-search"
           type="search"
@@ -26,12 +390,17 @@
           placeholder="Search by product, brand, category, or subcategory"
           aria-label="Search inventory rows"
         />
-        <label class="inventory-easy-toggle" title="Hide advanced columns for simpler view">
-          <input type="checkbox" id="simple-view-toggle" checked />
-          <span>Simple view</span>
-        </label>
       </div>
-      <div class="admin-import-strip">
+      <label class="premium-simple-toggle" title="Hide advanced columns for simpler view">
+          <input type="checkbox" id="simple-view-toggle" checked />
+          <span class="premium-toggle-track" aria-hidden="true"></span>
+          <span>Simple view</span>
+      </label>
+    </div>
+
+    <div class="admin-section-card premium-inventory-card" id="premium-inventory-card">
+      <div class="admin-import-strip premium-import-strip">
+        <a href="{% static 'downloads/product_bulk_import_template.xlsx' %}" class="btn btn-outline btn-xs" download>Download Excel template</a>
         <form method="post" action="{% url 'admin_bulk_import_products' %}" enctype="multipart/form-data" class="admin-import-form">
           {% csrf_token %}
           <label for="import-file" class="admin-import-label">Bulk import (.xlsx)</label>
@@ -40,7 +409,7 @@
         </form>
       </div>
       <div class="table-responsive">
-        <table class="admin-table" id="products-table">
+        <table class="admin-table premium-products-table" id="products-table">
           <thead>
             <tr>
               <th></th>
@@ -61,41 +430,44 @@
             {% for product in products %}
             <tr
               id="product-row-{{ product.pk }}"
+              class="premium-product-row {% if product.stock <= 10 %}is-low-stock{% endif %}"
               data-filter-text="{{ product.name|lower }} {{ product.brand|lower }} {{ product.category.name|lower }} {{ product.subcategory.name|default:''|lower }}"
             >
               <td class="td-thumb">
+                <span class="premium-thumb-frame">
                 {% if product.image %}
-                <img src="{{ product.image.url }}" alt="" class="admin-table-thumb" width="44" height="44" />
+                <img src="{{ product.image.url }}" alt="" class="admin-table-thumb" width="52" height="52" />
                 {% else %}
                 <span class="thumb-placeholder" aria-hidden="true">📷</span>
                 {% endif %}
+                </span>
               </td>
               <td>
-                <strong>{{ product.name }}</strong>
+                <strong class="premium-product-name">{{ product.name }}</strong>
                 {% if product.pricing_tiers.count > 1 %}
                 <span class="bulk-tag">{{ product.pricing_tiers.count }} tiers</span>
                 {% endif %}
               </td>
               <td>{{ product.brand }}</td>
-              <td>{{ product.category.name }}</td>
-              <td>{{ product.subcategory.name|default:"—" }}</td>
+              <td><span class="premium-pill premium-pill--category">{{ product.category.name }}</span></td>
+              <td><span class="premium-pill premium-pill--sub">{{ product.subcategory.name|default:"—" }}</span></td>
               <td class="advanced-col">{{ product.variants.count }}</td>
               <td>
                 <div class="stock-edit stock-edit--full">
-                  <div class="stock-adj">
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Reduce stock by 10" onclick="adjustStock({{ product.pk }}, -10)">-10</button>
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Reduce stock by 1" onclick="adjustStock({{ product.pk }}, -1)">-1</button>
-                    <input type="number" class="stock-input" id="stock-{{ product.pk }}"
+                  <div class="stock-adj premium-stock-control">
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Reduce stock by 10" onclick="adjustStock({{ product.pk }}, -10)" aria-label="Reduce stock by 10">−−</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Reduce stock by 1" onclick="adjustStock({{ product.pk }}, -1)" aria-label="Reduce stock by 1">−</button>
+                    <input type="number" class="stock-input premium-stock-input" id="stock-{{ product.pk }}"
                            value="{{ product.stock }}" min="0"
                            onchange="updateStock({{ product.pk }}, this.value)" aria-label="Stock quantity" />
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Increase stock by 1" onclick="adjustStock({{ product.pk }}, 1)">+1</button>
-                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn" title="Increase stock by 10" onclick="adjustStock({{ product.pk }}, 10)">+10</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Increase stock by 1" onclick="adjustStock({{ product.pk }}, 1)" aria-label="Increase stock by 1">＋</button>
+                    <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Increase stock by 10" onclick="adjustStock({{ product.pk }}, 10)" aria-label="Increase stock by 10">＋＋</button>
                   </div>
                   <span class="stock-unit">{{ product.unit }}</span>
                 </div>
-                {% if product.stock <= 10 %}
-                <span class="low-stock-warn">{% if product.stock == 0 %}Out of stock{% else %}Low stock{% endif %}</span>
-                {% endif %}
+                <span id="stock-status-{{ product.pk }}" class="stock-status-pill {% if product.stock <= 10 %}stock-status-pill--low{% else %}stock-status-pill--in{% endif %}">
+                  {% if product.stock == 0 %}Out of stock{% elif product.stock <= 10 %}Low Stock{% else %}In Stock{% endif %}
+                </span>
               </td>
               <td class="advanced-col">{{ product.moq }} {{ product.unit }}</td>
               <td class="advanced-col">
@@ -111,13 +483,14 @@
                 {% endwith %}
               </td>
               <td>
-                <label class="toggle-inline">
+                <label class="premium-switch">
                   <input type="checkbox" {% if product.is_active %}checked{% endif %}
                          onchange="toggleActive({{ product.pk }}, this.checked)" aria-label="Toggle availability" />
-                  <span>{% if product.is_active %}On{% else %}Off{% endif %}</span>
+                  <span class="premium-switch-track" aria-hidden="true"></span>
+                  <span class="premium-switch-label">{% if product.is_active %}On{% else %}Off{% endif %}</span>
                 </label>
               </td>
-              <td class="td-actions">
+              <td class="td-actions premium-row-actions">
                 <a href="{% url 'admin_product_edit' product.pk %}" class="btn btn-outline btn-xs">Edit details</a>
                 <form method="post" action="{% url 'admin_product_delete' product.pk %}" class="inline-delete-form"
                       onsubmit="return confirm('Delete {{ product.name|escapejs }}? This cannot be undone.');">
@@ -154,6 +527,7 @@ function updateStock(productId, stock) {
   .then(data => {
     if (data.success) {
       document.getElementById('stock-' + productId).value = data.stock;
+      refreshStockMeta(productId, data.stock);
       showToast('Stock: ' + data.stock + ' ✓', 'success');
     } else showToast('Update failed', 'error');
   });
@@ -169,6 +543,7 @@ function adjustStock(productId, delta) {
   .then(data => {
     if (data.success) {
       document.getElementById('stock-' + productId).value = data.stock;
+      refreshStockMeta(productId, data.stock);
       showToast((delta >= 0 ? '+' : '') + delta + ' → now ' + data.stock, 'success');
     } else showToast('Update failed', 'error');
   });
@@ -182,9 +557,26 @@ function toggleActive(productId, isActive) {
   })
   .then(r => r.json())
   .then(data => {
-    if (data.success) showToast(isActive ? 'Product is live ✓' : 'Product hidden', 'success');
+    if (data.success) {
+      const input = document.querySelector('#product-row-' + productId + ' .premium-switch input');
+      const label = document.querySelector('#product-row-' + productId + ' .premium-switch-label');
+      if (input) input.checked = isActive;
+      if (label) label.textContent = isActive ? 'On' : 'Off';
+      showToast(isActive ? 'Product is live ✓' : 'Product hidden', 'success');
+    }
     else showToast('Update failed', 'error');
   });
+}
+
+function refreshStockMeta(productId, stock) {
+  const row = document.getElementById('product-row-' + productId);
+  const badge = document.getElementById('stock-status-' + productId);
+  const n = parseInt(stock, 10) || 0;
+  if (row) row.classList.toggle('is-low-stock', n <= 10);
+  if (!badge) return;
+  badge.classList.toggle('stock-status-pill--low', n <= 10);
+  badge.classList.toggle('stock-status-pill--in', n > 10);
+  badge.textContent = n === 0 ? 'Out of stock' : (n <= 10 ? 'Low Stock' : 'In Stock');
 }
 
 function getCookie(name) {
@@ -204,9 +596,16 @@ function showToast(msg, type) {
   const rows = Array.from(document.querySelectorAll('#products-table tbody tr'));
   const simpleToggle = document.getElementById('simple-view-toggle');
   const table = document.getElementById('products-table');
+  const inventoryCard = document.getElementById('premium-inventory-card');
+  let filterTimer = null;
 
   function applyFilter() {
     const q = (searchInput?.value || '').trim().toLowerCase();
+    if (inventoryCard) {
+      inventoryCard.classList.add('is-filtering');
+      clearTimeout(filterTimer);
+      filterTimer = setTimeout(() => inventoryCard.classList.remove('is-filtering'), 260);
+    }
     rows.forEach((row) => {
       const text = row.dataset.filterText || '';
       row.style.display = !q || text.includes(q) ? '' : 'none';

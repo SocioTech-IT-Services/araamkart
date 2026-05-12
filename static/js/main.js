@@ -246,8 +246,19 @@ function initConversionTrustSection() {
         return 'in-stock';
     };
 
+    const originalPacketPrice = (item) => {
+        const explicit = Number(item.original_packet_price || 0);
+        if (explicit > 0) return explicit;
+        const singleMrp = Number(item.single_product_price || 0);
+        const packQty = Number(item.pack_quantity || 0);
+        if (singleMrp > 0 && packQty > 0) return singleMrp * packQty;
+        return Number(item.wholesale_price || 0);
+    };
+
     const renderSellingCards = (items) => {
-        sellingTrack.innerHTML = items.map((item) => `
+        sellingTrack.innerHTML = items.map((item) => {
+            const originalPacket = originalPacketPrice(item);
+            return `
             <a class="most-selling-card ${item.product_id ? '' : 'is-disabled'}" href="${item.product_id ? `/product/${item.product_id}/` : '#'}" ${item.product_id ? '' : 'aria-disabled="true" tabindex="-1"'}>
               <div class="most-selling-img-wrap">
                 <span class="trending-badge">🔥 Trending</span>
@@ -261,7 +272,7 @@ function initConversionTrustSection() {
                 </div>
                 <p class="most-selling-price">₹${item.packet_price || item.wholesale_price}</p>
                 ${item.packet_price ? `<p class="most-selling-price-note">per packet</p>` : ''}
-                ${(item.discount_percentage || 0) > 0 ? `<p class="most-selling-price-strike">₹${item.single_product_price || item.wholesale_price}</p>` : ''}
+                ${(item.discount_percentage || 0) > 0 ? `<p class="most-selling-price-strike">Original Packet Price <span>₹${originalPacket}</span></p>` : ''}
                 <p class="most-selling-volume">${item.quantity_sold || 0} sold</p>
                 <div class="most-selling-meta">
                   <span class="discount-chip">${item.discount_percentage || 0}% OFF</span>
@@ -272,7 +283,8 @@ function initConversionTrustSection() {
                 </button>
               </div>
             </a>
-        `).join('');
+        `;
+        }).join('');
     };
 
     const renderSellingSkeleton = () => {
@@ -346,6 +358,7 @@ function initConversionTrustSection() {
         wholesale_price: p.wholesale_price ?? p.base_price ?? p.price ?? 0,
         packet_price: p.packet_price ?? null,
         single_product_price: p.single_product_price ?? p.wholesale_price ?? p.base_price ?? p.price ?? 0,
+        original_packet_price: p.original_packet_price ?? null,
         discount_percentage: p.discount_percentage ?? p.discount ?? 0,
         stock_status: p.stock_status || ((p.stock ?? 1) > 10 ? 'In Stock' : (p.stock > 0 ? 'Low Stock' : 'Out of Stock')),
         image: p.image || p.image_url || '',

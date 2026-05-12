@@ -1,0 +1,483 @@
+{% extends 'admin_panel/base.html' %}
+{% block title %}Offline Order Entry — AaramKart Admin{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .glass-card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.05);
+  }
+  .floating-field { position: relative; }
+  .floating-field input, .floating-field textarea, .floating-field select {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid #dbe3ef;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 1.15rem 0.85rem 0.45rem 0.85rem;
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .floating-field input:focus, .floating-field textarea:focus, .floating-field select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  }
+  .floating-field label {
+    position: absolute;
+    left: 0.8rem;
+    top: 0.8rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    pointer-events: none;
+  }
+  .step-dot {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .fly-dot {
+    position: fixed;
+    z-index: 60;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #6366f1;
+    pointer-events: none;
+  }
+  .shimmer-btn {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -110%;
+    width: 110%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmerMove 1.2s linear infinite;
+    display: none;
+  }
+  .shimmer-btn.is-loading::before { display: block; }
+  @keyframes shimmerMove {
+    to { left: 120%; }
+  }
+  .next-step-btn {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0.4);
+    animation: nextPulse 1.6s ease-in-out infinite;
+  }
+  .next-step-btn:hover .arrow-shift {
+    transform: translateX(4px);
+  }
+  .arrow-shift { transition: transform 0.18s ease; }
+  @keyframes nextPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.35); }
+    60% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+  }
+  .finalize-gold {
+    background-image: linear-gradient(135deg, #f59e0b, #facc15, #10b981);
+  }
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.45);
+    border-top-color: #fff;
+    border-radius: 999px;
+    animation: spin 0.75s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .row-slide-in {
+    animation: rowSlideIn 0.28s ease;
+  }
+  @keyframes rowSlideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+</style>
+{% endblock %}
+
+{% block admin_main %}
+<section class="page-section admin-section bg-slate-50/70">
+  <div class="section-container" x-data="offlineOrderEntry()" x-init="init()">
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-wide text-slate-900">Offline Order Entry</h1>
+        <p class="text-sm text-slate-500">Phone, walk-in, and WhatsApp purchases in one premium flow</p>
+      </div>
+      <div class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">
+        <span class="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span x-text="syncStatus"></span>
+      </div>
+    </div>
+
+    <div class="glass-card rounded-2xl p-4 mb-4">
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <template x-for="(stepLabel, idx) in steps" :key="stepLabel">
+          <div class="flex items-center gap-2">
+            <div class="step-dot" :class="step > (idx+1) ? 'bg-emerald-500 text-white' : step === (idx+1) ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'">
+              <span x-show="step <= (idx+1)" x-text="idx+1"></span>
+              <span x-show="step > (idx+1)">✓</span>
+            </div>
+            <span class="font-medium text-slate-600" x-text="stepLabel"></span>
+            <span x-show="idx < steps.length-1" class="ml-1 text-slate-300">—</span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <form id="offline-order-form" method="post" class="space-y-4" @submit.prevent="submitForm">
+      {% csrf_token %}
+      <input type="hidden" name="cart_payload" :value="JSON.stringify(cartPayload())">
+      <input type="hidden" name="discount_value" :value="discountValue.toFixed(2)">
+      <input type="hidden" name="tax_value" :value="taxValue.toFixed(2)">
+
+      <div class="glass-card rounded-2xl p-4" x-show="step === 1" x-transition>
+        <h2 class="text-base font-semibold text-slate-900 mb-3">1. Customer Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="floating-field"><input name="customer_name" x-model="customer.customer_name" required /><label>Customer Name</label></div>
+          <div class="floating-field"><input name="phone" x-model="customer.phone" required /><label>Phone</label></div>
+          <div class="floating-field"><input name="business_name" x-model="customer.business_name" /><label>Business Name</label></div>
+          <div class="floating-field"><input name="email" x-model="customer.email" /><label>Email (optional)</label></div>
+          <div class="floating-field"><input name="city" x-model="customer.city" /><label>City</label></div>
+          <div class="floating-field"><input name="pincode" x-model="customer.pincode" /><label>Pincode</label></div>
+          <div class="floating-field md:col-span-2"><textarea name="address" x-model="customer.address" rows="2"></textarea><label>Address</label></div>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4" x-show="step === 2" x-transition>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-semibold text-slate-900">2. Add Products</h2>
+          <div class="text-xs text-slate-500">Items in cart: <span class="font-semibold" x-text="cart.length"></span></div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div class="xl:col-span-2 space-y-3">
+            <div class="relative">
+              <input type="text" x-model="searchTerm" @input="onSearchInput" @focus="productOpen=true"
+                     placeholder="Search products by name or brand..."
+                     class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500">
+              <div x-show="productOpen" @click.outside="productOpen=false" class="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                <template x-for="product in filteredProducts" :key="product.id">
+                  <button type="button" class="w-full rounded-lg px-2 py-2 text-left hover:bg-slate-50 flex items-center gap-3"
+                          @click="addProduct(product, $event)">
+                    <div class="h-10 w-10 rounded-md bg-slate-100 overflow-hidden">
+                      <img x-show="product.image" :src="product.image" alt="" class="h-full w-full object-cover">
+                    </div>
+                    <div class="flex-1">
+                      <div class="text-sm font-medium text-slate-800" x-text="product.name"></div>
+                      <div class="text-xs text-slate-500">
+                        <span x-text="product.brand"></span> · ₹<span x-text="Number(product.packet_price || product.price).toFixed(2)"></span> / packet
+                      </div>
+                    </div>
+                    <span class="text-xs rounded-full px-2 py-1"
+                          :class="product.stock > 10 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
+                          Stock: <span x-text="Math.floor(product.stock / Math.max(1, product.pack_qty || 1))"></span> pkt
+                    </span>
+                  </button>
+                </template>
+                <div x-show="searchLoading" class="px-2 py-3 text-sm text-slate-500">Searching products...</div>
+                <div x-show="!searchLoading && filteredProducts.length===0" class="px-2 py-3 text-sm text-slate-500">No products found.</div>
+              </div>
+            </div>
+
+            <div class="overflow-auto rounded-xl border border-slate-200 bg-white">
+              <table class="min-w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600">
+                  <tr><th class="px-3 py-2 text-left">Product</th><th class="px-3 py-2 text-right">Packet Qty</th><th class="px-3 py-2 text-right">Packet Price</th><th class="px-3 py-2 text-right">Line</th><th class="px-3 py-2"></th></tr>
+                </thead>
+                <tbody>
+                  <template x-for="item in cart" :key="item.product_id">
+                    <tr class="border-t border-slate-100" :class="item.justAdded ? 'row-slide-in' : ''">
+                      <td class="px-3 py-2">
+                        <div class="font-medium text-slate-800" x-text="item.name"></div>
+                        <div class="text-xs text-slate-500"><span x-text="item.brand"></span> · <span x-text="item.pack_qty"></span> units/packet</div>
+                      </td>
+                      <td class="px-3 py-2 text-right"><input type="number" min="1" class="w-20 rounded border border-slate-200 px-2 py-1 text-right" x-model.number="item.packet_qty" @input="recalculate"></td>
+                      <td class="px-3 py-2 text-right"><input type="number" min="0" step="0.01" class="w-24 rounded border border-slate-200 px-2 py-1 text-right" x-model.number="item.packet_price" @input="recalculate"></td>
+                      <td class="px-3 py-2 text-right font-semibold">₹<span x-text="(item.packet_qty * item.packet_price).toFixed(2)"></span></td>
+                      <td class="px-3 py-2 text-right"><button type="button" class="text-rose-600 text-xs" @click="removeItem(item.product_id)">Remove</button></td>
+                    </tr>
+                  </template>
+                  <tr x-show="cart.length===0"><td colspan="5" class="px-3 py-4 text-center text-slate-500">No items added yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <h3 class="text-sm font-semibold text-slate-900 mb-2">Quick Templates</h3>
+              <div class="space-y-2">
+                {% for t in bundle_templates %}
+                <button type="button" class="w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-left text-xs text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800 transition"
+                        @click="applyBundleTemplate('{{ t.name|escapejs }}', {{ t.discount }})">
+                  {{ t.name }} · {{ t.items }} items
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+              <div class="flex justify-between text-sm"><span>Subtotal</span><span>₹<span x-text="animatedSubtotal.toFixed(2)"></span></span></div>
+              <div class="floating-field"><input type="number" x-model.number="discountValue" min="0" step="0.01" @input="recalculate"><label>Discount (₹)</label></div>
+              <div class="floating-field"><input type="number" x-model.number="taxValue" min="0" step="0.01" @input="recalculate"><label>Tax (₹)</label></div>
+              <div class="pt-2 border-t border-slate-200 flex justify-between text-base font-semibold text-slate-900"><span>Grand Total</span><span>₹<span x-text="animatedGrandTotal.toFixed(2)"></span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4" x-show="step === 3" x-transition>
+        <h2 class="text-base font-semibold text-slate-900 mb-3">3. Payment & Summary</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="floating-field">
+            <select name="payment_method" x-model="payment.payment_method">
+              <option value="cash">Cash</option>
+              <option value="upi">UPI</option>
+              <option value="card">Card</option>
+              <option value="bank">Bank Transfer</option>
+            </select><label>Payment Method</label>
+          </div>
+          <div class="floating-field">
+            <select name="status" x-model="payment.status">
+              <option value="delivered">Delivered</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="pending">Pending</option>
+            </select><label>Order Status</label>
+          </div>
+          <div class="floating-field md:col-span-2"><textarea name="notes" x-model="payment.notes" rows="2"></textarea><label>Notes</label></div>
+        </div>
+        <div class="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <div>
+            <div class="text-sm font-medium text-slate-800">Auto-generate PDF Receipt</div>
+            <div class="text-xs text-slate-500">Generate downloadable receipt immediately after save</div>
+          </div>
+          <button type="button" @click="payment.auto_pdf=!payment.auto_pdf"
+                  class="relative h-7 w-12 rounded-full transition"
+                  :class="payment.auto_pdf ? 'bg-indigo-600' : 'bg-slate-300'">
+            <span class="absolute top-1 h-5 w-5 rounded-full bg-white transition"
+                  :class="payment.auto_pdf ? 'left-6' : 'left-1'"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex gap-2">
+          <button type="button" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm" @click="prevStep" :disabled="step===1">Back</button>
+          <button type="button" class="next-step-btn rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 transition inline-flex items-center gap-2" @click="nextStep" x-show="step<3">
+            Next Step <span class="arrow-shift">→</span>
+          </button>
+        </div>
+        <button type="submit" x-show="step===3" class="shimmer-btn finalize-gold rounded-lg px-5 py-2 text-sm font-semibold text-white disabled:opacity-60 inline-flex items-center gap-2"
+                :class="isSubmitting ? 'is-loading' : ''" :disabled="isSubmitting">
+          <span x-show="!savedOk && !isSubmitting">Finalize Purchase</span>
+          <span x-show="isSubmitting" class="inline-flex items-center gap-2"><span class="spinner"></span>Saving...</span>
+          <span x-show="savedOk" class="inline-flex items-center gap-1">✓ Saved</span>
+        </button>
+      </div>
+    </form>
+
+    {{ product_catalog|json_script:"offline-product-catalog" }}
+    <script id="offline-search-url" type="application/json">"{% url 'admin_offline_product_search' %}"</script>
+  </div>
+</section>
+{% endblock admin_main %}
+
+{% block extra_scripts %}
+<script>
+function offlineOrderEntry() {
+  return {
+    step: 1,
+    steps: ["Customer Details", "Add Products", "Payment & Summary"],
+    products: [],
+    filteredProducts: [],
+    productOpen: false,
+    searchLoading: false,
+    searchTimer: null,
+    searchAbortController: null,
+    searchTerm: "",
+    cart: [],
+    subtotal: 0,
+    grandTotal: 0,
+    animatedSubtotal: 0,
+    animatedGrandTotal: 0,
+    discountValue: 0,
+    taxValue: 0,
+    isSubmitting: false,
+    savedOk: false,
+    syncStatus: "Not synced",
+    customer: { customer_name: "", phone: "", business_name: "", email: "", city: "", pincode: "", address: "" },
+    payment: { payment_method: "cash", status: "delivered", notes: "", auto_pdf: true },
+    init() {
+      try {
+        this.products = JSON.parse(document.getElementById("offline-product-catalog").textContent || "[]");
+      } catch (err) {
+        this.products = [];
+      }
+      this.filteredProducts = this.products.slice(0, 25);
+      this.recalculate();
+      if (window.lucide) window.lucide.createIcons();
+    },
+    filterProducts() {
+      this.onSearchInput();
+    },
+    onSearchInput() {
+      const q = (this.searchTerm || "").trim();
+      this.productOpen = true;
+      if (this.searchTimer) clearTimeout(this.searchTimer);
+      if (!q) {
+        this.filteredProducts = [];
+        this.searchLoading = false;
+        return;
+      }
+      this.searchTimer = setTimeout(() => this.fetchProducts(q), 220);
+    },
+    fetchProducts(q) {
+      let endpoint = "";
+      try {
+        endpoint = JSON.parse((document.getElementById("offline-search-url") || {}).textContent || "\"\"");
+      } catch (err) {
+        endpoint = "";
+      }
+      if (!endpoint) return;
+      if (this.searchAbortController) this.searchAbortController.abort();
+      this.searchAbortController = new AbortController();
+      this.searchLoading = true;
+      fetch(endpoint + "?q=" + encodeURIComponent(q), { signal: this.searchAbortController.signal })
+        .then(r => r.json())
+        .then(data => {
+          this.filteredProducts = Array.isArray(data.results) ? data.results : [];
+        })
+        .catch(() => { this.filteredProducts = []; })
+        .finally(() => { this.searchLoading = false; });
+    },
+    addProduct(product, evt) {
+      const existing = this.cart.find(i => i.product_id === product.id);
+      if (existing) {
+        existing.packet_qty += 1;
+      } else {
+        const packQty = Number(product.pack_qty || 1);
+        const packetPrice = Number(product.packet_price || product.price || 0);
+        this.cart.push({
+          product_id: product.id,
+          name: product.name,
+          brand: product.brand,
+          pack_qty: packQty,
+          packet_qty: 1,
+          packet_price: packetPrice,
+          justAdded: true
+        });
+        setTimeout(() => {
+          const added = this.cart.find(i => i.product_id === product.id);
+          if (added) added.justAdded = false;
+        }, 320);
+      }
+      this.productOpen = false;
+      this.searchTerm = "";
+      this.filteredProducts = [];
+      this.animateFly(evt);
+      this.recalculate();
+    },
+    removeItem(productId) {
+      this.cart = this.cart.filter(i => i.product_id !== productId);
+      this.recalculate();
+    },
+    applyBundleTemplate(name, discount) {
+      this.discountValue = Number(discount || 0);
+      if (this.products.length && this.cart.length === 0) {
+        this.products.slice(0, 3).forEach(p => {
+          this.cart.push({ product_id: p.id, name: p.name, brand: p.brand, quantity: 1, unit_price: Number(p.price || 0) });
+        });
+      }
+      this.recalculate();
+    },
+    recalculate() {
+      this.subtotal = this.cart.reduce((acc, item) => {
+        const packetQty = Number(item.packet_qty || 0);
+        const packetPrice = Number(item.packet_price || 0);
+        return acc + (packetQty * packetPrice);
+      }, 0);
+      this.grandTotal = Math.max(0, this.subtotal + Number(this.taxValue || 0) - Number(this.discountValue || 0));
+      this.animateCount("animatedSubtotal", this.subtotal);
+      this.animateCount("animatedGrandTotal", this.grandTotal);
+    },
+    cartPayload() {
+      return this.cart.map(item => {
+        const packetQty = Number(item.packet_qty || 0);
+        const packQty = Number(item.pack_qty || 1);
+        const totalUnits = packetQty * Math.max(1, packQty);
+        const unitPrice = packQty > 0 ? Number(item.packet_price || 0) / packQty : Number(item.packet_price || 0);
+        return {
+          product_id: item.product_id,
+          quantity: totalUnits,
+          unit_price: unitPrice
+        };
+      }).filter(item => item.quantity > 0);
+    },
+    animateCount(key, target) {
+      const start = Number(this[key] || 0);
+      const duration = 220;
+      const startTime = performance.now();
+      const run = (t) => {
+        const p = Math.min((t - startTime) / duration, 1);
+        this[key] = start + (target - start) * p;
+        if (p < 1) requestAnimationFrame(run);
+      };
+      requestAnimationFrame(run);
+    },
+    nextStep() {
+      if (this.step === 1 && (!this.customer.customer_name || !this.customer.phone)) {
+        alert("Please fill customer name and phone.");
+        return;
+      }
+      if (this.step === 2 && this.cart.length === 0) {
+        alert("Please add at least one item.");
+        return;
+      }
+      if (this.step < 3) this.step += 1;
+    },
+    prevStep() {
+      if (this.step > 1) this.step -= 1;
+    },
+    animateFly(evt) {
+      const dot = document.createElement("div");
+      dot.className = "fly-dot";
+      const startX = evt && evt.clientX ? evt.clientX : window.innerWidth / 2;
+      const startY = evt && evt.clientY ? evt.clientY : window.innerHeight / 2;
+      dot.style.left = startX + "px";
+      dot.style.top = startY + "px";
+      document.body.appendChild(dot);
+      const targetX = window.innerWidth - 70;
+      const targetY = 80;
+      dot.animate(
+        [
+          { transform: "translate(0,0) scale(1)", opacity: 1 },
+          { transform: "translate(" + (targetX - startX) + "px," + (targetY - startY) + "px) scale(0.3)", opacity: 0.15 }
+        ],
+        { duration: 600, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+      ).onfinish = () => dot.remove();
+    },
+    submitForm() {
+      this.isSubmitting = true;
+      this.syncStatus = "Syncing...";
+      const form = document.getElementById("offline-order-form");
+      setTimeout(() => form.submit(), 900);
+    }
+  }
+}
+document.addEventListener("DOMContentLoaded", function () {
+  if (window.lucide) window.lucide.createIcons();
+});
+</script>
+{% endblock %}

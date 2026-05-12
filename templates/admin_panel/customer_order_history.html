@@ -1,0 +1,427 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+{% block title %}{{ customer.full_name }} — Order history — AaramKart Admin{% endblock %}
+
+{% block admin_extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: '#1E293B',
+          forest: '#065F46',
+          section: '#F9FAFB',
+        },
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        },
+        boxShadow: {
+          card: '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -4px rgba(0,0,0,0.05)',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  .coh-page {
+    font-family: Inter, system-ui, sans-serif;
+    color: #0f172a;
+    background: #fff;
+    margin: -1rem -1rem 0;
+    padding: 0 1rem 2.5rem;
+  }
+  .coh-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .coh-search:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  .coh-chip.is-active {
+    background: #1e293b;
+    color: #fff;
+    border-color: #1e293b;
+  }
+  .coh-source-chip.is-active {
+    background: #065f46;
+    color: #fff;
+    border-color: #065f46;
+  }
+  .coh-card-hidden {
+    display: none !important;
+  }
+  /* Horizontal stepper — glow on current */
+  .coh-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+  }
+  .coh-step:not(:last-child)::after {
+    content: "";
+    display: inline-block;
+    width: 1.25rem;
+    height: 2px;
+    margin: 0 0.15rem;
+    background: #e2e8f0;
+    border-radius: 1px;
+    vertical-align: middle;
+  }
+  .coh-step.is-done { color: #059669; }
+  .coh-step.is-done .coh-dot {
+    background: #10b981;
+    border-color: #10b981;
+  }
+  .coh-step.is-current {
+    color: #1e293b;
+    font-weight: 700;
+  }
+  .coh-step.is-current .coh-dot {
+    background: #065f46;
+    border-color: #065f46;
+    box-shadow: 0 0 0 4px rgba(6, 95, 70, 0.22);
+  }
+  .coh-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    border: 2px solid #cbd5e1;
+    flex-shrink: 0;
+  }
+  .coh-btn-premium {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #1e293b;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  }
+  .coh-btn-premium:hover {
+    background: #f8fafc;
+    transform: scale(1.02);
+  }
+  .coh-btn-premium--primary {
+    border-color: #1e293b;
+    background: #1e293b;
+    color: #fff;
+  }
+  .coh-btn-premium--primary:hover {
+    background: #334155;
+    border-color: #334155;
+  }
+  .coh-ready #coh-main { display: block; }
+  #coh-main { display: none; }
+  #coh-main.coh-visible .coh-order-card {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: cohReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes cohReveal {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  /* Skeleton */
+  .coh-skel-line {
+    height: 0.75rem;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: cohShimmer 1.2s ease-in-out infinite;
+  }
+  @keyframes cohShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .coh-ready .coh-skeleton-root { display: none; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(1) { animation-delay: 0ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(2) { animation-delay: 75ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(3) { animation-delay: 150ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(4) { animation-delay: 225ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(5) { animation-delay: 300ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(6) { animation-delay: 375ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(7) { animation-delay: 450ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(8) { animation-delay: 525ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(9) { animation-delay: 600ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(10) { animation-delay: 675ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(11) { animation-delay: 750ms; }
+  #coh-main.coh-visible #coh-order-list .coh-order-card:nth-child(12) { animation-delay: 825ms; }
+</style>
+{% endblock %}
+
+{% block admin_main %}
+<div class="coh-page" id="coh-root">
+  <!-- Skeleton -->
+  <div class="coh-skeleton-root pt-4 pb-8 max-w-4xl mx-auto" aria-hidden="true">
+    <div class="coh-skel-line w-32 mb-6 h-4 rounded-md"></div>
+    <div class="rounded-xl bg-section p-4 shadow-card mb-6">
+      <div class="coh-skel-line w-48 mb-3"></div>
+      <div class="coh-skel-line w-24 h-6"></div>
+    </div>
+    <div class="coh-skel-line w-full max-w-xl mb-4 h-12 rounded-xl"></div>
+    <div class="flex gap-2 mb-8">
+      <div class="coh-skel-line w-16 h-8 rounded-full"></div>
+      <div class="coh-skel-line w-20 h-8 rounded-full"></div>
+      <div class="coh-skel-line w-20 h-8 rounded-full"></div>
+    </div>
+    {% for _ in "123" %}
+    <div class="rounded-xl bg-section p-5 shadow-card mb-4">
+      <div class="coh-skel-line w-40 mb-4"></div>
+      <div class="coh-skel-line w-full mb-2"></div>
+      <div class="coh-skel-line w-3/4 mb-4"></div>
+      <div class="flex gap-3">
+        <div class="coh-skel-line w-16 h-16 rounded-lg"></div>
+        <div class="flex-1 space-y-2">
+          <div class="coh-skel-line w-2/3"></div>
+          <div class="coh-skel-line w-1/2"></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="coh-main" class="max-w-4xl mx-auto pt-4 pb-10">
+    <nav class="text-sm text-slate-500 mb-4">
+      <a href="{% url 'admin_customer_details' %}" class="text-navy font-medium hover:text-slate-700 transition-colors">← Back to Customers</a>
+    </nav>
+
+    <header class="coh-sticky -mx-4 px-4 py-3 mb-6">
+      <div class="max-w-4xl mx-auto flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h1 class="text-xl md:text-2xl font-bold tracking-tight text-slate-900">{{ customer.full_name }}</h1>
+        </div>
+        <div class="text-right">
+          <p class="text-[0.65rem] uppercase tracking-wider text-slate-500 font-semibold">Total spend</p>
+          <p class="text-lg font-bold tabular-nums text-navy">₹{{ display_total_spent }}</p>
+          <p class="text-[0.7rem] text-slate-500 mt-1">Online {{ online_order_count }} · Offline {{ offline_order_count }}</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="bg-section rounded-xl p-4 md:p-5 shadow-card mb-6">
+      <label class="coh-search flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition-all">
+        <i data-lucide="search" class="w-5 h-5 text-slate-400 shrink-0" aria-hidden="true"></i>
+        <input type="search" id="coh-search" placeholder="Search by Order ID or product name…" autocomplete="off"
+               class="flex-1 min-w-0 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none border-0" />
+      </label>
+      <div class="mt-4 flex flex-wrap gap-2" id="coh-chips" role="tablist" aria-label="Filter by status">
+        {% for key, label in filter_chips %}
+        <button type="button" data-filter="{{ key }}"
+                class="coh-chip {% if key == 'all' %}is-active{% endif %} px-3.5 py-1.5 rounded-full text-xs font-semibold border border-slate-200 bg-white text-slate-700 hover:border-slate-300 transition-colors">
+          {{ label }}
+        </button>
+        {% endfor %}
+      </div>
+      <div class="mt-3">
+        <p class="mb-2 text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Order category</p>
+        <div class="flex flex-wrap gap-2" id="coh-source-chips" role="tablist" aria-label="Filter by online or offline orders">
+          {% for key, label in order_category_chips %}
+          <button type="button" data-source-filter="{{ key }}"
+                  class="coh-source-chip {% if key == 'combined' %}is-active{% endif %} px-3.5 py-1.5 rounded-full text-xs font-semibold border border-slate-200 bg-white text-slate-700 hover:border-slate-300 transition-colors">
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    {% if merged_orders %}
+    <div id="coh-order-list" class="space-y-4">
+      {% for order in merged_orders %}
+      {% with search_blob=order.order_number|lower %}
+      <article class="coh-order-card rounded-xl bg-section p-4 md:p-5 shadow-card border border-slate-100/80"
+               data-status="{{ order.status }}"
+               data-source="{{ order.order_source }}"
+               data-search="{{ search_blob }} {% for item in order.items.all %}{{ item.product_name|lower }} {% endfor %}">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <p class="font-mono text-sm font-semibold tracking-tight text-slate-900">#{{ order.order_number }}</p>
+            <p class="text-xs text-slate-500 mt-0.5">{{ order.created_at|date:"d M Y, H:i" }}</p>
+            <span class="inline-flex mt-2 mr-1 rounded-md px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide border
+              {% if order.order_source == 'offline' %}bg-orange-50 text-orange-700 border-orange-100{% else %}bg-blue-50 text-blue-700 border-blue-100{% endif %}">
+              {{ order.order_source }}
+            </span>
+            {% for s, label in status_choices %}
+              {% if order.status == s %}
+              <span class="inline-flex mt-2 rounded-md px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide
+                {% if order.status == 'delivered' %}bg-emerald-50 text-forest border border-emerald-100
+                {% elif order.status == 'pending' %}bg-amber-50 text-amber-800 border border-amber-100
+                {% elif order.status == 'processing' %}bg-violet-50 text-violet-800 border border-violet-100
+                {% elif order.status == 'cancelled' %}bg-rose-50 text-rose-700 border border-rose-100
+                {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
+                {{ label }}
+              </span>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <p class="text-base font-bold tabular-nums text-slate-900">₹{{ order.total_amount }}</p>
+        </div>
+
+        {% if order.timeline_cancelled %}
+        <p class="text-sm font-semibold text-rose-600 mb-4 py-2 border-y border-slate-200/80">Order cancelled — timeline paused.</p>
+        {% else %}
+        <div class="flex flex-wrap items-center gap-y-1 mb-5 py-3 border-y border-slate-200/80" role="list" aria-label="Order progress">
+          {% for code in order_timeline_codes %}
+            {% for s, label in status_choices %}
+              {% if s == code %}
+              <span class="coh-step {% if forloop.parentloop.counter0 < order.timeline_idx %}is-done{% endif %} {% if order.status == code %}is-current{% endif %}" role="listitem">
+                <span class="coh-dot" aria-hidden="true"></span>
+                {{ label }}
+              </span>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="space-y-3 mb-5">
+          {% for item in order.items.all %}
+          <div class="flex gap-3 items-start">
+            <div class="w-14 h-14 rounded-lg overflow-hidden bg-white border border-slate-200 shrink-0 flex items-center justify-center">
+              {% if item.product and item.product.image %}
+              <img src="{{ item.product.image.url }}" alt="" class="w-full h-full object-cover" />
+              {% else %}
+              <span class="text-lg" aria-hidden="true">📦</span>
+              {% endif %}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-sans text-sm font-semibold text-slate-900 leading-snug">{{ item.product_name }}</p>
+              <p class="text-xs text-slate-500 mt-1">
+                <span class="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">{{ item.quantity }} qty</span>
+                <span class="tabular-nums ml-2">₹{{ item.unit_price }} · line ₹{{ item.line_total }}</span>
+              </p>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-sm text-slate-500">No line items.</p>
+          {% endfor %}
+        </div>
+
+        <div class="flex flex-wrap gap-2 pt-3 border-t border-slate-200/80">
+          <a href="{% url 'order_quotation' order.order_number %}" target="_blank" rel="noopener" class="coh-btn-premium">
+            <i data-lucide="printer" class="w-4 h-4" aria-hidden="true"></i>
+            Print invoice
+          </a>
+          <a href="{% url 'admin_order_detail' order.order_number %}" class="coh-btn-premium coh-btn-premium--primary">
+            Open
+            <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
+          </a>
+        </div>
+      </article>
+      {% endwith %}
+      {% endfor %}
+    </div>
+    <p id="coh-empty-filter" class="hidden text-center text-sm text-slate-500 py-12 rounded-xl bg-section border border-dashed border-slate-200">
+      No orders match your search or filter.
+    </p>
+    {% else %}
+    <div class="rounded-xl bg-section p-10 text-center shadow-card border border-slate-100">
+      <p class="text-slate-600 font-medium">No orders yet</p>
+      <p class="text-sm text-slate-500 mt-2 max-w-sm mx-auto">No purchases linked to this profile. Offline orders appear when the phone matches.</p>
+      <a href="{% url 'admin_offline_order' %}" class="inline-flex mt-6 coh-btn-premium coh-btn-premium--primary">Create order</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var root = document.getElementById("coh-root");
+  function showMain() {
+    if (root) root.classList.add("coh-ready");
+    var main = document.getElementById("coh-main");
+    if (main) main.classList.add("coh-visible");
+    if (typeof window.lucide !== "undefined") window.lucide.createIcons();
+  }
+  setTimeout(showMain, 380);
+
+  var searchEl = document.getElementById("coh-search");
+  var chips = document.querySelectorAll(".coh-chip");
+  var sourceChips = document.querySelectorAll(".coh-source-chip");
+  var cards = document.querySelectorAll("#coh-order-list .coh-order-card");
+  var emptyMsg = document.getElementById("coh-empty-filter");
+  var activeFilter = "all";
+  var activeSource = "combined";
+
+  function norm(s) {
+    return (s || "").trim().toLowerCase();
+  }
+
+  function applyFilters() {
+    var q = norm(searchEl ? searchEl.value : "");
+    var n = 0;
+    cards.forEach(function (card) {
+      var st = card.getAttribute("data-status") || "";
+      var source = card.getAttribute("data-source") || "online";
+      var blob = norm(card.getAttribute("data-search"));
+      var matchChip =
+        activeFilter === "all" ||
+        (activeFilter === "delivered" && st === "delivered") ||
+        (activeFilter === "pending" && st === "pending") ||
+        (activeFilter === "processing" && st === "processing");
+      var matchSource = activeSource === "combined" || activeSource === source;
+      var matchSearch = !q || blob.indexOf(q) !== -1;
+      var show = matchChip && matchSource && matchSearch;
+      card.classList.toggle("coh-card-hidden", !show);
+      if (show) n++;
+    });
+    if (emptyMsg) {
+      emptyMsg.classList.toggle("hidden", n !== 0 || cards.length === 0);
+    }
+  }
+
+  chips.forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      activeFilter = chip.getAttribute("data-filter") || "all";
+      chips.forEach(function (c) {
+        c.classList.toggle("is-active", c === chip);
+      });
+      applyFilters();
+    });
+  });
+  sourceChips.forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      activeSource = chip.getAttribute("data-source-filter") || "combined";
+      sourceChips.forEach(function (c) {
+        c.classList.toggle("is-active", c === chip);
+      });
+      applyFilters();
+    });
+  });
+  if (searchEl) {
+    searchEl.addEventListener("input", applyFilters);
+  }
+})();
+</script>
+{% endblock %}

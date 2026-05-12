@@ -69,6 +69,9 @@ class SearchTaxonomySuggestAPIView(APIView):
             | Q(subcategory__name__icontains=q)
             | Q(subcategory__parent__name__icontains=q)
             | Q(category__name__icontains=q)
+            | Q(placements__subcategory__name__icontains=q)
+            | Q(placements__subcategory__parent__name__icontains=q)
+            | Q(placements__category__name__icontains=q)
         )
         base = Product.objects.filter(is_active=True).filter(name_q)
 
@@ -76,12 +79,12 @@ class SearchTaxonomySuggestAPIView(APIView):
         seen_urls = set()
 
         sub_rows = (
-            base.filter(subcategory__isnull=False)
-            .values("subcategory_id")
+            base.filter(placements__subcategory__isnull=False)
+            .values("placements__subcategory_id")
             .annotate(matches=Count("id", distinct=True))
             .order_by("-matches")[: limit * 2]
         )
-        ids = [r["subcategory_id"] for r in sub_rows if r["subcategory_id"]]
+        ids = [r["placements__subcategory_id"] for r in sub_rows if r.get("placements__subcategory_id")]
         subs_by_id = {
             s.id: s
             for s in SubCategory.objects.filter(pk__in=ids).select_related(
@@ -119,14 +122,14 @@ class SearchTaxonomySuggestAPIView(APIView):
         remaining = limit - len(out)
         if remaining > 0:
             cat_rows = (
-                base.filter(subcategory__isnull=True)
-                .values("category__name", "category__slug")
+                base.filter(placements__subcategory__isnull=True)
+                .values("placements__category__name", "placements__category__slug")
                 .annotate(matches=Count("id", distinct=True))
-                .order_by("-matches", "category__name")[:remaining]
+                .order_by("-matches", "placements__category__name")[:remaining]
             )
             for row in cat_rows:
-                path = f"{row['category__name']} > Browse category"
-                rel = reverse("category_detail", kwargs={"slug": row["category__slug"]})
+                path = f"{row['placements__category__name']} > Browse category"
+                rel = reverse("category_detail", kwargs={"slug": row["placements__category__slug"]})
                 if rel in seen_urls:
                     continue
                 seen_urls.add(rel)
@@ -146,12 +149,18 @@ class ProductListAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        products = Product.objects.filter(is_active=True).select_related("category", "brand_obj", "subcategory").prefetch_related("pricing_tiers")
+        products = (
+            Product.objects.filter(is_active=True)
+            .select_related("category", "brand_obj", "subcategory")
+            .prefetch_related("pricing_tiers", "placements")
+        )
         category = request.GET.get("category")
         brand = request.GET.get("brand")
         q = request.GET.get("q", "").strip()
         if category:
-            products = products.filter(category__slug=category)
+            products = products.filter(
+                Q(category__slug=category) | Q(placements__category__slug=category)
+            ).distinct()
         if brand:
             products = products.filter(brand__icontains=brand)
         if q:
@@ -162,6 +171,9 @@ class ProductListAPIView(APIView):
                 | Q(subcategory__name__icontains=q)
                 | Q(subcategory__parent__name__icontains=q)
                 | Q(category__name__icontains=q)
+                | Q(placements__subcategory__name__icontains=q)
+                | Q(placements__subcategory__parent__name__icontains=q)
+                | Q(placements__category__name__icontains=q)
             ).distinct()
         try:
             lim = int(request.GET.get("limit", "0"))

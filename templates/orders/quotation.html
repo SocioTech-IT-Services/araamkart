@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quotation {{ order.order_number }} - AaramKart</title>
+  <title>Invoice {{ order.order_number }} - AaramKart</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Lato:wght@400;700;900&family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
     body { margin: 0; padding: 1.2rem; background: #f8fafc; color: #263238; font-family: "Lato", Arial, sans-serif; }
@@ -48,7 +48,7 @@
     .head-contact { color: #37474F; font-size: .82rem; font-weight: 600; text-align: right; line-height: 1.42; }
     .head-contact__line { display: block; }
     .head-contact__line--address { white-space: nowrap; }
-    .quote-no { font-weight: 900; color: #1A237E; font-size: .92rem; letter-spacing: .01em; }
+    .order-number-line { font-weight: 900; color: #1A237E; font-size: .92rem; letter-spacing: .01em; }
     .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin: .8rem 0; }
     .card { border: 1px solid #dde3ea; border-radius: 10px; padding: .7rem; background: #f9f9f9; }
     .card-customer { background: #f4f7fb; border-color: #d9e2ec; }
@@ -138,7 +138,7 @@
         <div class="brand-text">
           <strong>AaramKart</strong>
           <div class="proforma-title">INVOICE</div>
-          <div class="muted quote-no">Quotation No: Q-{{ order.order_number }}</div>
+          <div class="muted order-number-line">Order Number: {{ order.order_number }}</div>
           <div class="muted">Issue Date: {{ issued_on|date:"d M Y" }}</div>
         </div>
       </div>
@@ -146,7 +146,7 @@
         <span class="head-contact__line">Iewduh (Bara Bazar)</span>
         <span class="head-contact__line">Shillong</span>
         <span class="head-contact__line">Meghalaya - 793002</span>
-        <span class="head-contact__line">+91 9774365127 | aaramkartshillong@gmail.com</span>
+        <span class="head-contact__line">+91 9863645127 | aaramkartshillong@gmail.com</span>
       </div>
     </div>
 
@@ -159,8 +159,8 @@
         <div class="muted">{{ order.address|title }}</div>
       </div>
       <div class="card">
-        <strong>Order Reference</strong>
-        <div class="muted" style="margin-top:.35rem;">Order No: {{ order.order_number }}</div>
+        <strong>Order details</strong>
+        <div class="muted" style="margin-top:.35rem;">Order Number: {{ order.order_number }}</div>
         <div class="muted">Payment: Cash on Delivery</div>
         <div class="muted">Shipping: Free Delivery in Shillong</div>
       </div>
@@ -205,7 +205,7 @@
       <ul>
         <li>Returns: Goods once sold are not subject to return.</li>
         <li>Replacement: Damaged items may be replaced if reported within <strong>72 Hours</strong> of delivery with valid proof.</li>
-        <li>Validity: This quotation is valid for 7 days from the issue date.</li>
+        <li>Validity: This invoice is valid for 7 days from the issue date.</li>
         <li>Delivery: Complimentary shipping within Shillong.</li>
       </ul>
     </div>

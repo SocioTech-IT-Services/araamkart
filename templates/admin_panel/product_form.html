@@ -43,9 +43,15 @@
             {% if form.category.errors %}<span class="field-error">{{ form.category.errors.0 }}</span>{% endif %}
           </div>
           <div class="form-group premium-row premium-row-1 floating-field">
-            <label for="id_subcategory">Subcategory</label>
-            {{ form.subcategory }}
-            {% if form.subcategory.errors %}<span class="field-error">{{ form.subcategory.errors.0 }}</span>{% endif %}
+            <label for="id_subcategory_root">Subcategory</label>
+            {{ form.subcategory_root }}
+            {% if form.subcategory_root.errors %}<span class="field-error">{{ form.subcategory_root.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group premium-row premium-row-1 floating-field">
+            <label for="id_subcategory_child">{{ form.subcategory_child.label }}</label>
+            {{ form.subcategory_child }}
+            {% if form.subcategory_child.help_text %}<span class="admin-field-hint">{{ form.subcategory_child.help_text }}</span>{% endif %}
+            {% if form.subcategory_child.errors %}<span class="field-error">{{ form.subcategory_child.errors.0 }}</span>{% endif %}
           </div>
           <div class="form-group premium-row premium-row-2 floating-field">
             <label for="id_name">Product Name</label>
@@ -60,6 +66,7 @@
           <div class="form-group form-group-wide premium-row premium-row-3 floating-field">
             <label for="id_description">Description</label>
             {{ form.description }}
+            <span class="admin-field-hint">Auto-updates from product details until you type your own description.</span>
           </div>
           <div class="form-group premium-row premium-row-2 floating-field">
             <label for="id_image">{{ form.image.label }}</label>
@@ -97,8 +104,10 @@
               <div class="variant-head-row" aria-hidden="true">
                 <span>Net Qty</span>
                 <span>Unit</span>
-                <span>Single Price</span>
-                <span>Packet Qty</span>
+                <span>Single MRP</span>
+                <span>Single S.P</span>
+                <span>Items qty P.Packet</span>
+                <span>Original Packet Price</span>
                 <span>Packet Price</span>
                 <span>Stock</span>
                 <span>Discount</span>
@@ -233,30 +242,147 @@
 
 (function () {
   var categorySelect = document.getElementById('id_category');
-  var subcategorySelect = document.getElementById('id_subcategory');
-  if (!categorySelect || !subcategorySelect) return;
+  var rootSelect = document.getElementById('id_subcategory_root');
+  var childSelect = document.getElementById('id_subcategory_child');
+  if (!categorySelect || !rootSelect || !childSelect) return;
 
-  function refillSubcategories(items) {
-    var current = subcategorySelect.value;
-    subcategorySelect.innerHTML = '<option value="">---------</option>';
-    items.forEach(function (it) {
+  function refillSelect(select, items, keepValue) {
+    var current = keepValue !== undefined && keepValue !== null ? String(keepValue) : String(select.value || '');
+    select.innerHTML = '<option value="">---------</option>';
+    (items || []).forEach(function (it) {
       var opt = document.createElement('option');
       opt.value = it.id;
       opt.textContent = it.name;
-      if (String(it.id) === String(current)) opt.selected = true;
-      subcategorySelect.appendChild(opt);
+      if (String(it.id) === current) opt.selected = true;
+      select.appendChild(opt);
     });
+    if (window.refreshAutoDescription) setTimeout(window.refreshAutoDescription, 0);
   }
 
-  categorySelect.addEventListener('change', function () {
+  function fetchRoots() {
     if (!categorySelect.value) {
-      refillSubcategories([]);
+      refillSelect(rootSelect, []);
+      refillSelect(childSelect, []);
       return;
     }
-    fetch('{% url "subcategories_api" %}?category_id=' + encodeURIComponent(categorySelect.value))
+    fetch('{% url "subcategories_api" %}?category_id=' + encodeURIComponent(categorySelect.value) + '&roots_only=1')
       .then(function (r) { return r.json(); })
-      .then(function (data) { refillSubcategories(data.subcategories || []); });
+      .then(function (data) {
+        refillSelect(rootSelect, data.subcategories || []);
+        refillSelect(childSelect, []);
+      });
+  }
+
+  function fetchChildren() {
+    if (!categorySelect.value || !rootSelect.value) {
+      refillSelect(childSelect, []);
+      return;
+    }
+    fetch('{% url "subcategories_api" %}?category_id=' + encodeURIComponent(categorySelect.value)
+      + '&parent_id=' + encodeURIComponent(rootSelect.value))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        refillSelect(childSelect, data.subcategories || []);
+      });
+  }
+
+  categorySelect.addEventListener('change', fetchRoots);
+  rootSelect.addEventListener('change', fetchChildren);
+})();
+
+(function () {
+  var description = document.getElementById('id_description');
+  if (!description) return;
+
+  var previousAuto = '';
+  var manualDescription = String(description.value || '').trim() !== '';
+
+  function selectedText(select) {
+    if (!select || !select.options || select.selectedIndex < 0) return '';
+    return (select.options[select.selectedIndex].textContent || '').trim();
+  }
+
+  function money(value) {
+    var n = parseFloat(value || '0');
+    return n > 0 && isFinite(n) ? '₹' + n.toFixed(2) : '';
+  }
+
+  function firstVariantRow() {
+    return document.querySelector('#variants-list .variant-row');
+  }
+
+  function makeDescription() {
+    var name = (document.getElementById('id_name') || {}).value || '';
+    var brand = (document.getElementById('id_brand') || {}).value || '';
+    var category = selectedText(document.getElementById('id_category'));
+    var root = selectedText(document.getElementById('id_subcategory_root'));
+    var child = selectedText(document.getElementById('id_subcategory_child'));
+    var subcategory = child && child !== '---------' ? child : (root && root !== '---------' ? root : '');
+    var row = firstVariantRow();
+    var title = [brand.trim(), name.trim()].filter(Boolean).join(' ') || name.trim() || 'This product';
+    var parts = [title + ' is available'];
+    if (category && subcategory) parts.push('under ' + category + ' > ' + subcategory + '.');
+    else if (category) parts.push('under ' + category + '.');
+    else parts.push('in the AaramKart catalog.');
+
+    var details = [];
+    if (row) {
+      var netQty = (row.querySelector('.variant-net-qty') || {}).value || '';
+      var netUnit = (row.querySelector('.variant-net-unit') || {}).value || '';
+      var singleMrp = (row.querySelector('.variant-single-mrp') || {}).value || '';
+      var singleSp = (row.querySelector('.variant-single-sp') || {}).value || '';
+      var packQty = (row.querySelector('.variant-pack-qty') || {}).value || '';
+      var packetPrice = (row.querySelector('.variant-packet-price') || {}).value || '';
+      var stockPackets = (row.querySelector('.variant-stock') || {}).value || '';
+      if (netQty && netUnit) details.push('Net quantity: ' + netQty + ' ' + netUnit);
+      if (packQty) details.push('Items per packet: ' + packQty);
+      if (money(singleMrp)) details.push('Single MRP: ' + money(singleMrp));
+      if (money(singleSp)) details.push('Single S.P: ' + money(singleSp));
+      if (money(packetPrice)) details.push('Packet price: ' + money(packetPrice));
+      if (stockPackets) details.push('Stock: ' + stockPackets + ' packets');
+    }
+    if (details.length) parts.push(details.join('. ') + '.');
+    return parts.join(' ');
+  }
+
+  function refreshDescription() {
+    if (manualDescription) return;
+    previousAuto = makeDescription();
+    description.value = previousAuto;
+    description.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  description.addEventListener('input', function () {
+    var current = String(description.value || '').trim();
+    if (current && current !== String(previousAuto || '').trim()) {
+      manualDescription = true;
+    }
+    if (!current) {
+      manualDescription = false;
+      refreshDescription();
+    }
   });
+
+  ['id_name', 'id_brand', 'id_category', 'id_subcategory_root', 'id_subcategory_child'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', refreshDescription);
+    el.addEventListener('change', function () { setTimeout(refreshDescription, 0); });
+  });
+
+  document.addEventListener('input', function (event) {
+    if (event.target && event.target.closest && event.target.closest('#variants-list')) {
+      refreshDescription();
+    }
+  });
+  document.addEventListener('change', function (event) {
+    if (event.target && event.target.closest && event.target.closest('#variants-list')) {
+      refreshDescription();
+    }
+  });
+
+  window.refreshAutoDescription = refreshDescription;
+  refreshDescription();
 })();
 
 (function () {
@@ -361,9 +487,11 @@
       <option value="g">g</option>
       <option value="pieces">pieces</option>
     </select>
-    <input type="number" class="variant-input variant-single-price" min="0.01" step="0.01" placeholder="Single Qty Price" />
-    <input type="number" class="variant-input variant-pack-qty" min="1" step="1" value="1" placeholder="Packet Qty" />
-    <input type="number" class="variant-input variant-packet-price" min="0.01" step="0.01" placeholder="Packet Price" />
+    <input type="number" class="variant-input variant-single-mrp" min="0.01" step="0.01" placeholder="Single MRP" />
+    <input type="number" class="variant-input variant-single-sp" min="0.01" step="0.01" placeholder="Single S.P" />
+    <input type="number" class="variant-input variant-pack-qty" min="1" step="1" value="1" placeholder="Items qty P.Packet" />
+    <input type="number" class="variant-input variant-original-packet-price" min="0.01" step="0.01" readonly placeholder="Original Packet Price" />
+    <input type="number" class="variant-input variant-packet-price" min="0.01" step="0.01" readonly placeholder="Packet Price" />
     <input type="number" class="variant-input variant-stock" min="0" step="1" placeholder="Stock (Packets)" />
     <input type="number" class="variant-input variant-discount" readonly placeholder="Discount %" />
     <button type="button" class="variant-delete" title="Delete variant">🗑</button>
@@ -381,10 +509,20 @@
   if (!list || !addBtn || !tpl || !totalBadge || !hiddenJson || !form) return;
 
   function calcDiscount(row) {
-    var single = parseFloat(row.querySelector('.variant-single-price').value || '0');
+    var single = parseFloat(row.querySelector('.variant-single-mrp').value || '0');
+    var singleSp = parseFloat(row.querySelector('.variant-single-sp').value || '0');
     var qty = parseFloat(row.querySelector('.variant-pack-qty').value || '0');
-    var packet = parseFloat(row.querySelector('.variant-packet-price').value || '0');
+    var packetOut = row.querySelector('.variant-packet-price');
+    var packet = singleSp * qty;
     var out = row.querySelector('.variant-discount');
+    var originalOut = row.querySelector('.variant-original-packet-price');
+    var originalPacket = single * qty;
+    if (originalOut) {
+      originalOut.value = single > 0 && qty > 0 && isFinite(originalPacket) ? originalPacket.toFixed(2) : '';
+    }
+    if (packetOut) {
+      packetOut.value = singleSp > 0 && qty > 0 && isFinite(packet) ? packet.toFixed(2) : '';
+    }
     if (single <= 0 || qty <= 0 || packet <= 0) {
       out.value = '';
       return 0;
@@ -399,13 +537,15 @@
       return {
         net_quantity: parseFloat(row.querySelector('.variant-net-qty').value || '0') || 0,
         net_quantity_unit: row.querySelector('.variant-net-unit').value || '',
-        single_qty_price: parseFloat(row.querySelector('.variant-single-price').value || '0') || 0,
+        single_mrp: parseFloat(row.querySelector('.variant-single-mrp').value || '0') || 0,
+        single_sp: parseFloat(row.querySelector('.variant-single-sp').value || '0') || 0,
         packet_qty: parseInt(row.querySelector('.variant-pack-qty').value || '0', 10) || 0,
+        original_packet_price: parseFloat(row.querySelector('.variant-original-packet-price').value || '0') || 0,
         packet_price: parseFloat(row.querySelector('.variant-packet-price').value || '0') || 0,
         stock_packets: parseInt(row.querySelector('.variant-stock').value || '0', 10) || 0,
         discount_percent: parseFloat(row.querySelector('.variant-discount').value || '0') || 0,
       };
-    }).filter(function (v) { return v.net_quantity || v.net_quantity_unit || v.single_qty_price || v.packet_price || v.stock_packets; });
+    }).filter(function (v) { return v.net_quantity || v.net_quantity_unit || v.single_mrp || v.single_sp || v.packet_price || v.stock_packets; });
   }
 
   function recalcAll() {
@@ -436,6 +576,7 @@
     bindRow(row);
     requestAnimationFrame(function () { row.classList.remove('is-entering'); });
     recalcAll();
+    if (window.refreshAutoDescription) window.refreshAutoDescription();
   };
 
   addBtn.addEventListener('click', window.addVariantRow);
