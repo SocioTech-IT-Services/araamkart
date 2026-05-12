@@ -3,6 +3,7 @@ AaramKart Django Settings
 """
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -68,12 +69,39 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "aaramkart.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+DATABASE_URL = config("DATABASE_URL", default="").strip()
+
+if DATABASE_URL:
+    parsed_db = urlparse(DATABASE_URL)
+    db_options = {}
+    query = parse_qs(parsed_db.query)
+    if query.get("sslmode"):
+        db_options["sslmode"] = query["sslmode"][0]
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": parsed_db.path.lstrip("/"),
+            "USER": unquote(parsed_db.username or ""),
+            "PASSWORD": unquote(parsed_db.password or ""),
+            "HOST": parsed_db.hostname or "",
+            "PORT": str(parsed_db.port or ""),
+            "OPTIONS": db_options,
+            "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("POSTGRES_DB", default="aaramkart"),
+            "USER": config("POSTGRES_USER", default="postgres"),
+            "PASSWORD": config("POSTGRES_PASSWORD", default=""),
+            "HOST": config("POSTGRES_HOST", default="localhost"),
+            "PORT": config("POSTGRES_PORT", default="5432"),
+            "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
+        }
+    }
 
 AUTH_USER_MODEL = "users.User"
 

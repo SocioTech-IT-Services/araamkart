@@ -8,7 +8,7 @@ let currentPricingTiers = [];
 let currentProductId = null;
 let currentMoq = 1;
 let currentStock = 0;
-/** @type {{ packQuantity: number, packetPrice: number, minPackets: number, maxPackets: number, unitLabel: string } | null} */
+/** @type {{ packQuantity: number, packetPrice: number, originalPacketPrice?: number, discountPerPacket?: number, minPackets: number, maxPackets: number, unitLabel: string } | null} */
 let packetPricing = null;
 
 function initProductPage(tiers, productId, moq, stock, packetPricingOpts) {
@@ -21,6 +21,9 @@ function initProductPage(tiers, productId, moq, stock, packetPricingOpts) {
     const qtyInput = document.getElementById('qty-input');
     if (qtyInput) {
         qtyInput.addEventListener('input', updatePricePreview);
+        qtyInput.addEventListener('change', updatePricePreview);
+        syncPacketOrderSummaryFromInput();
+        updatePacketPiecesBadge();
         updatePricePreview();
     }
 
@@ -34,9 +37,29 @@ function initProductPage(tiers, productId, moq, stock, packetPricingOpts) {
         stickyAddBtn.addEventListener('click', handleAddToCart);
     }
 
+    bindProductActionRipples();
     bindTierCards();
     updateStockMeter();
     syncStickyTotal();
+}
+
+function bindProductActionRipples() {
+    document.querySelectorAll('.js-product-action-ripple').forEach((button) => {
+        if (button.dataset.rippleBound === '1') return;
+        button.dataset.rippleBound = '1';
+        button.addEventListener('click', (event) => {
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const ripple = document.createElement('span');
+            ripple.className = 'product-action-ripple';
+            ripple.style.width = `${size}px`;
+            ripple.style.height = `${size}px`;
+            ripple.style.left = `${event.clientX - rect.left}px`;
+            ripple.style.top = `${event.clientY - rect.top}px`;
+            button.appendChild(ripple);
+            window.setTimeout(() => ripple.remove(), 620);
+        });
+    });
 }
 
 function changeQty(delta) {
@@ -58,28 +81,35 @@ function changeQty(delta) {
         window.navigator.vibrate(10);
     }
     updatePricePreview();
+    syncPacketOrderSummaryFromInput();
+    updatePacketPiecesBadge();
     updateStockMeter();
 }
 
 function updatePricePreview() {
     const input = document.getElementById('qty-input');
     const preview = document.getElementById('preview-price');
-    if (!input || !preview) return;
+    if (!input) return;
 
     if (packetPricing) {
         const packets = parseInt(input.value, 10);
         if (isNaN(packets) || packets < packetPricing.minPackets) {
-            preview.textContent = '—';
+            updatePacketOrderSummary(0);
+            if (preview) preview.textContent = '—';
             syncStickyTotal();
             syncAddToCartButtonPrice();
             return;
         }
         const total = packets * packetPricing.packetPrice;
-        preview.textContent = `₹${total.toLocaleString('en-IN')}`;
+        updatePacketOrderSummary(packets);
+        updatePacketPiecesBadge(packets);
+        if (preview) preview.textContent = `₹${total.toLocaleString('en-IN')}`;
         syncStickyTotal();
         syncAddToCartButtonPrice();
         return;
     }
+
+    if (!preview) return;
 
     const qty = parseInt(input.value, 10);
     if (isNaN(qty) || qty < 1) {
@@ -94,6 +124,74 @@ function updatePricePreview() {
     syncStickyTotal();
     syncAddToCartButtonPrice();
     highlightActiveTierCard(qty);
+}
+
+function syncPacketOrderSummaryFromInput() {
+    if (!packetPricing) return;
+    const input = document.getElementById('qty-input');
+    if (!input) return;
+    let packets = parseInt(input.value, 10);
+    if (Number.isNaN(packets)) packets = packetPricing.minPackets || 0;
+    packets = Math.max(packetPricing.minPackets || 0, Math.min(packets, packetPricing.maxPackets || packets));
+    updatePacketOrderSummary(packets);
+    updatePacketPiecesBadge(packets);
+}
+
+function updatePacketPiecesBadge(packetCount) {
+    if (!packetPricing) return;
+    const badge = document.getElementById('packet-pieces-badge');
+    const countEl = document.getElementById('packet-pieces-count');
+    const input = document.getElementById('qty-input');
+    if (!badge || !countEl || !input) return;
+
+    let packets = Number(packetCount);
+    if (!Number.isFinite(packets)) {
+        packets = parseInt(input.value || '0', 10);
+    }
+    if (!Number.isFinite(packets)) packets = packetPricing.minPackets || 0;
+
+    const packQuantity = Number(packetPricing.packQuantity || 0);
+    const totalPieces = Math.max(0, packets) * packQuantity;
+    countEl.textContent = `(${totalPieces} Pieces)`;
+    badge.setAttribute('aria-label', `${packets} packet(s) equals ${totalPieces} pieces`);
+}
+
+function formatMoney(value) {
+    const amount = Number(value || 0);
+    return `₹${amount.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })}`;
+}
+
+function updatePacketOrderSummary(packets) {
+    if (!packetPricing) return;
+    const safePackets = Math.max(0, Number(packets || 0));
+    const packQuantity = Number(packetPricing.packQuantity || 0);
+    const packetPrice = Number(packetPricing.packetPrice || 0);
+    const originalPacketPrice = Number(packetPricing.originalPacketPrice || packetPrice);
+    const discountPerPacket = Number(packetPricing.discountPerPacket || Math.max(0, originalPacketPrice - packetPrice));
+    const values = {
+        packets: safePackets,
+        totalItems: safePackets * packQuantity,
+        originalPrice: safePackets * originalPacketPrice,
+        savings: safePackets * discountPerPacket,
+        finalAmount: safePackets * packetPrice
+    };
+
+    const packetEl = document.getElementById('summary-packets');
+    const itemsEl = document.getElementById('summary-total-items');
+    const originalEl = document.getElementById('summary-original-price');
+    const savingsEl = document.getElementById('summary-savings');
+    const savingsBadgeEl = document.getElementById('summary-savings-badge');
+    const finalEl = document.getElementById('summary-final-amount');
+
+    if (packetEl) packetEl.textContent = String(values.packets);
+    if (itemsEl) itemsEl.textContent = String(values.totalItems);
+    if (originalEl) originalEl.textContent = formatMoney(values.originalPrice);
+    if (savingsEl) savingsEl.textContent = formatMoney(values.savings);
+    if (savingsBadgeEl) savingsBadgeEl.textContent = formatMoney(values.savings).replace('₹', '');
+    if (finalEl) finalEl.textContent = formatMoney(values.finalAmount);
 }
 
 function getPriceForQty(qty) {
@@ -112,10 +210,7 @@ function getPriceForQty(qty) {
 }
 
 async function handleAddToCart() {
-    let qty = parseInt(document.getElementById('qty-input').value, 10);
-    if (packetPricing) {
-        qty *= packetPricing.packQuantity;
-    }
+    const qty = parseInt(document.getElementById('qty-input').value, 10);
     
     try {
         const response = await fetch('/orders/cart/add/', {
@@ -184,12 +279,12 @@ function updateStockMeter() {
 
     if (packetPricing) {
         const packets = parseInt(qtyInput.value || '0', 10);
-        const { maxPackets, unitLabel } = packetPricing;
+        const { maxPackets } = packetPricing;
         const ratio = maxPackets
             ? Math.min(100, Math.max(0, Math.round((packets / maxPackets) * 100)))
             : 0;
         fill.style.width = `${ratio}%`;
-        text.textContent = `Available: ${maxPackets} packets (${currentStock} ${unitLabel}) · Selected: ${packets} packet(s)`;
+        text.textContent = `Available: ${maxPackets} packets · Selected: ${packets} packet(s)`;
         return;
     }
 
@@ -215,6 +310,13 @@ function syncAddToCartButtonPrice() {
 
 // ── CART PAGE LOGIC ──
 
+function changeCartItemQty(itemId, delta) {
+    const qtyInput = document.getElementById(`qty-${itemId}`);
+    if (!qtyInput) return;
+    const currentQty = parseInt(qtyInput.value, 10) || parseInt(qtyInput.min, 10) || 1;
+    updateCartItem(itemId, currentQty + delta);
+}
+
 async function updateCartItem(itemId, newQty) {
     const qtyInput = document.getElementById(`qty-${itemId}`);
     const minusBtn = document.getElementById(`minus-${itemId}`);
@@ -229,19 +331,16 @@ async function updateCartItem(itemId, newQty) {
     if (Number.isNaN(newQty)) newQty = min;
 
     if (packetMode && packQty > 0) {
-        const minMultiple = Math.ceil(min / packQty) * packQty;
-        if (newQty < minMultiple) newQty = minMultiple;
-        newQty = Math.round(newQty / packQty) * packQty;
-        if (newQty < minMultiple) newQty = minMultiple;
+        if (newQty < min) newQty = min;
         if (newQty > max) {
-            newQty = Math.floor(max / packQty) * packQty;
+            newQty = max;
             if (newQty === prevQty && plusBtn) {
                 showToast('Limit reached for available stock.', 'error');
             }
         }
         if (newQty <= 0) {
-            showToast(`Not enough stock for a full packet of ${packQty}.`, 'error');
-            newQty = parseInt(qtyInput.value, 10) || minMultiple;
+            showToast('Not enough stock for a full packet.', 'error');
+            newQty = parseInt(qtyInput.value, 10) || min;
         }
     } else {
         if (newQty < min) {
@@ -279,25 +378,26 @@ async function updateCartItem(itemId, newQty) {
             const unitEl = document.getElementById(`unit-price-${itemId}`);
             if (unitEl) {
                 if (unitEl.dataset.packetMode === '1') {
-                    const pu = unitEl.dataset.packetUnit || 'pcs';
-                    const singular = pu === 'pcs' ? 'piece' : pu;
-                    unitEl.textContent = `₹${data.unit_price} per ${singular}`;
+                    unitEl.textContent = `₹${data.unit_price} per packet`;
                 } else {
                     unitEl.textContent = `₹${data.unit_price} / unit`;
                 }
             }
             document.getElementById(`line-total-${itemId}`).textContent = `₹${data.line_total}`;
-            animateRollTotal('cart-total', data.cart_total);
-            animateRollTotal('grand-total', data.cart_total);
+            updateCartPiecesLabel(itemId, data.quantity ?? newQty, data.packet_size, data.total_pieces);
+            updateLineSavings(itemId, data.line_savings);
+            updateCartSummaryTotals(data);
             toggleQtyButtons(itemId);
         } else {
             showToast(data.error, 'error');
             qtyInput.value = String(prevQty);
+            updateCartPiecesLabel(itemId, prevQty);
             toggleQtyButtons(itemId);
         }
     } catch (err) {
         showToast('Failed to update cart.', 'error');
         qtyInput.value = String(prevQty);
+        updateCartPiecesLabel(itemId, prevQty);
         toggleQtyButtons(itemId);
     }
 }
@@ -309,10 +409,8 @@ function toggleQtyButtons(itemId) {
     if (!qtyInput) return;
     const min = parseInt(qtyInput.min, 10);
     const max = parseInt(qtyInput.max, 10);
-    const packetMode = qtyInput.dataset.packetMode === '1';
-    const packQty = parseInt(qtyInput.dataset.packQty || '0', 10);
     const qty = parseInt(qtyInput.value, 10) || min;
-    const maxAllowed = packetMode && packQty > 0 ? Math.floor(max / packQty) * packQty : max;
+    const maxAllowed = max;
     if (minusBtn) minusBtn.disabled = qty <= min;
     if (plusBtn) plusBtn.disabled = qty >= maxAllowed;
 }
@@ -336,11 +434,16 @@ async function removeCartItem(itemId) {
                     row.classList.add('is-removing');
                     window.setTimeout(() => row.remove(), 260);
                 }
-                animateRollTotal('cart-total', data.cart_total);
-                animateRollTotal('grand-total', data.cart_total);
+                updateCartSummaryTotals(data);
                 document.getElementById('cart-badge').textContent = data.cart_count;
+                showToast('✓ Item removed successfully.', 'success');
                 if (data.cart_count === 0) {
-                    window.setTimeout(() => location.reload(), 280); // Show empty state after animation
+                    try {
+                        sessionStorage.setItem('akCartRemovedToast', '✓ Item removed successfully.');
+                    } catch (_) {
+                        /* private mode */
+                    }
+                    window.setTimeout(() => location.reload(), 900); // Show empty state after animation and toast.
                 }
                 return true;
             }
@@ -420,20 +523,69 @@ function confirmCartRemoval(onConfirmAsync) {
     });
 }
 
-function animateRollTotal(id, value) {
+function animateRollTotal(id, value, prefix = '₹') {
     const el = document.getElementById(id);
     if (!el) return;
     el.classList.add('is-rolling');
     window.setTimeout(() => {
         const n = Number(value);
-        el.textContent = `₹${Number.isFinite(n) ? n.toFixed(2) : value}`;
+        el.textContent = `${prefix}${Number.isFinite(n) ? n.toFixed(2) : value}`;
         el.classList.remove('is-rolling');
     }, 140);
 }
 
+function setMoneyText(id, value, prefix = '₹') {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const n = Number(value);
+    el.textContent = `${prefix}${Number.isFinite(n) ? n.toFixed(2) : value}`;
+}
+
+function updateCartSummaryTotals(data) {
+    const finalTotal = data.cart_total;
+    const originalTotal = data.original_total ?? data.cart_total;
+    const totalSavings = data.total_savings ?? 0;
+    animateRollTotal('cart-subtotal', originalTotal);
+    animateRollTotal('grand-total', finalTotal);
+    animateRollTotal('bulk-discount', totalSavings, '-₹');
+    setMoneyText('breakdown-original', originalTotal);
+    setMoneyText('breakdown-savings', totalSavings, '-₹');
+    setMoneyText('breakdown-final', finalTotal);
+}
+
+function updateCartPiecesLabel(itemId, quantity, packetSize, totalPieces) {
+    const label = document.getElementById(`total-pieces-${itemId}`);
+    const qtyInput = document.getElementById(`qty-${itemId}`);
+    if (!label || !qtyInput) return;
+    const text = document.getElementById(`total-pieces-text-${itemId}`);
+    const packQty = Number(packetSize || qtyInput.dataset.packQty || 0);
+    if (!packQty) return;
+    const packets = Number(quantity || qtyInput.value || 0);
+    const pieces = Number(totalPieces || packets * packQty);
+    if (text) text.textContent = `Total: ${pieces} Pieces`;
+}
+
+function updateLineSavings(itemId, value) {
+    const el = document.getElementById(`line-savings-${itemId}`);
+    if (!el) return;
+    const n = Number(value || 0);
+    el.textContent = `Saved ₹${Number.isFinite(n) ? n.toFixed(2) : value}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const pendingToast = sessionStorage.getItem('akCartRemovedToast');
+        if (pendingToast) {
+            sessionStorage.removeItem('akCartRemovedToast');
+            showToast(pendingToast, 'success');
+        }
+    } catch (_) {
+        /* private mode */
+    }
+
     document.querySelectorAll('.qty-input[id^="qty-"]').forEach((input) => {
         const itemId = input.id.replace('qty-', '');
         toggleQtyButtons(itemId);
+        updateCartPiecesLabel(itemId, input.value);
     });
 });

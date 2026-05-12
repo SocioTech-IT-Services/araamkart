@@ -73,7 +73,7 @@
     <button type="button" class="btn-bulk-add js-bulk-add js-premium-ripple" {% if product.stock == 0 %}disabled{% endif %}>Add to Cart</button>
     <div class="bulk-qty-controls js-bulk-qty" aria-live="polite">
       <button type="button" class="bulk-qty-btn js-bulk-dec" aria-label="Decrease quantity">−</button>
-      <span class="bulk-qty-val js-bulk-val">{% if product.packet_price and product.pack_quantity %}{{ product.pack_quantity }}{% else %}{{ product.moq }}{% endif %}</span>
+      <span class="bulk-qty-val js-bulk-val">{% if product.packet_price and product.pack_quantity %}1{% else %}{{ product.moq }}{% endif %}</span>
       <button type="button" class="bulk-qty-btn js-bulk-inc" aria-label="Increase quantity">+</button>
     </div>
   </div>

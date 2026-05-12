@@ -351,11 +351,17 @@ def product_detail(request, pk):
     min_packets = None
     can_order_packets = True
     if use_packet_pricing and pack_qty:
-        packets_available = product.stock // pack_qty
+        packets_available = product.stock
         if packets_available > 0:
-            min_packets = max(1, math.ceil(product.moq / pack_qty))
+            min_packets = 1
             min_packets = min(min_packets, packets_available)
-            can_order_packets = product.moq <= packets_available * pack_qty
+            can_order_packets = min_packets <= packets_available
+    summary_packets = min_packets or 0
+    summary_total_items = summary_packets * int(pack_qty or 0)
+    summary_original_price = (list_price_total or Decimal("0")) * summary_packets
+    summary_savings = (packet_savings_amount or Decimal("0")) * summary_packets
+    summary_final_amount = (packet_price or Decimal("0")) * summary_packets
+    money = lambda value: Decimal(value or 0).quantize(Decimal("0.01"))
 
     return render(request, "catalog/product.html", {
         "product": product,
@@ -369,6 +375,10 @@ def product_detail(request, pk):
         "packets_available": packets_available,
         "min_packets": min_packets,
         "can_order_packets": can_order_packets,
+        "summary_total_items": summary_total_items,
+        "summary_original_price": money(summary_original_price),
+        "summary_savings": money(summary_savings),
+        "summary_final_amount": money(summary_final_amount),
     })
 
 

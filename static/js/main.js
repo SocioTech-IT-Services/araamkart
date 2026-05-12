@@ -404,7 +404,7 @@ function initConversionTrustSection() {
             showToast('Out of stock.', 'error');
             return;
         }
-        const qty = packQty > 0 ? packQty : moq;
+        const qty = packQty > 0 ? 1 : moq;
         btn.disabled = true;
         btn.textContent = 'Adding...';
         try {
@@ -737,13 +737,9 @@ function initBulkAddGrid() {
     const normalizeQty = (qty, moq, stock, packetMode, packQty) => {
         let q = Number.isFinite(qty) ? qty : moq;
         if (packetMode && packQty > 0) {
-            const minPacketQty = packQty;
+            const minPacketQty = 1;
             if (q < minPacketQty) q = minPacketQty;
-            q = Math.round(q / packQty) * packQty;
-            if (q < minPacketQty) q = minPacketQty;
-            if (q > stock) {
-                q = Math.floor(stock / packQty) * packQty;
-            }
+            if (q > stock) q = stock;
             return Math.max(0, q);
         }
         if (q < moq) q = moq;
@@ -778,13 +774,13 @@ function initBulkAddGrid() {
                 showToast('Available stock is below MOQ for this product.', 'error');
                 return;
             }
-            if (packetMode && packQty > 0 && stock < packQty) {
-                showToast(`Only full packets of ${packQty} can be sold for this product.`, 'error');
+            if (packetMode && packQty > 0 && stock < 1) {
+                showToast('This product is out of stock.', 'error');
                 return;
             }
             const uiQty = parseInt(bar.dataset.qty || '', 10)
                 || parseInt(bar.querySelector('.js-bulk-val')?.textContent || '', 10)
-                || (packetMode && packQty > 0 ? packQty : moq);
+                || (packetMode && packQty > 0 ? 1 : moq);
             const qty = normalizeQty(uiQty, moq, stock, packetMode, packQty);
             if (qty <= 0) {
                 showToast('Not enough stock for a full packet.', 'error');
@@ -836,8 +832,8 @@ function initBulkAddGrid() {
         const packQty = parseInt(bar.dataset.packQty, 10) || 0;
         let qty = parseInt(bar.dataset.qty, 10)
             || parseInt(bar.querySelector('.js-bulk-val')?.textContent || '', 10)
-            || (packetMode && packQty > 0 ? packQty : moq);
-        const step = packetMode && packQty > 0 ? packQty : 1;
+            || (packetMode && packQty > 0 ? 1 : moq);
+        const step = 1;
         qty += inc ? step : -step;
         qty = normalizeQty(qty, moq, stock, packetMode, packQty);
         if (qty <= 0) {

@@ -1,5 +1,8 @@
 """DRF API Views — Orders & Cart"""
+import math
+
 from django.db.models import Sum
+from decimal import Decimal
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -18,8 +21,12 @@ def _packet_rules(product):
     pack_qty = int(product.pack_quantity or 0)
     if pack_qty <= 0:
         return None
-    min_multiple_qty = pack_qty * 1
-    return {"pack_qty": pack_qty, "min_multiple_qty": min_multiple_qty}
+    min_packets = 1
+    return {"pack_qty": pack_qty, "min_packets": min_packets}
+
+
+def _money(value):
+    return Decimal(value or 0).quantize(Decimal("0.01"))
 
 
 class CartAPIView(APIView):
@@ -41,25 +48,21 @@ class CartAPIView(APIView):
         if not packet_rules and quantity < product.moq:
             return Response({"error": f"Minimum order quantity is {product.moq} {product.unit}."}, status=400)
         if packet_rules:
-            pack_qty = packet_rules["pack_qty"]
-            min_multiple_qty = packet_rules["min_multiple_qty"]
-            if quantity % pack_qty != 0:
+            min_packets = packet_rules["min_packets"]
+            if quantity < min_packets:
                 return Response(
-                    {"error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}."},
-                    status=400,
-                )
-            if quantity < min_multiple_qty:
-                return Response(
-                    {"error": f"Minimum packet order is {min_multiple_qty} {product.unit} ({min_multiple_qty // pack_qty} packet(s))."},
+                    {"error": f"Minimum packet order is {min_packets} packet(s)."},
                     status=400,
                 )
         if quantity > product.stock:
             return Response({"error": "Not enough stock."}, status=400)
         cart, _ = Cart.objects.get_or_create(user=request.user)
         item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+        if packet_rules:
+            item.packet_size = packet_rules["pack_qty"]
         item.quantity = quantity if created else item.quantity + quantity
-        if packet_rules and item.quantity % packet_rules["pack_qty"] != 0:
-            return Response({"error": f"This item is sold in full packets of {packet_rules['pack_qty']}."}, status=400)
+        if item.quantity > product.stock:
+            return Response({"error": "Not enough stock."}, status=400)
         item.save()
         return Response(CartSerializer(cart).data)
 
@@ -75,18 +78,16 @@ class CartAPIView(APIView):
         if not packet_rules and quantity < item.product.moq:
             return Response({"error": f"Minimum is {item.product.moq}."}, status=400)
         if packet_rules:
-            pack_qty = packet_rules["pack_qty"]
-            min_multiple_qty = packet_rules["min_multiple_qty"]
-            if quantity % pack_qty != 0:
+            min_packets = packet_rules["min_packets"]
+            if quantity < min_packets:
                 return Response(
-                    {"error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}."},
+                    {"error": f"Minimum packet order is {min_packets} packet(s)."},
                     status=400,
                 )
-            if quantity < min_multiple_qty:
-                return Response(
-                    {"error": f"Minimum packet order is {min_multiple_qty} {item.product.unit} ({min_multiple_qty // pack_qty} packet(s))."},
-                    status=400,
-                )
+        if quantity > item.product.stock:
+            return Response({"error": "Not enough stock."}, status=400)
+        if packet_rules:
+            item.packet_size = packet_rules["pack_qty"]
         item.quantity = quantity
         item.save()
         return Response(CartSerializer(item.cart).data)
@@ -116,6 +117,8 @@ class PlaceOrderAPIView(APIView):
         if not items.exists():
             return Response({"error": "Cart is empty."}, status=400)
         total = cart.get_total()
+        original_total = cart.get_original_total()
+        total_savings = cart.get_total_savings()
         order = Order.objects.create(
             user=request.user,
             customer_name=d["customer_name"],
@@ -127,16 +130,23 @@ class PlaceOrderAPIView(APIView):
             pincode=d.get("pincode", ""),
             notes=d.get("notes", ""),
             payment_method="cod",
+            subtotal_amount=_money(original_total),
+            total_savings=_money(total_savings),
             total_amount=total,
         )
         for item in items:
+            original_unit_price = item.original_unit_price()
+            line_savings = item.line_savings()
             OrderItem.objects.create(
                 order=order,
                 product=item.product,
                 product_name=item.product.name,
                 brand=item.product.brand,
                 quantity=item.quantity,
+                packet_size=item.effective_packet_size,
+                original_unit_price=_money(original_unit_price),
                 unit_price=item.unit_price(),
+                line_savings=_money(line_savings),
             )
             p = item.product
             p.stock = max(0, p.stock - item.quantity)

@@ -105,6 +105,46 @@
   .summary-line.discount .val { color: #059669; }
   .summary-line.total { margin-top: .55rem; font-size: 1.06rem; }
   .summary-line.total .val { font-size: 1.34rem; }
+  .summary-line.saved {
+    margin-top: .65rem;
+    padding: .6rem .7rem;
+    border-radius: 12px;
+    background: #ecfdf5;
+    border: 1px solid rgba(16,185,129,.24);
+    color: #047857;
+    font-weight: 900;
+  }
+  .summary-line.saved span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+  }
+  .summary-line.saved svg { width: 1rem; height: 1rem; }
+  .summary-line.saved .val {
+    color: #27ae60;
+    animation: checkoutSavingsPulse .7s ease both;
+  }
+  @keyframes checkoutSavingsPulse {
+    0% { transform: scale(.96); opacity: .82; }
+    55% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .checkout-breakdown {
+    margin-top: .55rem;
+    border: 1px solid #dbe7f8;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f8fbff;
+  }
+  .checkout-breakdown summary {
+    list-style: none;
+    cursor: pointer;
+    padding: .58rem .7rem;
+    color: #0f172a;
+    font-weight: 800;
+  }
+  .checkout-breakdown summary::-webkit-details-marker { display: none; }
+  .checkout-breakdown__body { padding: 0 .7rem .65rem; font-size: .84rem; }
   .trust-box {
     margin-top: .85rem;
     padding: .75rem;
@@ -255,17 +295,37 @@
           {% endif %}
           <div>
             <p class="summary-item-name">{{ item.product.name }}</p>
-            <p class="summary-item-qty">Qty: {{ item.quantity }} {{ item.product.unit }}</p>
+            <p class="summary-item-qty">
+              {% if item.packet_mode %}
+              Qty: {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+              {% else %}
+              Qty: {{ item.quantity }} {{ item.product.unit }}
+              {% endif %}
+            </p>
           </div>
-          <div class="summary-item-total">₹{{ item.line_total }}</div>
+          <div class="summary-item-total">{% if item.locked_line_total %}₹{{ item.locked_line_total }}{% else %}₹{{ item.line_total }}{% endif %}</div>
         </div>
         {% endfor %}
         <hr class="summary-divider" />
-        <div class="summary-line"><span>Subtotal</span><span class="val">₹{{ total }}</span></div>
-        <div class="summary-line discount"><span>Bulk Discount</span><span class="val">₹0.00</span></div>
+        <div class="summary-line"><span>Subtotal</span><span class="val">₹{{ original_total }}</span></div>
+        <div class="summary-line saved">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Z"/><path d="M16 7V5a2 2 0 0 0-2-2H6"/><circle cx="16" cy="13" r="1"/></svg>
+            Total Savings
+          </span>
+          <span class="val">-₹{{ total_savings }}</span>
+        </div>
         <div class="summary-line"><span>Delivery</span><span class="val">FREE</span></div>
         <div class="summary-line"><span>Payment</span><span class="val">Cash on Delivery</span></div>
-        <div class="summary-line total"><strong>Grand Total</strong><strong class="val">₹{{ total }}</strong></div>
+        <div class="summary-line total"><strong>Total Payable</strong><strong class="val">₹{{ total }}</strong></div>
+        <details class="checkout-breakdown">
+          <summary>Price Breakdown</summary>
+          <div class="checkout-breakdown__body">
+            <div class="summary-line"><span>Original MRP total</span><span class="val">₹{{ original_total }}</span></div>
+            <div class="summary-line discount"><span>Bulk Discount Applied</span><span class="val">-₹{{ total_savings }}</span></div>
+            <div class="summary-line"><span>Locked checkout amount</span><span class="val">₹{{ total }}</span></div>
+          </div>
+        </details>
 
         <div class="trust-box">
           <span>Verified Genuine Products</span>

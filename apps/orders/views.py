@@ -1,5 +1,6 @@
 """Orders app — Template Views (Cart, Checkout, Order History)"""
 import json
+import math
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -29,8 +30,89 @@ def _packet_rules(product):
     pack_qty = int(product.pack_quantity or 0)
     if pack_qty <= 0:
         return None
-    min_multiple_qty = pack_qty * 1
-    return {"pack_qty": pack_qty, "min_multiple_qty": min_multiple_qty}
+    min_packets = 1
+    return {"pack_qty": pack_qty, "min_packets": min_packets}
+
+
+def _money(value):
+    return Decimal(value or 0).quantize(Decimal("0.01"))
+
+
+def _decorate_cart_items(items):
+    for item in items:
+        product = item.product
+        item.packet_mode = bool(product.packet_price and product.pack_quantity)
+        rules = _packet_rules(product)
+        item.packet_min_qty = rules["min_packets"] if rules else product.moq
+        if item.packet_mode and item.packet_size != rules["pack_qty"]:
+            item.packet_size = rules["pack_qty"]
+            item.save(update_fields=["packet_size"])
+        item.pieces_label = f"{item.quantity} Packets ({item.total_pieces} Pcs)" if item.packet_mode else f"{item.quantity} {product.unit}"
+        item.original_line_total_value = _money(item.original_line_total())
+        item.line_savings_value = _money(item.line_savings())
+        item.unit_savings_value = _money(item.unit_savings())
+    return items
+
+
+def _cart_totals(cart):
+    final_total = _money(cart.get_total())
+    original_total = _money(cart.get_original_total())
+    total_savings = _money(cart.get_total_savings())
+    return {
+        "final_total": final_total,
+        "original_total": original_total,
+        "total_savings": total_savings,
+    }
+
+
+def _build_checkout_lock(items):
+    lines = []
+    original_total = Decimal("0")
+    final_total = Decimal("0")
+    total_savings = Decimal("0")
+    for item in items:
+        unit_price = _money(item.unit_price())
+        original_unit_price = _money(item.original_unit_price())
+        line_total = _money(unit_price * item.quantity)
+        original_line_total = _money(original_unit_price * item.quantity)
+        line_savings = _money(max(Decimal("0"), original_line_total - line_total))
+        lines.append(
+            {
+                "item_id": item.pk,
+                "product_id": item.product_id,
+                "quantity": item.quantity,
+                "packet_size": item.effective_packet_size,
+                "unit_price": str(unit_price),
+                "original_unit_price": str(original_unit_price),
+                "line_total": str(line_total),
+                "original_line_total": str(original_line_total),
+                "line_savings": str(line_savings),
+            }
+        )
+        original_total += original_line_total
+        final_total += line_total
+        total_savings += line_savings
+    return {
+        "lines": lines,
+        "original_total": str(_money(original_total)),
+        "final_total": str(_money(final_total)),
+        "total_savings": str(_money(total_savings)),
+    }
+
+
+def _checkout_lock_matches(lock, items):
+    if not lock or "lines" not in lock:
+        return False
+    current = sorted((item.pk, item.product_id, item.quantity) for item in items)
+    locked = sorted(
+        (line.get("item_id"), line.get("product_id"), line.get("quantity"))
+        for line in lock.get("lines", [])
+    )
+    return current == locked
+
+
+def _checkout_line_map(lock):
+    return {line["item_id"]: line for line in lock.get("lines", [])}
 
 
 def _merge_product_into_cart(user, product, quantity):
@@ -43,30 +125,21 @@ def _merge_product_into_cart(user, product, quantity):
         return False, f"Minimum order quantity is {product.moq} {product.unit}."
 
     if packet_rules:
-        pack_qty = packet_rules["pack_qty"]
-        min_multiple_qty = packet_rules["min_multiple_qty"]
-        if quantity % pack_qty != 0:
-            return False, (
-                f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}."
-            )
-        if quantity < min_multiple_qty:
-            return False, (
-                f"Minimum packet order is {min_multiple_qty} {product.unit} "
-                f"({min_multiple_qty // pack_qty} packet(s))."
-            )
+        min_packets = packet_rules["min_packets"]
+        if quantity < min_packets:
+            return False, f"Minimum packet order is {min_packets} packet(s)."
 
     if quantity > product.stock:
         return False, "Not enough stock available."
 
     cart, _ = Cart.objects.get_or_create(user=user)
     item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+    if packet_rules:
+        item.packet_size = packet_rules["pack_qty"]
     if not created:
         item.quantity += quantity
     else:
         item.quantity = quantity
-
-    if packet_rules and item.quantity % packet_rules["pack_qty"] != 0:
-        return False, f"This item is sold in full packets of {packet_rules['pack_qty']}."
 
     if item.quantity > product.stock:
         item.quantity = product.stock
@@ -83,15 +156,14 @@ def cart_view(request):
         )
     cart, _ = Cart.objects.get_or_create(user=request.user)
     items = cart.items.select_related("product").prefetch_related("product__pricing_tiers")
-    for item in items:
-        product = item.product
-        item.packet_mode = bool(product.packet_price and product.pack_quantity)
-        rules = _packet_rules(product)
-        item.packet_min_qty = rules["min_multiple_qty"] if rules else product.moq
+    items = _decorate_cart_items(items)
+    totals = _cart_totals(cart)
     return render(request, "orders/cart.html", {
         "cart": cart,
         "items": items,
-        "total": cart.get_total(),
+        "total": totals["final_total"],
+        "original_total": totals["original_total"],
+        "total_savings": totals["total_savings"],
         "login_prompt": False,
     })
 
@@ -111,11 +183,19 @@ def add_to_cart(request):
 
     cart, _ = Cart.objects.get_or_create(user=request.user)
     cart_total = cart.get_total()
+    totals = _cart_totals(cart)
+    packet_rules = _packet_rules(product)
     return JsonResponse({
         "success": True,
-        "message": f"Added {quantity} {product.unit} of {product.name} to cart.",
+        "message": (
+            f"Added {quantity} packet(s) of {product.name} to cart."
+            if packet_rules
+            else f"Added {quantity} {product.unit} of {product.name} to cart."
+        ),
         "cart_count": cart.item_count(),
         "cart_total": float(cart_total),
+        "original_total": float(totals["original_total"]),
+        "total_savings": float(totals["total_savings"]),
     })
 
 
@@ -134,30 +214,33 @@ def update_cart(request):
         return JsonResponse({"success": False, "error": f"Minimum order quantity is {product.moq} {product.unit}."})
 
     if packet_rules:
-        pack_qty = packet_rules["pack_qty"]
-        min_multiple_qty = packet_rules["min_multiple_qty"]
-        if quantity % pack_qty != 0:
+        min_packets = packet_rules["min_packets"]
+        if quantity < min_packets:
             return JsonResponse({
                 "success": False,
-                "error": f"This item is sold in full packets of {pack_qty}. Please use multiples of {pack_qty}.",
-            })
-        if quantity < min_multiple_qty:
-            return JsonResponse({
-                "success": False,
-                "error": f"Minimum packet order is {min_multiple_qty} {product.unit} ({min_multiple_qty // pack_qty} packet(s)).",
+                "error": f"Minimum packet order is {min_packets} packet(s).",
             })
 
     if quantity > product.stock:
         return JsonResponse({"success": False, "error": "Not enough stock available."})
 
+    if packet_rules:
+        item.packet_size = packet_rules["pack_qty"]
     item.quantity = quantity
     item.save()
 
     cart = item.cart
+    totals = _cart_totals(cart)
     return JsonResponse({
         "success": True,
         "line_total": float(item.line_total()),
         "cart_total": float(cart.get_total()),
+        "original_total": float(totals["original_total"]),
+        "total_savings": float(totals["total_savings"]),
+        "line_savings": float(item.line_savings()),
+        "quantity": item.quantity,
+        "packet_size": item.effective_packet_size,
+        "total_pieces": item.total_pieces,
         "unit_price": float(item.unit_price()),
     })
 
@@ -170,9 +253,12 @@ def remove_from_cart(request):
     item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
     item.delete()
     cart = Cart.objects.get(user=request.user)
+    totals = _cart_totals(cart)
     return JsonResponse({
         "success": True,
         "cart_total": float(cart.get_total()),
+        "original_total": float(totals["original_total"]),
+        "total_savings": float(totals["total_savings"]),
         "cart_count": cart.item_count(),
     })
 
@@ -188,7 +274,15 @@ def checkout_view(request):
         messages.error(request, "Your cart is empty.")
         return redirect("cart")
 
+    items = _decorate_cart_items(items)
+
     if request.method == "POST":
+        checkout_lock = request.session.get("checkout_price_lock")
+        if not _checkout_lock_matches(checkout_lock, items):
+            request.session["checkout_price_lock"] = _build_checkout_lock(items)
+            messages.error(request, "Your cart changed. Please review the locked checkout total again.")
+            return redirect("checkout")
+
         customer_name = request.POST.get("customer_name", "").strip()
         business_name = request.POST.get("business_name", "").strip()
         phone = request.POST.get("phone", "").strip()
@@ -205,15 +299,21 @@ def checkout_view(request):
 
         if not all([customer_name, phone, street_locality, address]):
             messages.error(request, "Please fill in all required fields.")
+            totals = _cart_totals(cart)
             return render(request, "orders/checkout.html", {
                 "cart": cart,
                 "items": items,
-                "total": cart.get_total(),
+                "total": totals["final_total"],
+                "original_total": totals["original_total"],
+                "total_savings": totals["total_savings"],
                 "user": request.user,
             })
 
         # Create order
-        total = cart.get_total()
+        locked_lines = _checkout_line_map(checkout_lock)
+        total = _money(checkout_lock["final_total"])
+        original_total = _money(checkout_lock["original_total"])
+        total_savings = _money(checkout_lock["total_savings"])
         order = Order.objects.create(
             user=request.user,
             customer_name=customer_name,
@@ -225,20 +325,28 @@ def checkout_view(request):
             pincode=pincode,
             notes=notes,
             payment_method="cod",
+            subtotal_amount=original_total,
+            total_savings=total_savings,
             total_amount=total,
             status="pending",
         )
 
         # Create order items + reduce stock
         for item in items:
-            price = item.unit_price()
+            locked_line = locked_lines[item.pk]
+            price = _money(locked_line["unit_price"])
+            original_price = _money(locked_line["original_unit_price"])
+            line_savings = _money(locked_line["line_savings"])
             OrderItem.objects.create(
                 order=order,
                 product=item.product,
                 product_name=item.product.name,
                 brand=item.product.brand,
                 quantity=item.quantity,
+                packet_size=int(locked_line.get("packet_size") or item.effective_packet_size),
+                original_unit_price=original_price,
                 unit_price=price,
+                line_savings=line_savings,
             )
             # Reduce stock
             product = item.product
@@ -247,6 +355,7 @@ def checkout_view(request):
 
         # Clear cart
         items.delete()
+        request.session.pop("checkout_price_lock", None)
 
         # Send notifications
         try:
@@ -257,10 +366,22 @@ def checkout_view(request):
         messages.success(request, f"Order #{order.order_number} placed successfully!")
         return redirect("order_success", order_number=order.order_number)
 
+    checkout_lock = _build_checkout_lock(items)
+    request.session["checkout_price_lock"] = checkout_lock
+    request.session.modified = True
+    line_map = _checkout_line_map(checkout_lock)
+    for item in items:
+        line = line_map[item.pk]
+        item.locked_line_total = _money(line["line_total"])
+        item.locked_original_line_total = _money(line["original_line_total"])
+        item.locked_line_savings = _money(line["line_savings"])
+
     return render(request, "orders/checkout.html", {
         "cart": cart,
         "items": items,
-        "total": cart.get_total(),
+        "total": _money(checkout_lock["final_total"]),
+        "original_total": _money(checkout_lock["original_total"]),
+        "total_savings": _money(checkout_lock["total_savings"]),
         "user": request.user,
     })
 
@@ -287,20 +408,13 @@ def order_quotation(request, order_number):
     issued_on = timezone.localdate()
     valid_until = issued_on + timedelta(days=7)
     subtotal = sum((item.line_total() for item in order.items.all()), Decimal("0"))
-    mrp_total = Decimal("0")
-    discount_amount = Decimal("0")
-    for item in order.items.all():
-        mrp_unit = None
-        if item.product and item.product.single_product_price:
-            mrp_unit = Decimal(item.product.single_product_price)
-        elif item.unit_price is not None:
-            mrp_unit = Decimal(item.unit_price)
-        if mrp_unit is None:
-            continue
-        line_mrp_total = mrp_unit * Decimal(item.quantity)
-        line_selling_total = Decimal(item.unit_price) * Decimal(item.quantity)
-        mrp_total += line_mrp_total
-        discount_amount += max(Decimal("0"), line_mrp_total - line_selling_total)
+    mrp_total = order.subtotal_amount or Decimal("0")
+    discount_amount = order.total_savings or Decimal("0")
+    if mrp_total <= 0:
+        mrp_total = sum(
+            (Decimal(item.unit_price) * Decimal(item.quantity) for item in order.items.all()),
+            Decimal("0"),
+        )
 
     discount_pct = Decimal("0")
     if mrp_total > 0:
@@ -726,7 +840,7 @@ def admin_bulk_import_products(request):
             pack_qty = max(1, int(float(pack_qty_raw)))
             packet_price = Decimal(str(packet_price_raw)) if packet_price_raw else price * Decimal(pack_qty)
             stock_packets = max(0, int(float(stock_raw)))
-            product_stock = stock_packets * pack_qty
+            product_stock = stock_packets
 
             sku_clean = (sku or "").strip()
             product = None
@@ -914,7 +1028,7 @@ def _sync_product_from_variant_rows(product, request):
     elif single_sp is not None:
         product.packet_price = single_sp * Decimal(pack_qty)
     product.pack_quantity = pack_qty
-    product.stock = max(0, stock_packets) * pack_qty
+    product.stock = max(0, stock_packets)
     if net_qty is not None:
         product.net_quantity_value = net_qty
     if net_unit:
@@ -1276,6 +1390,8 @@ def admin_offline_order(request):
             status = "delivered"
 
         subtotal = Decimal("0")
+        original_total = Decimal("0")
+        total_savings = Decimal("0")
         order_lines = []
         for item in cart_items:
             product_id = item.get("product_id")
@@ -1290,12 +1406,23 @@ def admin_offline_order(request):
                 price_guess = product.get_price_for_qty(qty) or product.base_price or Decimal("0")
                 unit_price = Decimal(price_guess)
             line_total = unit_price * qty
+            original_unit_price = (
+                Decimal(product.single_product_price) * Decimal(product.pack_quantity)
+                if product.packet_price and product.pack_quantity and product.single_product_price
+                else max(Decimal(product.single_product_price or 0), unit_price)
+            )
+            line_savings = max(Decimal("0"), (original_unit_price * qty) - line_total)
             subtotal += line_total
+            original_total += original_unit_price * qty
+            total_savings += line_savings
             order_lines.append(
                 {
                     "product": product,
                     "qty": qty,
+                    "packet_size": int(product.pack_quantity or 1),
                     "unit_price": unit_price,
+                    "original_unit_price": original_unit_price,
+                    "line_savings": line_savings,
                 }
             )
 
@@ -1304,6 +1431,7 @@ def admin_offline_order(request):
             return redirect("admin_offline_order")
 
         grand_total = max(Decimal("0"), subtotal + tax_value - discount_value)
+        total_savings += max(Decimal("0"), discount_value)
         order = Order.objects.create(
             user=request.user if request.user.is_authenticated else None,
             business_name=business_name,
@@ -1315,6 +1443,8 @@ def admin_offline_order(request):
             pincode=pincode,
             payment_method=payment_method,
             status=status,
+            subtotal_amount=_money(original_total),
+            total_savings=_money(total_savings),
             total_amount=grand_total,
             notes=f"Offline order entry. {notes}".strip(),
         )
@@ -1327,7 +1457,10 @@ def admin_offline_order(request):
                 product_name=product.name,
                 brand=product.brand,
                 quantity=qty,
+                packet_size=line["packet_size"],
+                original_unit_price=_money(line["original_unit_price"]),
                 unit_price=line["unit_price"],
+                line_savings=_money(line["line_savings"]),
             )
             product.stock = max(0, int(product.stock) - qty)
             product.save(update_fields=["stock", "updated_at"])

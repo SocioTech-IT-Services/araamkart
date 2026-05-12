@@ -180,7 +180,7 @@ class Product(models.Model):
         # Packet pricing takes precedence across the storefront.
         if self.packet_price and self.pack_quantity:
             try:
-                return Decimal(self.packet_price) / Decimal(self.pack_quantity)
+                return Decimal(self.packet_price)
             except Exception:
                 pass
         tier = self.pricing_tiers.order_by("min_qty").first()
@@ -188,11 +188,10 @@ class Product(models.Model):
 
     def get_price_for_qty(self, qty):
         """Return unit price for a given quantity."""
-        # If packet pricing is configured, always treat it as the final price.
-        # Cart quantities are stored as single units (pcs), so we return an effective per-piece rate.
+        # Packet-priced products store cart quantities and stock as packet counts.
         if self.packet_price and self.pack_quantity:
             try:
-                return Decimal(self.packet_price) / Decimal(self.pack_quantity)
+                return Decimal(self.packet_price)
             except Exception:
                 pass
         applicable = (

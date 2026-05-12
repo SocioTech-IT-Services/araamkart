@@ -316,7 +316,13 @@
             <div class="min-w-0 flex-1">
               <p class="font-sans text-sm font-semibold text-slate-900 leading-snug">{{ item.product_name }}</p>
               <p class="text-xs text-slate-500 mt-1">
-                <span class="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">{{ item.quantity }} qty</span>
+                <span class="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">
+                  {% if item.packet_size > 1 %}
+                  {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+                  {% else %}
+                  {{ item.quantity }} qty
+                  {% endif %}
+                </span>
                 <span class="tabular-nums ml-2">₹{{ item.unit_price }} · line ₹{{ item.line_total }}</span>
               </p>
             </div>

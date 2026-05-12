@@ -65,6 +65,24 @@
     object-fit: cover;
     border: 1px solid #e2e8f0;
   }
+  .cart-item-img { position: relative; }
+  .save-per-pack-badge {
+    position: absolute;
+    left: .35rem;
+    bottom: .35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    border-radius: 999px;
+    padding: .2rem .42rem;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid rgba(16,185,129,.25);
+    font-size: .66rem;
+    font-weight: 900;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
+  }
+  .save-per-pack-badge svg { width: .75rem; height: .75rem; }
   .cart-item-brand { margin: 0 0 .2rem; font-size: .74rem; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: .05em; }
   .cart-item-name { margin: 0 0 .25rem; line-height: 1.3; }
   .cart-item-name a { color: #0f172a; text-decoration: none; font-weight: 700; }
@@ -92,11 +110,12 @@
     border: 1px solid #e2e8f0;
     border-radius: 999px;
     overflow: hidden;
-    background: #f8fafc;
+    background: #ffffff;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .08);
   }
   .qty-btn {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
     border: none;
     background: transparent;
     color: #0f172a;
@@ -104,6 +123,7 @@
     cursor: pointer;
     transition: all .2s ease;
   }
+  .qty-btn svg { width: 16px; height: 16px; display: block; margin: auto; }
   .qty-btn:hover { background: #10b981; color: #fff; }
   .qty-btn:disabled {
     opacity: .45;
@@ -112,14 +132,33 @@
     color: #94a3b8;
   }
   .qty-input {
-    width: 42px;
+    width: 46px;
     text-align: center;
     border: none;
     outline: none;
     background: #fff;
     color: #0f172a;
-    font-weight: 700;
+    font-weight: 900;
+    font-size: .98rem;
   }
+  .qty-input::-webkit-outer-spin-button,
+  .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .qty-total-pieces {
+    display: inline-flex;
+    align-items: center;
+    gap: .28rem;
+    border-radius: 999px;
+    padding: .22rem .52rem;
+    background: #eef6ff;
+    color: #1e3a8a;
+    border: 1px solid #cfe3ff;
+    font-size: .72rem;
+    font-weight: 900;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .qty-total-pieces svg { width: .82rem; height: .82rem; flex: 0 0 auto; }
+  .qty-total-pieces span { white-space: nowrap; }
   .cart-item-price {
     text-align: right;
     min-width: 0;
@@ -135,6 +174,12 @@
     font-size: 1.08rem;
     font-weight: 900;
     color: #0f172a;
+  }
+  .line-savings-mini {
+    margin: .18rem 0 0;
+    color: #27ae60;
+    font-weight: 900;
+    font-size: .78rem;
   }
   .cart-item-remove {
     position: absolute;
@@ -271,7 +316,63 @@
     50% { box-shadow: 0 16px 34px rgba(16,185,129,.36); }
   }
   .summary-row-discount { color: #059669; font-weight: 800; }
-  @media (max-width: 980px) { .cart-layout { grid-template-columns: 1fr; } .cart-summary { position: static; } }
+  .summary-row-savings {
+    margin-top: .65rem;
+    padding: .62rem .7rem;
+    border-radius: 12px;
+    background: #ecfdf5;
+    border: 1px solid rgba(16, 185, 129, .24);
+    color: #27ae60;
+    font-weight: 900;
+  }
+  .summary-row-savings > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    color: #047857;
+  }
+  .summary-row-savings > span:last-child { color: #27ae60; }
+  .summary-row-savings svg { width: 1rem; height: 1rem; }
+  .summary-row-savings .cart-total-roll.is-rolling {
+    animation: savingsSuccessPulse .42s ease;
+  }
+  @keyframes savingsSuccessPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.12); color: #16a34a; }
+    100% { transform: scale(1); }
+  }
+  .price-breakdown {
+    margin: .65rem 0 .25rem;
+    border: 1px solid #dbe7f8;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .price-breakdown summary {
+    cursor: pointer;
+    list-style: none;
+    padding: .58rem .7rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .price-breakdown summary::-webkit-details-marker { display: none; }
+  .price-breakdown__body {
+    padding: 0 .7rem .65rem;
+    color: #475569;
+    font-size: .84rem;
+  }
+  @media (max-width: 980px) {
+    .cart-summary {
+      position: sticky;
+      bottom: 0;
+      z-index: 30;
+      border-radius: 18px 18px 0 0;
+      margin: 0 -.75rem;
+      box-shadow: 0 -16px 36px rgba(15, 23, 42, .18);
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+  }
+  @media (max-width: 980px) { .cart-layout { grid-template-columns: 1fr; } }
   @media (max-width: 760px) {
     .cart-item {
       display: flex;
@@ -480,7 +581,15 @@
               {% if item.product.image %}
               <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" />
               {% else %}
-              <div class="product-img-placeholder">{{ item.product.category.icon }}</div>
+              <div class="product-img-placeholder">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12l1 7H5l1-7Z"/><path d="M5 9h14l-1 13H6L5 9Z"/><path d="M9 13h6"/></svg>
+              </div>
+              {% endif %}
+              {% if item.unit_savings_value %}
+              <span class="save-per-pack-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7"/><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/></svg>
+                Save ₹{{ item.unit_savings_value }}{% if item.packet_mode %}/pk{% endif %}
+              </span>
               {% endif %}
             </div>
 
@@ -489,19 +598,29 @@
               <h3 class="cart-item-name">
                 <a href="{% url 'product_detail' item.product.pk %}">{{ item.product.name }}</a>
               </h3>
-              <p class="cart-item-moq">MOQ: {{ item.product.moq }} {{ item.product.unit }}</p>
+              <p class="cart-item-moq">{% if item.packet_mode %}Pack of {{ item.effective_packet_size }}{% else %}MOQ: {{ item.product.moq }} {{ item.product.unit }}{% endif %}</p>
             </div>
           </div>
 
           <div class="cart-item-qty">
             <div class="qty-controls">
-              <button class="qty-btn" onclick="updateCartItem({{ item.pk }}, {{ item.quantity }} - {% if item.packet_mode %}{{ item.product.pack_quantity }}{% else %}1{% endif %})" id="minus-{{ item.pk }}">−</button>
+              <button class="qty-btn" type="button" onclick="changeCartItemQty({{ item.pk }}, -1)" id="minus-{{ item.pk }}" aria-label="Decrease packet quantity">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/></svg>
+              </button>
               <input type="number" class="qty-input" id="qty-{{ item.pk }}"
-                     value="{{ item.quantity }}" min="{{ item.packet_min_qty }}" max="{{ item.product.stock }}" step="{% if item.packet_mode %}{{ item.product.pack_quantity }}{% else %}1{% endif %}" data-packet-mode="{% if item.packet_mode %}1{% else %}0{% endif %}" data-pack-qty="{% if item.packet_mode %}{{ item.product.pack_quantity }}{% else %}0{% endif %}"
-                     onchange="updateCartItem({{ item.pk }}, this.value)" readonly />
-              <button class="qty-btn" onclick="updateCartItem({{ item.pk }}, {{ item.quantity }} + {% if item.packet_mode %}{{ item.product.pack_quantity }}{% else %}1{% endif %})" id="plus-{{ item.pk }}">+</button>
+                     value="{{ item.quantity }}" min="{{ item.packet_min_qty }}" max="{{ item.product.stock }}" step="1" inputmode="numeric" data-packet-mode="{% if item.packet_mode %}1{% else %}0{% endif %}" data-pack-qty="{% if item.packet_mode %}{{ item.effective_packet_size }}{% else %}0{% endif %}"
+                     onchange="updateCartItem({{ item.pk }}, this.value)" />
+              <button class="qty-btn" type="button" onclick="changeCartItemQty({{ item.pk }}, 1)" id="plus-{{ item.pk }}" aria-label="Increase packet quantity">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              </button>
             </div>
-            <small>{{ item.product.unit }}</small>
+            <small>{% if item.packet_mode %}Packets{% else %}{{ item.product.unit }}{% endif %}</small>
+            {% if item.packet_mode %}
+            <span class="qty-total-pieces" id="total-pieces-{{ item.pk }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+              <span id="total-pieces-text-{{ item.pk }}">Total: {{ item.total_pieces }} Pieces</span>
+            </span>
+            {% endif %}
           </div>
 
           <div class="cart-item-price">
@@ -511,12 +630,15 @@
                data-packet-mode="1"
                data-packet-qty="{{ item.product.pack_quantity }}"
                data-packet-unit="{{ item.product.unit|escape }}">
-               ₹{{ item.unit_price }} per {% if item.product.unit == 'pcs' %}piece{% else %}{{ item.product.unit }}{% endif %}
+               ₹{{ item.unit_price }} per packet
             </p>
             {% else %}
             <p class="unit-price" id="unit-price-{{ item.pk }}">₹{{ item.unit_price }} / {{ item.product.unit }}</p>
             {% endif %}
             <p class="line-total" id="line-total-{{ item.pk }}">₹{{ item.line_total }}</p>
+            {% if item.line_savings_value %}
+            <p class="line-savings-mini" id="line-savings-{{ item.pk }}">Saved ₹{{ item.line_savings_value }}</p>
+            {% endif %}
           </div>
 
           <button class="cart-item-remove" id="remove-{{ item.pk }}"
@@ -530,11 +652,14 @@
         <h3>Order Summary</h3>
         <div class="summary-row">
           <span>Subtotal</span>
-          <span id="cart-total" class="cart-total-roll">₹{{ total }}</span>
+          <span id="cart-subtotal" class="cart-total-roll">₹{{ original_total }}</span>
         </div>
-        <div class="summary-row summary-row-discount">
-          <span>Bulk Discount</span>
-          <span id="bulk-discount">₹0.00</span>
+        <div class="summary-row summary-row-discount summary-row-savings">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Z"/><path d="M16 7V5a2 2 0 0 0-2-2H6"/><circle cx="16" cy="13" r="1"/></svg>
+            Total Savings
+          </span>
+          <span id="bulk-discount" class="cart-total-roll">-₹{{ total_savings }}</span>
         </div>
         <div class="summary-row">
           <span>Delivery</span>
@@ -546,15 +671,35 @@
         </div>
         <hr class="summary-divider" />
         <div class="summary-row total-row">
-          <strong>Total</strong>
+          <strong>Total Payable</strong>
           <strong id="grand-total" class="cart-total-roll">₹{{ total }}</strong>
         </div>
-        <span class="trust-badge">✔ Verified Wholesale</span>
+        <details class="price-breakdown">
+          <summary>Price Breakdown</summary>
+          <div class="price-breakdown__body">
+            <div class="summary-row">
+              <span>Original MRP total</span>
+              <span id="breakdown-original">₹{{ original_total }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Bulk Discount Applied</span>
+              <span id="breakdown-savings">-₹{{ total_savings }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Locked checkout amount</span>
+              <span id="breakdown-final">₹{{ total }}</span>
+            </div>
+          </div>
+        </details>
+        <span class="trust-badge">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+          Verified Wholesale
+        </span>
         <a href="{% url 'checkout' %}" class="btn btn-primary btn-full btn-lg" id="checkout-btn" target="_blank" rel="noopener">
-          Proceed to Checkout →
+          Proceed to Checkout
         </a>
         <a href="{% url 'home' %}" class="btn btn-ghost btn-full" style="margin-top:.5rem;">
-          ← Continue Shopping
+          Continue Shopping
         </a>
       </div>
     </div>
@@ -562,7 +707,9 @@
     {% else %}
     <div class="cart-empty-premium">
       <div class="cart-empty-premium__head">
-        <div class="cart-empty-premium__icon">🛒</div>
+        <div class="cart-empty-premium__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
+        </div>
         <div>
           <h3>Your Cart Is Empty</h3>
           <p>Browse our wholesale categories and add products to get started.</p>
@@ -573,8 +720,8 @@
         <a href="{% url 'order_history' %}" class="btn btn-ghost">View Previous Orders</a>
       </div>
       <div class="cart-empty-premium__trust">
-        <span>✔ Verified wholesale pricing</span>
-        <span>🚚 Free delivery support in Shillong</span>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Verified wholesale pricing</span>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17h4V5H2v12h3"/><path d="M14 9h4l4 4v4h-3"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg> Free delivery support in Shillong</span>
       </div>
     </div>
     {% endif %}

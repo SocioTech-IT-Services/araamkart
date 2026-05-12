@@ -93,7 +93,7 @@ class SearchTaxonomySuggestAPIView(APIView):
         }
 
         for row in sub_rows:
-            sid = row["subcategory_id"]
+            sid = row.get("placements__subcategory_id")
             sub = subs_by_id.get(sid)
             if not sub:
                 continue

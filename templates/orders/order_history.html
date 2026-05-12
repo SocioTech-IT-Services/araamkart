@@ -207,7 +207,13 @@
             {% for item in order.items.all|slice:":3" %}
             <div class="item-line">
               <span class="item-name">{{ item.product_name|title }}</span>
-              <span class="qty-badge">x{{ item.quantity }}</span>
+              <span class="qty-badge">
+                {% if item.packet_size > 1 %}
+                {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+                {% else %}
+                x{{ item.quantity }}
+                {% endif %}
+              </span>
             </div>
             {% endfor %}
             {% if order.items.count > 3 %}

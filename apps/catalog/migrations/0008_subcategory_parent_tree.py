@@ -18,6 +18,7 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ("catalog", "0007_product_net_quantity_unit_product_net_quantity_value"),

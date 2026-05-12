@@ -182,8 +182,14 @@
         <tr>
           <td>{{ forloop.counter|stringformat:"02d" }}</td>
           <td><span class="item-title">{{ item.product_name|title }}</span><span class="item-sub">Pack of 12 (Bulk Wholesale)</span></td>
-          <td class="num">{{ item.quantity }} pcs</td>
-          <td class="num">{% if item.product and item.product.single_product_price %}₹{{ item.product.single_product_price }}{% else %}₹{{ item.unit_price }}{% endif %}</td>
+          <td class="num">
+            {% if item.packet_size > 1 %}
+            {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+            {% else %}
+            {{ item.quantity }} pcs
+            {% endif %}
+          </td>
+          <td class="num">{% if item.original_unit_price %}₹{{ item.original_unit_price }}{% else %}₹{{ item.unit_price }}{% endif %}</td>
           <td class="num">₹{{ item.unit_price }}</td>
           <td class="num">₹{{ item.line_total }}</td>
         </tr>
@@ -195,6 +201,7 @@
       <div class="row"><span>Original Total</span><strong>₹{{ mrp_total|floatformat:2 }}</strong></div>
       <div class="row"><span>Subtotal</span><strong>₹{{ subtotal }}</strong></div>
       <div class="row"><span>Discount</span><strong>₹{{ discount_amount|floatformat:2 }} ({{ discount_pct|floatformat:1 }}%)</strong></div>
+      <div class="row"><span>You Saved</span><strong>₹{{ order.total_savings }}</strong></div>
       <div class="row"><span>Shipping</span><strong>₹{{ shipping }}</strong></div>
       <div class="row total"><span>Discounted Total</span><span>₹{{ order.total_amount }}</span></div>
       <div class="grand-total-box"><strong>Total Payable</strong><strong>₹{{ order.total_amount }}</strong></div>

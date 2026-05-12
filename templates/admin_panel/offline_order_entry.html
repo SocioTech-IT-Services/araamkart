@@ -183,7 +183,7 @@
                     </div>
                     <span class="text-xs rounded-full px-2 py-1"
                           :class="product.stock > 10 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
-                          Stock: <span x-text="Math.floor(product.stock / Math.max(1, product.pack_qty || 1))"></span> pkt
+                          Stock: <span x-text="product.stock"></span> pkt
                     </span>
                   </button>
                 </template>
@@ -415,13 +415,10 @@ function offlineOrderEntry() {
     cartPayload() {
       return this.cart.map(item => {
         const packetQty = Number(item.packet_qty || 0);
-        const packQty = Number(item.pack_qty || 1);
-        const totalUnits = packetQty * Math.max(1, packQty);
-        const unitPrice = packQty > 0 ? Number(item.packet_price || 0) / packQty : Number(item.packet_price || 0);
         return {
           product_id: item.product_id,
-          quantity: totalUnits,
-          unit_price: unitPrice
+          quantity: packetQty,
+          unit_price: Number(item.packet_price || 0)
         };
       }).filter(item => item.quantity > 0);
     },

@@ -132,6 +132,10 @@
               <div class="text-xs text-slate-500">Order Total</div>
               <div class="text-2xl font-extrabold text-indigo-700">₹{{ order.total_amount }}</div>
             </div>
+            <div class="mt-2 rounded-xl bg-emerald-50 px-3 py-2">
+              <div class="text-xs text-slate-500">Customer Savings</div>
+              <div class="text-xl font-extrabold text-emerald-700">₹{{ order.total_savings }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -153,7 +157,15 @@
               </div>
             </div>
             <div class="text-sm text-right">
-              <p>Qty: <span class="font-semibold">{{ item.quantity }}</span></p>
+              <p>Qty:
+                <span class="font-semibold">
+                  {% if item.packet_size > 1 %}
+                  {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+                  {% else %}
+                  {{ item.quantity }}
+                  {% endif %}
+                </span>
+              </p>
               <p>Unit: ₹{{ item.unit_price }}</p>
               <p class="font-semibold text-indigo-700">Line: ₹{{ item.line_total }}</p>
             </div>

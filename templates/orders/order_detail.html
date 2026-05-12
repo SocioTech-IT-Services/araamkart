@@ -258,7 +258,13 @@
               </span>
             </td>
             <td>{{ item.brand }}</td>
-            <td>{{ item.quantity }}</td>
+            <td>
+              {% if item.packet_size > 1 %}
+              {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+              {% else %}
+              {{ item.quantity }}
+              {% endif %}
+            </td>
             <td>₹{{ item.unit_price }}</td>
             <td>₹{{ item.line_total }}</td>
           </tr>
