@@ -69,7 +69,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "aaramkart.wsgi.application"
 
-DATABASE_URL = config("DATABASE_URL", default="").strip()
+# Database: PostgreSQL only (no SQLite in this project).
+# Tables live wherever DATABASE_URL points if set; otherwise POSTGRES_* (default localhost:5432).
+# If migrate and runserver see different DBs, compare .env / container env between those commands.
+# Supabase: paste the Postgres URI into DATABASE_URL or SUPABASE_DATABASE_URL (same value).
+DATABASE_URL = (
+    config("DATABASE_URL", default="").strip()
+    or config("SUPABASE_DATABASE_URL", default="").strip()
+    or config("SUPABASE_DB_URL", default="").strip()
+)
 
 if DATABASE_URL:
     parsed_db = urlparse(DATABASE_URL)
@@ -78,18 +86,30 @@ if DATABASE_URL:
     if query.get("sslmode"):
         db_options["sslmode"] = query["sslmode"][0]
 
+    db_host = parsed_db.hostname or ""
+    db_port = str(parsed_db.port or "")
+    if not db_port:
+        db_port = "5432"
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed_db.path.lstrip("/"),
+            "NAME": parsed_db.path.lstrip("/") or "postgres",
             "USER": unquote(parsed_db.username or ""),
             "PASSWORD": unquote(parsed_db.password or ""),
-            "HOST": parsed_db.hostname or "",
-            "PORT": str(parsed_db.port or ""),
+            "HOST": db_host,
+            "PORT": db_port,
             "OPTIONS": db_options,
             "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
         }
     }
+
+    # Supabase (managed Postgres): TLS is required; transaction pooler uses port 6543 (PgBouncer).
+    _host_lc = db_host.lower()
+    if "supabase" in _host_lc:
+        DATABASES["default"].setdefault("OPTIONS", {}).setdefault("sslmode", "require")
+    if db_port == "6543":
+        DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 else:
     DATABASES = {
         "default": {
@@ -102,6 +122,9 @@ else:
             "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
         }
     }
+    _postg_host = (DATABASES["default"].get("HOST") or "").lower()
+    if "supabase" in _postg_host:
+        DATABASES["default"].setdefault("OPTIONS", {})["sslmode"] = "require"
 
 AUTH_USER_MODEL = "users.User"
 
