@@ -63,6 +63,12 @@
           {% endif %}
         </div>
         {% endif %}
+        {% if use_packet_pricing and has_variants %}
+        <div class="product-variant-strip-wrap" aria-label="Pack options">
+          <span class="product-variant-strip-label">Choose option</span>
+          <div class="product-variant-strip" id="product-variant-strip" role="listbox" aria-orientation="horizontal"></div>
+        </div>
+        {% endif %}
         {% if product.stock <= 0 %}
         <div class="product-badges product-badges--icon">
           <span class="badge badge-red badge-icon product-stock-badge" data-tip="Currently unavailable">
@@ -76,7 +82,7 @@
       <!-- ── DETAILS ── -->
       <div class="product-detail-info">
         <p class="product-brand-tag">{{ product.brand }}</p>
-        <h1 class="product-detail-title">{{ product.name }}</h1>
+        <h1 class="product-detail-title">{{ product.name }}<span class="product-title-variant" id="product-title-variant"></span></h1>
 
         {% if use_packet_pricing %}
         <div class="product-pricing-card" aria-label="Pricing">
@@ -84,8 +90,8 @@
           <div class="product-pricing-card__hero-row">
             <div class="product-pricing-card__packet-price">
               <span class="product-pricing-card__hint">Packet price</span>
-              <span class="product-pricing-card__amount">₹{{ product.packet_price }}</span>
-              <span class="product-pricing-card__per-piece">₹{{ effective_price_per_unit }}/pc · Price per piece</span>
+              <span class="product-pricing-card__amount" id="pdp-packet-hero-price">₹{{ pdp_packet_price }}</span>
+              <span class="product-pricing-card__per-piece" id="pdp-per-piece-line">₹{{ effective_price_per_unit }}/pc · Price per piece</span>
             </div>
           </div>
           <div class="packet-order-summary packet-order-summary--inside-price" aria-label="Packet calculation">
@@ -100,14 +106,16 @@
                 <dd><span id="summary-total-items">{{ summary_total_items }}</span> Single Pieces</dd>
               </div>
               <div class="packet-order-summary__row">
-                <dt>MRP total</dt>
-                <dd class="packet-order-summary__mrp" id="summary-original-price">₹{{ summary_original_price }}</dd>
+                <dt>Original packet price (total)</dt>
+                <dd class="packet-order-summary__original-dd">
+                  <span class="packet-order-summary__mrp" id="summary-original-price">₹{{ summary_original_price }}</span>
+                </dd>
               </div>
               <div class="packet-order-summary__row packet-order-summary__single-price">
-                <dt>Single quantity price</dt>
+                <dt>Per 1 packet</dt>
                 <dd>
-                  <span class="single-price-line single-price-line--old"><span aria-hidden="true">X</span> ₹{{ product.single_product_price }}</span>
-                  <span class="single-price-line single-price-line--new"><span aria-hidden="true">✓</span> ₹{{ effective_price_per_unit }}</span>
+                  <span class="single-price-line single-price-line--old"><span aria-hidden="true">X</span> ₹<span id="pdp-original-packet-mrp-display">{% if pdp_original_packet_mrp %}{{ pdp_original_packet_mrp }}{% else %}—{% endif %}</span></span>
+                  <span class="single-price-line single-price-line--new"><span aria-hidden="true">✓</span> ₹<span id="pdp-packet-selling-display">{{ pdp_packet_price }}</span></span>
                 </dd>
               </div>
               <div class="packet-order-summary__row packet-order-summary__final">
@@ -185,7 +193,7 @@
               <div class="stock-meter"><span class="stock-meter-fill" id="stock-meter-fill"></span></div>
               <small class="stock-meter-text" id="stock-meter-text">Available: {{ packets_available }} packets</small>
             </div>
-            <small class="qty-hint">Each packet = {{ product.pack_quantity }} {{ product.unit }} · Up to {{ packets_available }} packets</small>
+            <small class="qty-hint" id="pdp-qty-hint">Each packet = <span id="pdp-pack-qty-hint">{{ product.pack_quantity }}</span> {{ product.unit }} · Up to <span id="pdp-max-packets-hint">{{ packets_available }}</span> packets</small>
             {% else %}
             <label for="qty-input">Quantity ({{ product.unit }})</label>
             <div class="qty-controls">
@@ -208,7 +216,8 @@
 
           <div class="product-cart-actions">
             <button class="btn btn-primary btn-lg btn-full btn-cart-premium js-product-action-ripple" id="add-to-cart-btn"
-                    data-product-id="{{ product.pk }}" data-moq="{{ product.moq }}" data-stock="{{ product.stock }}">
+                    data-product-id="{{ product.pk }}" data-moq="{{ product.moq }}" data-stock="{{ product.stock }}"
+                    {% if default_variant_id %}data-default-variant-id="{{ default_variant_id }}"{% endif %}>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="18" height="18">
                 <path d="M6.5 6.5h14l-1.6 7.2a2 2 0 0 1-2 1.56H9.2a2 2 0 0 1-1.96-1.62L5.8 4.5H3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M10 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM17 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="currentColor" />
@@ -320,7 +329,9 @@ const PRICING_TIERS = [
 const productId = {{ product.pk }};
 const moq = {{ product.moq }};
 const stock = {{ product.stock }};
-{% if use_packet_pricing and min_packets and packets_available %}
+{% if use_packet_pricing and can_order_packets and packets_available %}
+const VARIANTS_JSON = JSON.parse('{{ variants_payload_json|escapejs }}');
+const DEFAULT_VARIANT_ID = {% if default_variant_id %}{{ default_variant_id }}{% else %}null{% endif %};
 initProductPage(PRICING_TIERS, productId, moq, stock, {
   packQuantity: {{ product.pack_quantity }},
   packetPrice: Number('{{ product.packet_price }}'),
@@ -329,7 +340,7 @@ initProductPage(PRICING_TIERS, productId, moq, stock, {
   minPackets: {{ min_packets }},
   maxPackets: {{ packets_available }},
   unitLabel: '{{ product.unit|escapejs }}'
-});
+}, VARIANTS_JSON.length ? VARIANTS_JSON : null, DEFAULT_VARIANT_ID);
 {% else %}
 initProductPage(PRICING_TIERS, productId, moq, stock);
 {% endif %}

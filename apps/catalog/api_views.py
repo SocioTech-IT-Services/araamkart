@@ -1,9 +1,8 @@
 """DRF API Views — Catalog"""
 import json
-from functools import lru_cache
 from pathlib import Path
 
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Prefetch
 from django.urls import reverse
 from urllib.parse import urlencode
 from rest_framework.views import APIView
@@ -11,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import Category, Product, PricingTier, SubCategory
+from .models import Category, Product, PricingTier, SubCategory, ProductVariant
 from .serializers import (
     CategorySerializer, ProductListSerializer,
     ProductDetailSerializer, ProductWriteSerializer, PricingTierSerializer,
@@ -19,7 +18,6 @@ from .serializers import (
 from apps.orders.models import OrderItem
 
 
-@lru_cache(maxsize=1)
 def _catalog_image_manifest():
     manifest_path = (
         Path(__file__).resolve().parent.parent.parent
@@ -184,7 +182,7 @@ class ProductListAPIView(APIView):
         return Response(ProductListSerializer(products, many=True, context={"request": request}).data)
 
     def post(self, request):
-        if not (request.user.is_authenticated and (request.user.is_admin or request.user.is_staff)):
+        if not (request.user.is_authenticated and getattr(request.user, "can_access_admin_panel", False)):
             return Response({"error": "Admin only."}, status=403)
         s = ProductWriteSerializer(data=request.data)
         if s.is_valid():
@@ -204,7 +202,7 @@ class ProductDetailAPIView(APIView):
         return Response(ProductDetailSerializer(product, context={"request": request}).data)
 
     def put(self, request, pk):
-        if not (request.user.is_authenticated and (request.user.is_admin or request.user.is_staff)):
+        if not (request.user.is_authenticated and getattr(request.user, "can_access_admin_panel", False)):
             return Response({"error": "Admin only."}, status=403)
         try:
             product = Product.objects.get(pk=pk)
@@ -217,7 +215,7 @@ class ProductDetailAPIView(APIView):
         return Response(s.errors, status=400)
 
     def delete(self, request, pk):
-        if not (request.user.is_authenticated and (request.user.is_admin or request.user.is_staff)):
+        if not (request.user.is_authenticated and getattr(request.user, "can_access_admin_panel", False)):
             return Response({"error": "Admin only."}, status=403)
         try:
             product = Product.objects.get(pk=pk)
@@ -262,9 +260,23 @@ class MostSellingProductsAPIView(APIView):
         product_map = {
             p.id: p
             for p in Product.objects.filter(pk__in=product_ids)
-            .prefetch_related("pricing_tiers")
+            .prefetch_related(
+                "pricing_tiers",
+                Prefetch(
+                    "variants",
+                    queryset=ProductVariant.objects.filter(is_active=True).order_by("id"),
+                ),
+            )
             .select_related("category", "subcategory")
         }
+
+        def _default_variant_id_for_quick_add(product: Product):
+            """When multiple variants exist, cart add needs a variant_id; pick first in-stock or first row."""
+            variants = list(product.variants.all())
+            if len(variants) <= 1:
+                return None
+            pick = next((v for v in variants if int(v.stock or 0) > 0), None) or variants[0]
+            return pick.pk
 
         manifest = _catalog_image_manifest()
         payload = []
@@ -291,6 +303,7 @@ class MostSellingProductsAPIView(APIView):
             payload.append(
                 {
                     "product_id": row["product_id"],
+                    "default_variant_id": _default_variant_id_for_quick_add(product),
                     "product_name": row["product__name"],
                     "quantity_sold": int(row["total_sold"] or 0),
                     "wholesale_price": float(product.base_price) if product.base_price else 0,

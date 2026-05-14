@@ -167,13 +167,35 @@
     align-items: flex-end;
     justify-content: center;
   }
-  .packet-price-main { font-size: 1.34rem; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: -.01em; }
-  .packet-price-sub { margin: .2rem 0 0; font-size: .79rem; color: #64748b; }
+  .cart-per-unit-price {
+    margin: .28rem 0 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #64748b;
+    line-height: 1.35;
+  }
   .line-total {
-    margin-top: .35rem;
-    font-size: 1.08rem;
+    margin: 0;
+    font-size: 1.62rem;
     font-weight: 900;
     color: #0f172a;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+  .line-total-label {
+    margin: 0 0 0.12rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .unit-price {
+    margin: 0.28rem 0 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #64748b;
   }
   .line-savings-mini {
     margin: .18rem 0 0;
@@ -598,7 +620,7 @@
               <h3 class="cart-item-name">
                 <a href="{% url 'product_detail' item.product.pk %}">{{ item.product.name }}</a>
               </h3>
-              <p class="cart-item-moq">{% if item.packet_mode %}Pack of {{ item.effective_packet_size }}{% else %}MOQ: {{ item.product.moq }} {{ item.product.unit }}{% endif %}</p>
+              <p class="cart-item-moq">{% if item.product_variant %}<span class="cart-variant-label">{{ item.product_variant.name|default:"Option" }}</span> · {% endif %}{% if item.packet_mode %}Pack of {{ item.effective_packet_size }}{% else %}MOQ: {{ item.product.moq }} {{ item.product.unit }}{% endif %}</p>
             </div>
           </div>
 
@@ -608,7 +630,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/></svg>
               </button>
               <input type="number" class="qty-input" id="qty-{{ item.pk }}"
-                     value="{{ item.quantity }}" min="{{ item.packet_min_qty }}" max="{{ item.product.stock }}" step="1" inputmode="numeric" data-packet-mode="{% if item.packet_mode %}1{% else %}0{% endif %}" data-pack-qty="{% if item.packet_mode %}{{ item.effective_packet_size }}{% else %}0{% endif %}"
+                     value="{{ item.quantity }}" min="{{ item.packet_min_qty }}" max="{{ item.line_max_stock }}" step="1" inputmode="numeric" data-packet-mode="{% if item.packet_mode %}1{% else %}0{% endif %}" data-pack-qty="{% if item.packet_mode %}{{ item.effective_packet_size }}{% else %}0{% endif %}"
                      onchange="updateCartItem({{ item.pk }}, this.value)" />
               <button class="qty-btn" type="button" onclick="changeCartItemQty({{ item.pk }}, 1)" id="plus-{{ item.pk }}" aria-label="Increase packet quantity">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
@@ -625,17 +647,19 @@
 
           <div class="cart-item-price">
             {% if item.packet_mode %}
-            <p class="packet-price-main">₹{{ item.product.packet_price }} / packet</p>
-            <p class="packet-price-sub" id="unit-price-{{ item.pk }}"
+            <p class="line-total-label">Line total</p>
+            <p class="line-total" id="line-total-{{ item.pk }}">₹{{ item.line_total }}</p>
+            <p class="cart-per-unit-price" id="unit-price-{{ item.pk }}"
                data-packet-mode="1"
                data-packet-qty="{{ item.product.pack_quantity }}"
                data-packet-unit="{{ item.product.unit|escape }}">
-               ₹{{ item.unit_price }} per packet
+               ₹{{ item.unit_price }} / packet
             </p>
             {% else %}
+            <p class="line-total-label">Line total</p>
+            <p class="line-total" id="line-total-{{ item.pk }}">₹{{ item.line_total }}</p>
             <p class="unit-price" id="unit-price-{{ item.pk }}">₹{{ item.unit_price }} / {{ item.product.unit }}</p>
             {% endif %}
-            <p class="line-total" id="line-total-{{ item.pk }}">₹{{ item.line_total }}</p>
             {% if item.line_savings_value %}
             <p class="line-savings-mini" id="line-savings-{{ item.pk }}">Saved ₹{{ item.line_savings_value }}</p>
             {% endif %}

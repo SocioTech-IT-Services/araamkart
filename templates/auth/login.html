@@ -50,7 +50,11 @@
       </form>
 
       <div class="auth-footer">
-        <p>New shopkeeper? <a href="{% url 'register' %}">Register your business</a></p>
+        <nav class="auth-footer-links auth-footer-links--inline" aria-label="Other sign-in options">
+          <a href="{% url 'register' %}">Register</a>
+          <a href="{% url 'staff_login' %}">Staff login</a>
+          <a href="{% url 'staff_login' %}?portal_role=admin">Admin login</a>
+        </nav>
         <p><a href="{% url 'home' %}">← Back to home</a></p>
       </div>
     </div>

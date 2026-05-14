@@ -1,10 +1,12 @@
 """Orders app — Template Views (Cart, Checkout, Order History)"""
 import json
+import logging
 import math
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.db.models import Count, DecimalField, Prefetch, Q, Sum, Value
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth
 from django.contrib.auth.views import redirect_to_login
@@ -18,10 +20,11 @@ from django.utils import timezone
 from openpyxl import load_workbook
 
 from apps.catalog.forms import AdminProductForm, ensure_product_placement
-from apps.catalog.models import Product, ProductImage, Category, SubCategory, Brand, ProductVariant
+from apps.catalog.models import Product, ProductImage, Category, SubCategory, Brand, ProductVariant, distribute_integer_delta
 from .models import Cart, CartItem, Order, OrderItem
-from apps.notifications.services import send_order_confirmation
+from apps.notifications.services import send_order_confirmation, notify_customer_order_status_change
 
+logger = logging.getLogger(__name__)
 
 # ── Cart ──────────────────────────────────────────────────────────────────────
 def _packet_rules(product):
@@ -43,14 +46,21 @@ def _decorate_cart_items(items):
         product = item.product
         item.packet_mode = bool(product.packet_price and product.pack_quantity)
         rules = _packet_rules(product)
+        if rules and item.product_variant_id:
+            rules = dict(rules)
+            rules["pack_qty"] = max(1, int(item.product_variant.pack_size or rules["pack_qty"]))
         item.packet_min_qty = rules["min_packets"] if rules else product.moq
-        if item.packet_mode and item.packet_size != rules["pack_qty"]:
+        if item.packet_mode and rules and item.packet_size != rules["pack_qty"]:
             item.packet_size = rules["pack_qty"]
             item.save(update_fields=["packet_size"])
         item.pieces_label = f"{item.quantity} Packets ({item.total_pieces} Pcs)" if item.packet_mode else f"{item.quantity} {product.unit}"
         item.original_line_total_value = _money(item.original_line_total())
         item.line_savings_value = _money(item.line_savings())
         item.unit_savings_value = _money(item.unit_savings())
+        if item.product_variant_id:
+            item.line_max_stock = max(0, int(item.product_variant.stock or 0))
+        else:
+            item.line_max_stock = max(0, int(product.stock or 0))
     return items
 
 
@@ -80,6 +90,7 @@ def _build_checkout_lock(items):
             {
                 "item_id": item.pk,
                 "product_id": item.product_id,
+                "product_variant_id": item.product_variant_id,
                 "quantity": item.quantity,
                 "packet_size": item.effective_packet_size,
                 "unit_price": str(unit_price),
@@ -103,9 +114,9 @@ def _build_checkout_lock(items):
 def _checkout_lock_matches(lock, items):
     if not lock or "lines" not in lock:
         return False
-    current = sorted((item.pk, item.product_id, item.quantity) for item in items)
+    current = sorted((item.pk, item.product_id, item.quantity, item.product_variant_id) for item in items)
     locked = sorted(
-        (line.get("item_id"), line.get("product_id"), line.get("quantity"))
+        (line.get("item_id"), line.get("product_id"), line.get("quantity"), line.get("product_variant_id"))
         for line in lock.get("lines", [])
     )
     return current == locked
@@ -115,11 +126,20 @@ def _checkout_line_map(lock):
     return {line["item_id"]: line for line in lock.get("lines", [])}
 
 
-def _merge_product_into_cart(user, product, quantity):
+def _merge_product_into_cart(user, product, quantity, variant=None):
     """
     Add `quantity` units of `product` into the user's cart (merges with an existing line).
     Returns (True, None) on success, (False, error_message) on validation failure.
     """
+    active_variants = list(product.variants.filter(is_active=True))
+    if active_variants:
+        if variant is None and len(active_variants) == 1:
+            variant = active_variants[0]
+        elif variant is None:
+            return False, "Please select a size or pack option on the product page."
+        if variant.product_id != product.pk or not variant.is_active:
+            return False, "That product option is not available."
+
     packet_rules = _packet_rules(product)
     if not packet_rules and quantity < product.moq:
         return False, f"Minimum order quantity is {product.moq} {product.unit}."
@@ -129,20 +149,29 @@ def _merge_product_into_cart(user, product, quantity):
         if quantity < min_packets:
             return False, f"Minimum packet order is {min_packets} packet(s)."
 
-    if quantity > product.stock:
+    available = int(variant.stock) if variant else int(product.stock or 0)
+    if quantity > available:
         return False, "Not enough stock available."
 
     cart, _ = Cart.objects.get_or_create(user=user)
-    item, created = CartItem.objects.get_or_create(cart=cart, product=product)
-    if packet_rules:
-        item.packet_size = packet_rules["pack_qty"]
-    if not created:
+    if variant is not None:
+        item = CartItem.objects.filter(cart=cart, product=product, product_variant=variant).first()
+    else:
+        item = CartItem.objects.filter(cart=cart, product=product, product_variant__isnull=True).first()
+
+    if item:
         item.quantity += quantity
     else:
-        item.quantity = quantity
+        item = CartItem(cart=cart, product=product, product_variant=variant, quantity=quantity)
 
-    if item.quantity > product.stock:
-        item.quantity = product.stock
+    if packet_rules:
+        pack_qty = packet_rules["pack_qty"]
+        if variant is not None:
+            pack_qty = max(1, int(variant.pack_size or pack_qty))
+        item.packet_size = pack_qty
+
+    if item.quantity > available:
+        item.quantity = available
     item.save()
     return True, None
 
@@ -155,7 +184,10 @@ def cart_view(request):
             {"items": [], "total": 0, "login_prompt": True, "next_path": request.get_full_path()},
         )
     cart, _ = Cart.objects.get_or_create(user=request.user)
-    items = cart.items.select_related("product").prefetch_related("product__pricing_tiers")
+    items = (
+        cart.items.select_related("product", "product_variant")
+        .prefetch_related("product__pricing_tiers")
+    )
     items = _decorate_cart_items(items)
     totals = _cart_totals(cart)
     return render(request, "orders/cart.html", {
@@ -174,10 +206,26 @@ def add_to_cart(request):
     data = json.loads(request.body)
     product_id = data.get("product_id")
     quantity = int(data.get("quantity", 1))
+    variant_id = data.get("variant_id")
 
     product = get_object_or_404(Product, pk=product_id, is_active=True)
 
-    ok, err = _merge_product_into_cart(request.user, product, quantity)
+    variant = None
+    if variant_id not in (None, ""):
+        variant = ProductVariant.objects.filter(
+            pk=variant_id, product=product, is_active=True
+        ).first()
+        if variant is None:
+            return JsonResponse({"success": False, "error": "Invalid product option."})
+
+    active_variants = product.variants.filter(is_active=True)
+    if active_variants.exists():
+        if variant is None and active_variants.count() == 1:
+            variant = active_variants.first()
+        elif variant is None:
+            return JsonResponse({"success": False, "error": "Please select an option before adding to cart."})
+
+    ok, err = _merge_product_into_cart(request.user, product, quantity, variant)
     if not ok:
         return JsonResponse({"success": False, "error": err})
 
@@ -206,7 +254,11 @@ def update_cart(request):
     item_id = data.get("item_id")
     quantity = int(data.get("quantity", 1))
 
-    item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
+    item = get_object_or_404(
+        CartItem.objects.select_related("product", "product_variant"),
+        pk=item_id,
+        cart__user=request.user,
+    )
     product = item.product
 
     packet_rules = _packet_rules(product)
@@ -221,7 +273,8 @@ def update_cart(request):
                 "error": f"Minimum packet order is {min_packets} packet(s).",
             })
 
-    if quantity > product.stock:
+    max_stock = int(item.product_variant.stock) if item.product_variant_id else int(product.stock or 0)
+    if quantity > max_stock:
         return JsonResponse({"success": False, "error": "Not enough stock available."})
 
     if packet_rules:
@@ -268,7 +321,10 @@ def remove_from_cart(request):
 @login_required
 def checkout_view(request):
     cart, _ = Cart.objects.get_or_create(user=request.user)
-    items = cart.items.select_related("product").prefetch_related("product__pricing_tiers")
+    items = (
+        cart.items.select_related("product", "product_variant")
+        .prefetch_related("product__pricing_tiers")
+    )
 
     if not items.exists():
         messages.error(request, "Your cart is empty.")
@@ -348,10 +404,8 @@ def checkout_view(request):
                 unit_price=price,
                 line_savings=line_savings,
             )
-            # Reduce stock
-            product = item.product
-            product.stock = max(0, product.stock - item.quantity)
-            product.save()
+            # Reduce stock (variant-aware when applicable)
+            item.product.decrease_inventory_for_sale(item.quantity, item.product_variant)
 
         # Clear cart
         items.delete()
@@ -393,7 +447,7 @@ def order_success(request, order_number):
 
 @login_required
 def order_quotation(request, order_number):
-    if request.user.is_staff or request.user.is_admin:
+    if getattr(request.user, "can_use_delivery_ops", False):
         order = get_object_or_404(
             Order.objects.prefetch_related("items__product"),
             order_number=order_number,
@@ -506,12 +560,29 @@ def _save_gallery_uploads(product, request):
         ProductImage.objects.create(product=product, image=f, sort_order=start + i)
 
 
-def admin_required(view_func):
+def delivery_ops_required(view_func):
+    """Delivery panel + order status updates (includes delivery-only staff phones)."""
+
     def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated or not (request.user.is_admin or request.user.is_staff):
+        u = request.user
+        if not u.is_authenticated or not getattr(u, "can_use_delivery_ops", False):
+            messages.error(request, "Staff access required.")
+            return redirect_to_login(request.get_full_path())
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+def admin_required(view_func):
+    """Custom admin panel, inventory, and product management (excludes delivery-only staff)."""
+
+    def wrapper(request, *args, **kwargs):
+        u = request.user
+        if not u.is_authenticated or not getattr(u, "can_access_admin_panel", False):
             messages.error(request, "Admin access required.")
             return redirect_to_login(request.get_full_path())
         return view_func(request, *args, **kwargs)
+
     return wrapper
 
 
@@ -651,7 +722,11 @@ def admin_dashboard(request):
 def admin_products(request):
     products = (
         Product.objects.select_related("category", "subcategory", "brand_obj")
-        .prefetch_related("pricing_tiers", "variants")
+        .annotate(variant_count=Count("variants"))
+        .prefetch_related(
+            "pricing_tiers",
+            Prefetch("variants", ProductVariant.objects.order_by("id")),
+        )
         .order_by("-updated_at")
     )
     categories = Category.objects.filter(is_active=True)
@@ -903,12 +978,12 @@ def admin_bulk_import_products(request):
                 product.packet_price = packet_price
                 product.net_quantity_value = net_quantity_value
                 product.net_quantity_unit = net_quantity_unit
-                product.stock = product_stock
                 product.sync_discount_from_pack_pricing()
                 product.save()
 
             variant_defaults = {
                 "price": price,
+                "mrp": single_mrp,
                 "stock": stock_packets,
                 "is_active": True,
             }
@@ -924,6 +999,7 @@ def admin_bulk_import_products(request):
                 created_variants += 1
             else:
                 variant.price = price
+                variant.mrp = single_mrp
                 variant.stock = stock_packets
                 if variant_sku:
                     variant.sku = variant_sku
@@ -934,8 +1010,7 @@ def admin_bulk_import_products(request):
                 variant.save()
                 updated_variants += 1
 
-            # Keep legacy product fields in sync.
-            product.stock = product_stock
+            # Keep product pricing in sync; total stock is sum of all variant rows.
             product.single_product_price = single_mrp
             product.pack_quantity = pack_qty
             product.packet_price = packet_price
@@ -944,7 +1019,6 @@ def admin_bulk_import_products(request):
             product.sync_discount_from_pack_pricing()
             product.save(
                 update_fields=[
-                    "stock",
                     "single_product_price",
                     "pack_quantity",
                     "packet_price",
@@ -963,6 +1037,8 @@ def admin_bulk_import_products(request):
                 tier.save()
             else:
                 product.pricing_tiers.create(min_qty=1, max_qty=None, unit_price=price, label="")
+
+            product.refresh_stock_from_variants()
 
         except (ValueError, TypeError, InvalidOperation):
             errors += 1
@@ -993,6 +1069,33 @@ def _int_from_variant(value, default=0):
     except (TypeError, ValueError):
         return default
 
+def _redistribute_variant_stocks_to_total(variants: list, total_units: int) -> None:
+    """Assign nonnegative integer stocks per variant summing to total_units."""
+    from apps.catalog.models import ProductVariant
+
+    if not variants:
+        return
+    total_units = max(0, int(total_units))
+    n = len(variants)
+    old = [max(0, int(v.stock)) for v in variants]
+    s = sum(old)
+    if s == 0:
+        shares = distribute_integer_delta(total_units, n)
+        for v, sh in zip(variants, shares):
+            ProductVariant.objects.filter(pk=v.pk).update(stock=max(0, sh))
+            v.stock = max(0, sh)
+        return
+    allocated = []
+    acc = 0
+    for i in range(n - 1):
+        raw = int(round(total_units * old[i] / s))
+        allocated.append(raw)
+        acc += raw
+    allocated.append(max(0, total_units - acc))
+    for v, sh in zip(variants, allocated):
+        ProductVariant.objects.filter(pk=v.pk).update(stock=max(0, sh))
+        v.stock = max(0, sh)
+
 
 def _sync_product_from_variant_rows(product, request):
     """
@@ -1015,7 +1118,6 @@ def _sync_product_from_variant_rows(product, request):
     single_sp = _decimal_from_variant(first.get("single_sp"))
     packet_price = _decimal_from_variant(first.get("packet_price"))
     pack_qty = _int_from_variant(first.get("packet_qty"), default=1)
-    stock_packets = _int_from_variant(first.get("stock_packets"), default=0)
     net_qty = _decimal_from_variant(first.get("net_quantity"))
     net_unit = (first.get("net_quantity_unit") or "").strip()
 
@@ -1028,7 +1130,6 @@ def _sync_product_from_variant_rows(product, request):
     elif single_sp is not None:
         product.packet_price = single_sp * Decimal(pack_qty)
     product.pack_quantity = pack_qty
-    product.stock = max(0, stock_packets)
     if net_qty is not None:
         product.net_quantity_value = net_qty
     if net_unit:
@@ -1053,11 +1154,14 @@ def _sync_product_from_variant_rows(product, request):
         row_pack_qty = max(1, _int_from_variant(row.get("packet_qty"), default=1))
         row_stock_packets = _int_from_variant(row.get("stock_packets"), default=0)
         row_net_qty = _decimal_from_variant(row.get("net_quantity"))
-        row_price = (
-            _decimal_from_variant(row.get("single_sp"))
-            or _decimal_from_variant(row.get("packet_price"))
-            or Decimal("0")
-        )
+        row_single_sp = _decimal_from_variant(row.get("single_sp"))
+        row_packet_price = _decimal_from_variant(row.get("packet_price"))
+        row_single_mrp = _decimal_from_variant(row.get("single_mrp"))
+
+        per_piece = row_single_sp
+        if per_piece is None and row_packet_price is not None and row_pack_qty > 0:
+            per_piece = row_packet_price / Decimal(row_pack_qty)
+
         row_unit = (row.get("net_quantity_unit") or "").strip()
         label = []
         if row_net_qty is not None:
@@ -1069,10 +1173,13 @@ def _sync_product_from_variant_rows(product, request):
         variant.size_value = row_net_qty
         variant.size_unit = row_unit
         variant.pack_size = row_pack_qty
-        variant.price = row_price
+        variant.price = per_piece or Decimal("0")
+        variant.mrp = row_single_mrp
         variant.stock = max(0, row_stock_packets)
         variant.is_active = True
         variant.save()
+
+    product.refresh_stock_from_variants()
 
 
 @admin_required
@@ -1080,7 +1187,30 @@ def admin_product_add(request):
     if request.method == "POST":
         form = AdminProductForm(request.POST, request.FILES)
         if form.is_valid():
-            product = form.save()
+            try:
+                product = form.save()
+            except IntegrityError:
+                logger.warning("admin_product_add IntegrityError (often duplicate SKU)", exc_info=True)
+                messages.error(
+                    request,
+                    "Could not save — that SKU may already exist. Use a unique SKU or leave SKU empty.",
+                )
+                return render(
+                    request,
+                    "admin_panel/product_form.html",
+                    {"form": form, "title": "Add product", "product": None, "gallery_images": []},
+                )
+            except Exception:
+                logger.exception("admin_product_add save failed")
+                messages.error(
+                    request,
+                    "Could not save the product. Check required fields and try again.",
+                )
+                return render(
+                    request,
+                    "admin_panel/product_form.html",
+                    {"form": form, "title": "Add product", "product": None, "gallery_images": []},
+                )
             _save_gallery_uploads(product, request)
             if getattr(form, "did_merge_existing", False):
                 messages.success(
@@ -1092,6 +1222,11 @@ def admin_product_add(request):
             _sync_product_from_variant_rows(product, request)
             messages.success(request, f"Product “{product.name}” added.")
             return redirect("admin_products")
+        else:
+            messages.error(
+                request,
+                "Form has errors — read the red summary below each field (or at the top) and try again.",
+            )
     else:
         form = AdminProductForm()
     return render(
@@ -1137,6 +1272,11 @@ def admin_product_edit(request, pk):
             _save_gallery_uploads(product, request)
             messages.success(request, "Product updated.")
             return redirect("admin_products")
+        else:
+            messages.error(
+                request,
+                "Form has errors — read the red summary below each field (or at the top) and try again.",
+            )
     else:
         form = AdminProductForm(instance=product)
     gallery_images = product.gallery_images.all()
@@ -1462,8 +1602,7 @@ def admin_offline_order(request):
                 unit_price=line["unit_price"],
                 line_savings=_money(line["line_savings"]),
             )
-            product.stock = max(0, int(product.stock) - qty)
-            product.save(update_fields=["stock", "updated_at"])
+            product.decrease_inventory_for_sale(qty)
 
         messages.success(request, f"Offline order #{order.order_number} saved successfully.")
         return redirect("order_success", order_number=order.order_number)
@@ -1536,7 +1675,7 @@ def admin_offline_product_search(request):
     return JsonResponse({"results": results})
 
 
-@admin_required
+@delivery_ops_required
 @require_POST
 def admin_update_order_status(request):
     try:
@@ -1548,9 +1687,18 @@ def admin_update_order_status(request):
     order = get_object_or_404(Order, pk=order_id)
     if new_status not in dict(Order.STATUS_CHOICES):
         return JsonResponse({"success": False, "error": "Invalid status."})
+    old_status = order.status
+    if new_status == "cancelled" and old_status in ("delivered", "cancelled"):
+        return JsonResponse({"success": False, "error": "This order cannot be cancelled."})
     if new_status == "delivered":
         raw = (data.get("delivery_phone") or "").strip()
         digits = "".join(c for c in raw if c.isdigit())
+        if len(digits) < 10:
+            existing = (order.phone or "").strip()
+            digits_existing = "".join(c for c in existing if c.isdigit())
+            if len(digits_existing) >= 10:
+                raw = existing
+                digits = digits_existing
         if len(digits) < 10:
             return JsonResponse(
                 {
@@ -1560,18 +1708,82 @@ def admin_update_order_status(request):
                 }
             )
         order.phone = raw if len(raw) <= 15 else digits[-10:]
+    if new_status == "cancelled":
+        reason = (data.get("cancellation_reason") or "").strip()
+        if not reason:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Select a cancellation reason.",
+                    "require_cancel_reason": True,
+                }
+            )
+        order.cancellation_reason = reason[:255]
+    elif old_status == "cancelled" and new_status != "cancelled":
+        order.cancellation_reason = ""
     order.status = new_status
+    if request.user.is_authenticated:
+        order.last_status_updated_by = request.user
     order.save()
+    if old_status != new_status:
+        notify_customer_order_status_change(order, old_status, new_status)
     return JsonResponse({"success": True})
 
 
 @admin_required
 @require_POST
 def admin_update_stock(request):
-    """Set absolute stock or apply a delta (+/-) from the inventory dashboard."""
-    data = json.loads(request.body)
-    product_id = data.get("product_id")
-    product = get_object_or_404(Product, pk=product_id)
+    """Set absolute stock or apply a delta from the inventory dashboard.
+
+    With ``variant_id``: update that variant's packet stock only, then refresh Product.stock total.
+
+    Without ``variant_id`` and with variants: deltas split across variants; absolute totals redistribute.
+
+    Without variants: updates Product.stock directly.
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({"success": False, "error": "Invalid request."}, status=400)
+    product = get_object_or_404(Product, pk=data.get("product_id"))
+    variants = list(product.variants.all().order_by("pk"))
+    variant_id = data.get("variant_id")
+
+    if variant_id:
+        if not variants:
+            return JsonResponse({"success": False, "error": "Product has no variants."}, status=400)
+        variant = get_object_or_404(ProductVariant, pk=variant_id, product=product)
+        if "delta" in data:
+            delta = int(data["delta"])
+            new_s = max(0, int(variant.stock) + delta)
+        else:
+            new_s = max(0, int(data.get("stock", 0)))
+        ProductVariant.objects.filter(pk=variant.pk).update(stock=new_s)
+        product.refresh_stock_from_variants()
+        product.refresh_from_db(fields=["stock", "updated_at"])
+        return JsonResponse(
+            {
+                "success": True,
+                "stock": product.stock,
+                "variant_id": variant.pk,
+                "variant_stock": new_s,
+            }
+        )
+
+    if variants:
+        if "delta" in data:
+            delta = int(data["delta"])
+            shares = distribute_integer_delta(delta, len(variants))
+            for v, share in zip(variants, shares):
+                new_s = max(0, int(v.stock) + share)
+                ProductVariant.objects.filter(pk=v.pk).update(stock=new_s)
+        else:
+            new_total = max(0, int(data.get("stock", 0)))
+            _redistribute_variant_stocks_to_total(variants, new_total)
+        product.refresh_stock_from_variants()
+        product.refresh_from_db(fields=["stock", "updated_at"])
+        return JsonResponse({"success": True, "stock": product.stock})
+
     if "delta" in data:
         delta = int(data["delta"])
         product.stock = max(0, int(product.stock) + delta)
@@ -1579,6 +1791,89 @@ def admin_update_stock(request):
         product.stock = max(0, int(data.get("stock", 0)))
     product.save(update_fields=["stock", "updated_at"])
     return JsonResponse({"success": True, "stock": product.stock})
+
+
+@admin_required
+@require_POST
+def admin_patch_variant(request):
+    """Update variant fields from the inventory panel (name, SKU, pack, MRP, price, size, stock, active)."""
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({"success": False, "error": "Invalid request."}, status=400)
+
+    product = get_object_or_404(Product, pk=data.get("product_id"))
+    variant = get_object_or_404(ProductVariant, pk=data.get("variant_id"), product=product)
+
+    try:
+        if "name" in data:
+            variant.name = str(data.get("name") or "").strip()[:120]
+
+        if "sku" in data:
+            sku = str(data.get("sku") or "").strip() or None
+            if sku and ProductVariant.objects.exclude(pk=variant.pk).filter(sku__iexact=sku).exists():
+                return JsonResponse(
+                    {"success": False, "error": "That SKU is already used by another variant."},
+                    status=400,
+                )
+            variant.sku = sku
+
+        if "pack_size" in data:
+            variant.pack_size = max(1, int(data["pack_size"]))
+
+        if "price" in data:
+            variant.price = max(Decimal("0"), Decimal(str(data["price"])))
+
+        if "mrp" in data:
+            raw = data.get("mrp")
+            if raw in (None, ""):
+                variant.mrp = None
+            else:
+                variant.mrp = max(Decimal("0"), Decimal(str(raw)))
+
+        if "size_value" in data:
+            raw_sv = data.get("size_value")
+            if raw_sv in (None, ""):
+                variant.size_value = None
+            else:
+                variant.size_value = Decimal(str(raw_sv))
+
+        if "size_unit" in data:
+            variant.size_unit = str(data.get("size_unit") or "").strip()[:20]
+
+        if "stock" in data:
+            variant.stock = max(0, int(data["stock"]))
+
+        if "is_active" in data:
+            variant.is_active = bool(data["is_active"])
+
+        variant.save()
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        return JsonResponse({"success": False, "error": f"Invalid value: {exc}"}, status=400)
+    except IntegrityError:
+        return JsonResponse({"success": False, "error": "Could not save (duplicate SKU?)."}, status=400)
+
+    product.refresh_stock_from_variants()
+    product.refresh_from_db(fields=["stock", "updated_at"])
+
+    return JsonResponse(
+        {
+            "success": True,
+            "product_stock": product.stock,
+            "variant": {
+                "id": variant.pk,
+                "name": variant.name,
+                "sku": variant.sku or "",
+                "pack_size": variant.pack_size,
+                "price": str(variant.price),
+                "mrp": str(variant.mrp) if variant.mrp is not None else "",
+                "stock": variant.stock,
+                "is_active": variant.is_active,
+                "size_value": str(variant.size_value.normalize()) if variant.size_value is not None else "",
+                "size_unit": variant.size_unit or "",
+            },
+        }
+    )
 
 
 @admin_required

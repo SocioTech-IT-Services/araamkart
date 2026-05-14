@@ -258,8 +258,22 @@ function initConversionTrustSection() {
     const renderSellingCards = (items) => {
         sellingTrack.innerHTML = items.map((item) => {
             const originalPacket = originalPacketPrice(item);
+            const pid = item.product_id != null ? Number(item.product_id) : 0;
+            const disabled = !pid;
+            const href = pid ? `/product/${pid}/` : '#';
+            const vid =
+                item.default_variant_id != null && item.default_variant_id !== ''
+                    ? Number(item.default_variant_id)
+                    : '';
+            const variantAttr =
+                Number.isFinite(vid) && vid > 0 ? ` data-variant-id="${vid}"` : '';
             return `
-            <a class="most-selling-card ${item.product_id ? '' : 'is-disabled'}" href="${item.product_id ? `/product/${item.product_id}/` : '#'}" ${item.product_id ? '' : 'aria-disabled="true" tabindex="-1"'}>
+            <article class="most-selling-card js-most-selling-card${disabled ? ' is-disabled' : ''}"
+              tabindex="${disabled ? '-1' : '0'}"
+              role="group"
+              aria-label="${String(item.product_name || 'Product').replace(/"/g, '&quot;')}"
+              data-product-href="${href}"
+              ${disabled ? 'aria-disabled="true"' : ''}>
               <div class="most-selling-img-wrap">
                 <span class="trending-badge">🔥 Trending</span>
                 <img src="${item.image || ''}" alt="${item.product_name}" loading="lazy" />
@@ -278,11 +292,11 @@ function initConversionTrustSection() {
                   <span class="discount-chip">${item.discount_percentage || 0}% OFF</span>
                   <span class="stock-pill ${stockClass(item.stock_status)}">${item.stock_status || 'In Stock'}</span>
                 </div>
-                <button type="button" class="most-selling-add-btn js-most-selling-add" data-product-id="${item.product_id || ''}" data-moq="${item.moq || 1}" data-pack-qty="${item.pack_quantity || 0}" data-stock="${item.stock || 0}">
+                <button type="button" class="most-selling-add-btn js-most-selling-add" data-product-id="${pid || ''}" data-moq="${item.moq || 1}" data-pack-qty="${item.pack_quantity || 0}" data-stock="${item.stock || 0}"${variantAttr}>
                   Add to Cart
                 </button>
               </div>
-            </a>
+            </article>
         `;
         }).join('');
     };
@@ -354,6 +368,8 @@ function initConversionTrustSection() {
     };
 
     const mapApiProduct = (p) => ({
+        product_id: p.product_id ?? p.id ?? null,
+        default_variant_id: p.default_variant_id ?? null,
         product_name: p.product_name || p.name || 'AaramKart Bestseller',
         wholesale_price: p.wholesale_price ?? p.base_price ?? p.price ?? 0,
         packet_price: p.packet_price ?? null,
@@ -389,50 +405,80 @@ function initConversionTrustSection() {
 
     sellingTrack.addEventListener('click', async (e) => {
         const btn = e.target.closest('.js-most-selling-add');
-        if (!btn) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (document.body.dataset.auth !== '1') {
-            window.location.href = '/auth/login/?next=' + encodeURIComponent(window.location.pathname + window.location.search);
-            return;
-        }
-        const productId = Number(btn.dataset.productId || 0);
-        const moq = Number(btn.dataset.moq || 1);
-        const packQty = Number(btn.dataset.packQty || 0);
-        const stock = Number(btn.dataset.stock || 0);
-        if (!productId || stock <= 0) {
-            showToast('Out of stock.', 'error');
-            return;
-        }
-        const qty = packQty > 0 ? 1 : moq;
-        btn.disabled = true;
-        btn.textContent = 'Adding...';
-        try {
-            const res = await fetch('/orders/cart/add/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken') || '',
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({ product_id: productId, quantity: qty }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.success) {
-                showToast(data.error || 'Could not add to cart', 'error');
-            } else {
-                const badge = document.querySelector('.cart-count-badge');
-                const totalEl = document.querySelector('.cart-count-badge')?.closest('.cart-meta-item')?.querySelector('.meta-value');
-                if (badge && data.cart_count != null) badge.textContent = String(data.cart_count);
-                if (totalEl && data.cart_total != null) totalEl.textContent = `₹${Number(data.cart_total).toFixed(2)}`;
-                showToast('Added to cart', 'success');
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (document.body.dataset.auth !== '1') {
+                window.location.href =
+                    '/auth/login/?next=' +
+                    encodeURIComponent(window.location.pathname + window.location.search);
+                return;
             }
-        } catch {
-            showToast('Network error', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Add to Cart';
+            const productId = Number(btn.dataset.productId || 0);
+            const variantId = Number(btn.dataset.variantId || 0);
+            const moq = Number(btn.dataset.moq || 1);
+            const packQty = Number(btn.dataset.packQty || 0);
+            const stock = Number(btn.dataset.stock || 0);
+            if (!productId || stock <= 0) {
+                showToast('Out of stock.', 'error');
+                return;
+            }
+            const qty = packQty > 0 ? 1 : moq;
+            const payload = { product_id: productId, quantity: qty };
+            if (Number.isFinite(variantId) && variantId > 0) {
+                payload.variant_id = variantId;
+            }
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+            try {
+                const res = await fetch('/orders/cart/add/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') || '',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    showToast(data.error || 'Could not add to cart', 'error');
+                } else {
+                    const badge = document.querySelector('.cart-count-badge');
+                    const totalEl = document
+                        .querySelector('.cart-count-badge')
+                        ?.closest('.cart-meta-item')
+                        ?.querySelector('.meta-value');
+                    if (badge && data.cart_count != null) badge.textContent = String(data.cart_count);
+                    if (totalEl && data.cart_total != null) {
+                        totalEl.textContent = `₹${Number(data.cart_total).toFixed(2)}`;
+                    }
+                    showToast('Added to cart', 'success');
+                }
+            } catch {
+                showToast('Network error', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Add to Cart';
+            }
+            return;
         }
+        const card = e.target.closest('.js-most-selling-card');
+        if (!card || card.classList.contains('is-disabled')) return;
+        const href = card.getAttribute('data-product-href');
+        if (!href || href === '#') return;
+        window.location.assign(href);
+    });
+
+    sellingTrack.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.js-most-selling-card');
+        if (!card || card.classList.contains('is-disabled')) return;
+        if (e.target.closest('.js-most-selling-add')) return;
+        const href = card.getAttribute('data-product-href');
+        if (!href || href === '#') return;
+        e.preventDefault();
+        window.location.assign(href);
     });
 
     renderSellingSkeleton();

@@ -13,7 +13,7 @@ from .views import (
     admin_gallery_image_delete,
     admin_order_detail,
     admin_order_delete,
-    admin_update_order_status, admin_update_stock,
+    admin_update_order_status, admin_update_stock, admin_patch_variant,
     admin_toggle_product_active,
 )
 
@@ -43,6 +43,7 @@ urlpatterns = [
         name="admin_gallery_image_delete",
     ),
     path("admin-panel/products/update-stock/", admin_update_stock, name="admin_update_stock"),
+    path("admin-panel/products/patch-variant/", admin_patch_variant, name="admin_patch_variant"),
     path("admin-panel/products/toggle-active/", admin_toggle_product_active, name="admin_toggle_product_active"),
     path("admin-panel/orders/", admin_orders, name="admin_orders"),
     path("admin-panel/customers/", admin_customer_details, name="admin_customer_details"),

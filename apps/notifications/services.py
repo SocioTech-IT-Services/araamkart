@@ -116,3 +116,98 @@ def _build_order_email(order):
         f"  Aapka Aaram, Hamara Kaam",
     ]
     return "\n".join(lines)
+
+
+def _normalize_in_mobile_10(phone_raw):
+    digits = "".join(c for c in (phone_raw or "") if c.isdigit())
+    if len(digits) >= 10:
+        return digits[-10:]
+    return ""
+
+
+def notify_customer_order_status_change(order, previous_status, new_status):
+    """
+    Notify customer when staff advances order status (SMS via Fast2SMS,
+    WhatsApp via CallMeBot to 91XXXXXXXXXX, optional email).
+    No-ops when API keys are missing; always logs to console.
+    """
+    if previous_status == new_status:
+        return
+    if new_status not in {"confirmed", "processing", "shipped", "delivered"}:
+        return
+
+    customer = order.customer_name or "Customer"
+    num = order.order_number
+    msgs = {
+        "confirmed": (
+            f"Hi {customer}, AaramKart order #{num} is confirmed. "
+            f"We will prepare your wholesale delivery from Shillong."
+        ),
+        "processing": f"Hi {customer}, order #{num} is being processed at AaramKart.",
+        "shipped": (
+            f"Hi {customer}, order #{num} is SHIPPED and on the way. "
+            f"Questions? Reply to this SMS. — AaramKart"
+        ),
+        "delivered": f"Hi {customer}, order #{num} has been delivered. Thank you! — AaramKart",
+    }
+    text = msgs.get(new_status)
+    if not text:
+        return
+
+    mobile = _normalize_in_mobile_10(order.phone)
+    logger.info("Order %s status %s → %s (customer notify)", num, previous_status, new_status)
+
+    print(f"\n[STATUS NOTIFY] #{num} {previous_status} → {new_status}\n  {text}\n")
+
+    if order.email and settings.EMAIL_HOST_USER:
+        try:
+            send_mail(
+                subject=f"AaramKart — Order #{num} update ({new_status.replace('_', ' ').title()})",
+                message=text + "\n\n— Team AaramKart\nShillong",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[order.email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            logger.warning("Status email failed: %s", e)
+
+    api_key = getattr(settings, "FAST2SMS_API_KEY", "") or ""
+    if api_key and mobile and new_status in {"shipped", "delivered"}:
+        try:
+            import requests
+
+            r = requests.post(
+                "https://www.fast2sms.com/dev/bulkV2",
+                json={
+                    "route": "q",
+                    "message": text,
+                    "language": "english",
+                    "numbers": mobile,
+                },
+                headers={"authorization": api_key},
+                timeout=12,
+            )
+            if r.status_code != 200:
+                logger.warning("Fast2SMS HTTP %s: %s", r.status_code, (r.text or "")[:200])
+        except Exception as e:
+            logger.warning("Fast2SMS failed: %s", e)
+
+    wkey = (getattr(settings, "CALLMEBOT_API_KEY", "") or "").strip()
+    if wkey and mobile and new_status in {"shipped", "delivered"}:
+        try:
+            import urllib.parse
+
+            import requests
+
+            msg_q = urllib.parse.quote_plus(text)
+            phone_intl = "91" + mobile
+            url = (
+                "https://api.callmebot.com/whatsapp.php?"
+                f"phone={phone_intl}&text={msg_q}&apikey={urllib.parse.quote_plus(wkey)}"
+            )
+            r = requests.get(url, timeout=15)
+            body = (r.text or "").strip()
+            if r.status_code != 200 or body.upper().startswith("ERROR"):
+                logger.warning("CallMeBot WhatsApp: %s %s", r.status_code, body[:200])
+        except Exception as e:
+            logger.warning("WhatsApp notify failed: %s", e)

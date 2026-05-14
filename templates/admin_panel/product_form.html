@@ -27,11 +27,25 @@
         <div class="admin-easy-step is-active" data-step-target="identity"><span>1</span> Identity</div>
         <div class="admin-easy-step" data-step-target="variants"><span>2</span> Product Variants &amp; Sizes</div>
       </div>
-      <form method="post" enctype="multipart/form-data" class="admin-product-form" id="admin-product-form">
+      <form method="post" enctype="multipart/form-data" class="admin-product-form" id="admin-product-form" novalidate>
         {% csrf_token %}
 
-        {% if form.non_field_errors %}
-        <div class="admin-form-errors">{{ form.non_field_errors }}</div>
+        {% if form.errors %}
+        <div class="admin-form-errors admin-form-errors--summary" id="admin-product-form-errors" role="alert" tabindex="-1">
+          <strong>Could not save — please review:</strong>
+          <ul>
+            {% for field in form %}
+              {% if field.errors %}
+                {% for err in field.errors %}
+                <li><span class="admin-error-field">{{ field.label }}</span>: {{ err }}</li>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            {% for err in form.non_field_errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+          </ul>
+        </div>
         {% endif %}
 
         <fieldset class="admin-fieldset admin-fieldset--animated admin-fieldset--glass">
@@ -102,7 +116,7 @@
                 <span class="total-stock-badge" id="variants-total-stock">Total Stock: 0 packets</span>
               </div>
               <div class="variant-head-row" aria-hidden="true">
-                <span>Net Qty</span>
+                <span>Net qty #</span>
                 <span>Unit</span>
                 <span>Single MRP</span>
                 <span>Single S.P</span>
@@ -127,15 +141,15 @@
           <button type="button" class="btn btn-outline" data-step-nav="-1">Back</button>
           <button type="button" class="btn btn-outline" data-step-nav="1">Next</button>
         </div>
-      </form>
 
-      <div class="admin-sticky-footer">
-        <button type="submit" form="admin-product-form" class="btn btn-primary btn-premium-submit" id="save-product-btn-sticky">
-          <span class="save-btn-label">Save Product</span>
-          <span class="save-spinner" aria-hidden="true"></span>
-          <span class="save-checkmark" aria-hidden="true">✓</span>
-        </button>
-      </div>
+        <div class="admin-sticky-footer">
+          <button type="submit" class="btn btn-primary btn-premium-submit" id="save-product-btn-sticky">
+            <span class="save-btn-label">Save Product</span>
+            <span class="save-spinner" aria-hidden="true"></span>
+            <span class="save-checkmark" aria-hidden="true">✓</span>
+          </button>
+        </div>
+      </form>
 
       {% if product %}
       <div class="admin-danger-zone">
@@ -217,8 +231,11 @@
   var form = document.getElementById('admin-product-form');
   var saveBtn = document.getElementById('save-product-btn-sticky');
   if (!form || !saveBtn) return;
+  window.addEventListener('pageshow', function () {
+    saveBtn.disabled = false;
+    saveBtn.classList.remove('is-saving');
+  });
   form.addEventListener('submit', function () {
-    if (!form.checkValidity()) return;
     saveBtn.classList.add('is-saving');
     saveBtn.disabled = true;
   });
@@ -480,7 +497,7 @@
 </script>
 <template id="variant-row-template">
   <div class="variant-row">
-    <input type="number" class="variant-input variant-net-qty" min="0.01" step="0.01" placeholder="Net Quantity" />
+    <input type="text" class="variant-input variant-net-qty" inputmode="decimal" autocomplete="off" maxlength="14" placeholder="Numbers only" title="Digits and decimal only; choose unit separately" />
     <select class="variant-input variant-net-unit">
       <option value="">Unit</option>
       <option value="ml">ml</option>
@@ -507,6 +524,38 @@
   var form = document.getElementById('admin-product-form');
   var stockInput = document.getElementById('id_stock');
   if (!list || !addBtn || !tpl || !totalBadge || !hiddenJson || !form) return;
+
+  function sanitizeNetQtyValue(str) {
+    var s = String(str || '').replace(/[^\d.]/g, '');
+    var d = s.indexOf('.');
+    if (d !== -1) {
+      s = s.slice(0, d + 1) + s.slice(d + 1).replace(/\./g, '');
+      var parts = s.split('.');
+      s = parts[0] + '.' + (parts[1] || '').slice(0, 2);
+    }
+    return s;
+  }
+
+  function parseNetQuantityForRow(row) {
+    var el = row.querySelector('.variant-net-qty');
+    var raw = String((el && el.value) || '').trim();
+    if (raw === '') return 0;
+    var s = sanitizeNetQtyValue(raw);
+    var n = parseFloat(s);
+    return isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  function bindNetQtyInput(el) {
+    if (!el || el.getAttribute('data-net-qty-bound') === '1') return;
+    el.setAttribute('data-net-qty-bound', '1');
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '-') e.preventDefault();
+    });
+    el.addEventListener('input', function () {
+      var next = sanitizeNetQtyValue(el.value);
+      if (next !== el.value) el.value = next;
+    });
+  }
 
   function calcDiscount(row) {
     var single = parseFloat(row.querySelector('.variant-single-mrp').value || '0');
@@ -535,7 +584,7 @@
   function collectRows() {
     return Array.from(list.querySelectorAll('.variant-row')).map(function (row) {
       return {
-        net_quantity: parseFloat(row.querySelector('.variant-net-qty').value || '0') || 0,
+        net_quantity: parseNetQuantityForRow(row),
         net_quantity_unit: row.querySelector('.variant-net-unit').value || '',
         single_mrp: parseFloat(row.querySelector('.variant-single-mrp').value || '0') || 0,
         single_sp: parseFloat(row.querySelector('.variant-single-sp').value || '0') || 0,
@@ -563,6 +612,8 @@
     row.querySelectorAll('input').forEach(function (input) {
       input.addEventListener('input', recalcAll);
     });
+    var nq = row.querySelector('.variant-net-qty');
+    if (nq) bindNetQtyInput(nq);
     row.querySelector('.variant-delete').addEventListener('click', function () {
       row.remove();
       recalcAll();
@@ -580,8 +631,25 @@
   };
 
   addBtn.addEventListener('click', window.addVariantRow);
-  form.addEventListener('submit', function () { hiddenJson.value = JSON.stringify(collectRows()); });
+  form.addEventListener(
+    'submit',
+    function () {
+      hiddenJson.value = JSON.stringify(collectRows());
+    },
+    true
+  );
   recalcAll();
+})();
+</script>
+<script>
+(function () {
+  var el = document.getElementById('admin-product-form-errors');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    try {
+      el.focus();
+    } catch (e) {}
+  }
 })();
 </script>
 {% endblock %}

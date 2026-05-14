@@ -491,6 +491,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h2 class="text-lg font-semibold tracking-wide">Recent Orders</h2>
         <div class="flex items-center gap-2">
+          <a href="{% url 'staff_delivery_panel' %}" class="premium-btn liquid-btn liquid-btn-neutral rounded-xl border border-indigo-400/45 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-700 dark:text-indigo-200 dark:border-indigo-500/35 dark:bg-indigo-950/40" title="Glass status board — same updates as Orders">Delivery ops</a>
           <button type="button" class="premium-btn liquid-btn liquid-btn-emerald rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-600 dark:text-emerald-300" id="export-orders-csv">Export to CSV</button>
           <a href="{% url 'admin_orders' %}" class="premium-btn liquid-btn liquid-btn-neutral rounded-xl border border-slate-300/70 bg-white/70 px-3 py-2 text-xs dark:bg-slate-800/70 dark:border-slate-700">View All</a>
         </div>

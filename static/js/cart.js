@@ -10,13 +10,35 @@ let currentMoq = 1;
 let currentStock = 0;
 /** @type {{ packQuantity: number, packetPrice: number, originalPacketPrice?: number, discountPerPacket?: number, minPackets: number, maxPackets: number, unitLabel: string } | null} */
 let packetPricing = null;
+/** @type {Array<{ id: number, label: string, sku: string, pack_size: number, stock: number, single_sp: number, single_mrp: number | null, packet_price: number, packet_mrp: number, savings_per_packet: number }>} */
+let productVariants = [];
+let selectedVariantId = null;
 
-function initProductPage(tiers, productId, moq, stock, packetPricingOpts) {
+function fmtMoneyInr(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return '—';
+    return x.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function initProductPage(tiers, productId, moq, stock, packetPricingOpts, variantsList, defaultVariantId) {
     currentPricingTiers = tiers;
     currentProductId = productId;
     currentMoq = moq;
     currentStock = stock;
     packetPricing = packetPricingOpts || null;
+    productVariants = Array.isArray(variantsList) ? variantsList : [];
+    selectedVariantId = defaultVariantId != null ? Number(defaultVariantId) : null;
+
+    if (packetPricing && productVariants.length > 0) {
+        const v =
+            productVariants.find((row) => Number(row.id) === Number(selectedVariantId)) ||
+            productVariants[0];
+        if (v) {
+            selectedVariantId = Number(v.id);
+            applyVariantToPacketPricing(v);
+        }
+        renderProductVariantButtons();
+    }
 
     const qtyInput = document.getElementById('qty-input');
     if (qtyInput) {
@@ -41,6 +63,103 @@ function initProductPage(tiers, productId, moq, stock, packetPricingOpts) {
     bindTierCards();
     updateStockMeter();
     syncStickyTotal();
+}
+
+function applyVariantToPacketPricing(v) {
+    if (!v || !packetPricing) return;
+    const pk = Math.max(1, Number(v.pack_size) || 1);
+    const stockPackets = Math.max(0, Number(v.stock) || 0);
+    const sellPkt = Number(v.packet_price);
+    const listPktRaw = v.packet_mrp != null && v.packet_mrp !== '' ? Number(v.packet_mrp) : NaN;
+    const listPkt = Number.isFinite(listPktRaw) ? listPktRaw : (Number.isFinite(sellPkt) ? sellPkt : 0);
+
+    packetPricing.packQuantity = pk;
+    packetPricing.packetPrice = Number.isFinite(sellPkt) ? sellPkt : 0;
+    packetPricing.originalPacketPrice = listPkt;
+    packetPricing.discountPerPacket = Math.max(
+        0,
+        Number(v.savings_per_packet) ||
+            (packetPricing.originalPacketPrice - packetPricing.packetPrice)
+    );
+    packetPricing.minPackets = stockPackets > 0 ? 1 : 0;
+    packetPricing.maxPackets = stockPackets;
+    currentStock = stockPackets;
+
+    const hero = document.getElementById('pdp-packet-hero-price');
+    if (hero) hero.textContent = `₹${fmtMoneyInr(v.packet_price)}`;
+    const perLine = document.getElementById('pdp-per-piece-line');
+    const perUnitNum = Number(v.packet_price) / pk;
+    if (perLine) perLine.textContent = `₹${fmtMoneyInr(perUnitNum)}/pc · Price per piece`;
+
+    const origPktEl = document.getElementById('pdp-original-packet-mrp-display');
+    if (origPktEl) {
+        const op = Number(v.packet_mrp);
+        origPktEl.textContent = Number.isFinite(op) ? fmtMoneyInr(op) : '—';
+    }
+    const sellPktEl = document.getElementById('pdp-packet-selling-display');
+    if (sellPktEl) sellPktEl.textContent = fmtMoneyInr(v.packet_price);
+
+    const titleSuf = document.getElementById('product-title-variant');
+    if (titleSuf) titleSuf.textContent = v.label ? ` · ${v.label}` : '';
+
+    const pq = document.getElementById('pdp-pack-qty-hint');
+    if (pq) pq.textContent = String(pk);
+    const mx = document.getElementById('pdp-max-packets-hint');
+    if (mx) mx.textContent = String(stockPackets);
+
+    const qtyInput = document.getElementById('qty-input');
+    if (qtyInput && packetPricing) {
+        let q = parseInt(qtyInput.value, 10);
+        if (Number.isNaN(q)) q = packetPricing.minPackets;
+        q = Math.max(packetPricing.minPackets, Math.min(q, packetPricing.maxPackets || q));
+        qtyInput.min = String(Math.max(1, packetPricing.minPackets || 1));
+        qtyInput.max = String(Math.max(0, packetPricing.maxPackets || 0));
+        qtyInput.value = String(q);
+    }
+
+    syncPacketOrderSummaryFromInput();
+}
+
+function renderProductVariantButtons() {
+    const strip = document.getElementById('product-variant-strip');
+    if (!strip || !productVariants.length) return;
+    strip.innerHTML = '';
+    productVariants.forEach((v) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'product-variant-chip';
+        btn.setAttribute('role', 'option');
+        btn.dataset.variantId = String(v.id);
+        btn.textContent = v.label != null && String(v.label).length ? String(v.label) : String(v.id);
+        const st = Math.max(0, Number(v.stock) || 0);
+        if (st <= 0) {
+            btn.disabled = true;
+            btn.classList.add('is-disabled');
+            btn.title = 'Out of stock';
+        }
+        if (Number(v.id) === Number(selectedVariantId)) {
+            btn.classList.add('is-active');
+            btn.setAttribute('aria-selected', 'true');
+        } else {
+            btn.setAttribute('aria-selected', 'false');
+        }
+        btn.addEventListener('click', () => {
+            if (btn.disabled) return;
+            selectedVariantId = Number(v.id);
+            applyVariantToPacketPricing(v);
+            strip.querySelectorAll('.product-variant-chip').forEach((b) => {
+                b.classList.toggle('is-active', b.dataset.variantId === String(v.id));
+                b.setAttribute('aria-selected', b.dataset.variantId === String(v.id) ? 'true' : 'false');
+            });
+            updatePricePreview();
+            syncPacketOrderSummaryFromInput();
+            updatePacketPiecesBadge();
+            updateStockMeter();
+            syncStickyTotal();
+            syncAddToCartButtonPrice();
+        });
+        strip.appendChild(btn);
+    });
 }
 
 function bindProductActionRipples() {
@@ -211,18 +330,31 @@ function getPriceForQty(qty) {
 
 async function handleAddToCart() {
     const qty = parseInt(document.getElementById('qty-input').value, 10);
-    
+
+    if (packetPricing && productVariants.length > 0) {
+        const v = productVariants.find((row) => Number(row.id) === Number(selectedVariantId));
+        if (!v || !(Number(v.stock) > 0)) {
+            showToast('This option is out of stock.', 'error');
+            return;
+        }
+    }
+
+    const body = {
+        product_id: currentProductId,
+        quantity: qty,
+    };
+    if (productVariants.length > 0 && selectedVariantId != null) {
+        body.variant_id = selectedVariantId;
+    }
+
     try {
         const response = await fetch('/orders/cart/add/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
             },
-            body: JSON.stringify({
-                product_id: currentProductId,
-                quantity: qty
-            })
+            body: JSON.stringify(body),
         });
 
         const data = await response.json();
@@ -275,11 +407,16 @@ function updateStockMeter() {
     const fill = document.getElementById('stock-meter-fill');
     const text = document.getElementById('stock-meter-text');
     const qtyInput = document.getElementById('qty-input');
-    if (!fill || !text || !qtyInput || !currentStock) return;
+    if (!fill || !text || !qtyInput) return;
 
     if (packetPricing) {
         const packets = parseInt(qtyInput.value || '0', 10);
         const { maxPackets } = packetPricing;
+        if (!maxPackets) {
+            fill.style.width = '0%';
+            text.textContent = 'Out of stock for this option';
+            return;
+        }
         const ratio = maxPackets
             ? Math.min(100, Math.max(0, Math.round((packets / maxPackets) * 100)))
             : 0;
@@ -287,6 +424,8 @@ function updateStockMeter() {
         text.textContent = `Available: ${maxPackets} packets · Selected: ${packets} packet(s)`;
         return;
     }
+
+    if (!currentStock) return;
 
     const qty = parseInt(qtyInput.value || '0', 10);
     const ratio = Math.min(100, Math.max(0, Math.round((qty / currentStock) * 100)));
@@ -378,7 +517,7 @@ async function updateCartItem(itemId, newQty) {
             const unitEl = document.getElementById(`unit-price-${itemId}`);
             if (unitEl) {
                 if (unitEl.dataset.packetMode === '1') {
-                    unitEl.textContent = `₹${data.unit_price} per packet`;
+                    unitEl.textContent = `₹${data.unit_price} / packet`;
                 } else {
                     unitEl.textContent = `₹${data.unit_price} / unit`;
                 }

@@ -355,6 +355,178 @@
     transform: translateY(-1px);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
   }
+  .premium-variant-nest-row td {
+    background: linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
+    border-top: 0 !important;
+    padding: 0.65rem 0.85rem 0.85rem 2.5rem !important;
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.12);
+  }
+  .premium-variant-nest-row[aria-hidden="true"] {
+    display: none !important;
+  }
+  .premium-variant-nest-row[aria-hidden="false"] {
+    display: table-row !important;
+  }
+  .premium-variant-nest-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
+  }
+  .premium-variant-nest-toolbar span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #334155;
+  }
+  .premium-variant-editor {
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.45rem;
+  }
+  .premium-variant-editor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.5rem 0.65rem;
+    align-items: end;
+  }
+  .inv-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+  .inv-field > span:first-child {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .inv-input {
+    width: 100%;
+    min-width: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 0.35rem 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #0f172a;
+    background: #fff;
+  }
+  .inv-field--check {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .inv-field--check input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  .inv-field--derived .inv-derived-value {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border-radius: 10px;
+    border: 1px dashed rgba(148, 163, 184, 0.45);
+    padding: 0.35rem 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0f172a;
+    background: #f8fafc;
+    line-height: 1.25;
+  }
+  .inv-field--derived .inv-field-hint {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.2;
+  }
+  .premium-variant-editor-stock {
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px dashed rgba(148, 163, 184, 0.3);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+  .premium-variant-editor-stock .stock-section-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #475569;
+  }
+  .premium-variant-editor-stock .stock-unit {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .premium-variant-editor-footer {
+    margin-top: 0.55rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .premium-variant-nest-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .inv-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-right: 0.35rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+    flex-shrink: 0;
+  }
+  .inv-expand-btn:hover {
+    background: #ecfdf5;
+    border-color: rgba(45, 90, 39, 0.35);
+  }
+  .inv-expand-btn[aria-expanded="true"] {
+    background: rgba(45, 90, 39, 0.12);
+    border-color: rgba(45, 90, 39, 0.35);
+  }
+  .inv-expand-btn svg {
+    transition: transform 0.22s ease;
+  }
+  .inv-expand-btn[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+  .inv-expand-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+    pointer-events: none;
+  }
+  .td-thumb--split {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .premium-product-row[data-has-variants="1"] .stock-parent-muted {
+    opacity: 0.55;
+  }
+  .premium-product-row[data-has-variants="1"] .stock-parent-muted .premium-stock-btn,
+  .premium-product-row[data-has-variants="1"] .stock-parent-muted .premium-stock-input {
+    pointer-events: none;
+  }
   @media (max-width: 900px) {
     .premium-row-actions { opacity: 1; }
   }
@@ -367,7 +539,8 @@
     <div class="admin-header">
       <div>
         <h1>Inventory &amp; stock</h1>
-        <p>{{ products|length }} product{{ products|length|pluralize }} managed in one polished control center. Update stock, visibility, and product details without leaving the flow.</p>
+        <p>{{ products|length }} product{{ products|length|pluralize }} managed in one polished control center.
+          Stock shows <strong>total packets</strong>; when a product has variants, use the <strong>expand</strong> control to edit each variant’s stock inline — the parent total updates automatically.</p>
       </div>
       <div class="admin-header-actions">
         <a href="{% url 'admin_product_add' %}" class="btn btn-primary premium-add-product">
@@ -431,9 +604,19 @@
             <tr
               id="product-row-{{ product.pk }}"
               class="premium-product-row {% if product.stock <= 10 %}is-low-stock{% endif %}"
+              data-has-variants="{% if product.variant_count %}1{% else %}0{% endif %}"
               data-filter-text="{{ product.name|lower }} {{ product.brand|lower }} {{ product.category.name|lower }} {{ product.subcategory.name|default:''|lower }}"
             >
-              <td class="td-thumb">
+              <td class="td-thumb td-thumb--split">
+                {% if product.variant_count %}
+                <button type="button" class="inv-expand-btn" id="inv-expand-{{ product.pk }}" aria-expanded="false"
+                        aria-controls="variant-nest-{{ product.pk }}" title="Show variants — stock &amp; edit link"
+                        onclick="toggleInventoryVariants({{ product.pk }}, this)">
+                  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                {% else %}
+                <span class="inv-expand-btn" style="visibility:hidden;width:32px;height:32px;margin-right:0.35rem;border:none;background:transparent" aria-hidden="true"></span>
+                {% endif %}
                 <span class="premium-thumb-frame">
                 {% if product.image %}
                 <img src="{{ product.image.url }}" alt="" class="admin-table-thumb" width="52" height="52" />
@@ -451,15 +634,15 @@
               <td>{{ product.brand }}</td>
               <td><span class="premium-pill premium-pill--category">{{ product.category.name }}</span></td>
               <td><span class="premium-pill premium-pill--sub">{{ product.subcategory.name|default:"—" }}</span></td>
-              <td class="advanced-col">{{ product.variants.count }}</td>
+              <td class="advanced-col">{{ product.variant_count }}</td>
               <td>
-                <div class="stock-edit stock-edit--full">
+                <div class="stock-edit stock-edit--full{% if product.variant_count %} stock-parent-muted{% endif %}" {% if product.variant_count %}title="Total packets (sum of variants). Use ▾ to change each variant’s stock."{% endif %}>
                   <div class="stock-adj premium-stock-control">
                     <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Reduce stock by 10" onclick="adjustStock({{ product.pk }}, -10)" aria-label="Reduce stock by 10">−−</button>
                     <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Reduce stock by 1" onclick="adjustStock({{ product.pk }}, -1)" aria-label="Reduce stock by 1">−</button>
                     <input type="number" class="stock-input premium-stock-input" id="stock-{{ product.pk }}"
-                           value="{{ product.stock }}" min="0"
-                           onchange="updateStock({{ product.pk }}, this.value)" aria-label="Stock quantity" />
+                           value="{{ product.stock }}" min="0" {% if product.variant_count %}readonly{% endif %}
+                           onchange="updateStock({{ product.pk }}, this.value)" aria-label="Total stock (packets)" />
                     <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Increase stock by 1" onclick="adjustStock({{ product.pk }}, 1)" aria-label="Increase stock by 1">＋</button>
                     <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="Increase stock by 10" onclick="adjustStock({{ product.pk }}, 10)" aria-label="Increase stock by 10">＋＋</button>
                   </div>
@@ -499,14 +682,61 @@
                 </form>
               </td>
             </tr>
+            {% if product.variant_count %}
+            <tr id="variant-nest-{{ product.pk }}" class="premium-variant-nest-row" data-product-group="{{ product.pk }}" aria-hidden="true">
+              <td colspan="12">
+                <div class="premium-variant-nest-inner">
+                  <div class="premium-variant-nest-toolbar">
+                    <span>{{ product.variant_count }} variant{{ product.variant_count|pluralize }} — edit below, then <strong>Save variant</strong></span>
+                    <a href="{% url 'admin_product_edit' product.pk %}#variants-section" class="btn btn-outline btn-xs">Full product form</a>
+                  </div>
+                  {% for v in product.variants.all %}
+                  <div class="premium-variant-editor" id="variant-editor-{{ v.pk }}">
+                    <div class="premium-variant-editor-grid">
+                      <label class="inv-field"><span>Label / name</span><input type="text" class="inv-input" id="v-name-{{ v.pk }}" maxlength="120" value="{{ v.name }}" autocomplete="off" /></label>
+                      <label class="inv-field"><span>SKU</span><input type="text" class="inv-input" id="v-sku-{{ v.pk }}" maxlength="80" value="{{ v.sku|default:'' }}" autocomplete="off" /></label>
+                      <label class="inv-field"><span>Pack size</span><input type="number" class="inv-input js-variant-pack-calc" id="v-pack-{{ v.pk }}" data-variant-id="{{ v.pk }}" min="1" step="1" value="{{ v.pack_size }}" /></label>
+                      <label class="inv-field"><span>Single MRP ₹</span><input type="number" class="inv-input js-variant-pack-calc" id="v-mrp-{{ v.pk }}" data-variant-id="{{ v.pk }}" min="0" step="0.01" placeholder="—" value="{% if v.mrp %}{{ v.mrp }}{% endif %}" /></label>
+                      <label class="inv-field"><span>Single SP ₹</span><input type="number" class="inv-input js-variant-pack-calc" id="v-price-{{ v.pk }}" data-variant-id="{{ v.pk }}" min="0" step="0.01" value="{{ v.price }}" /></label>
+                      <div class="inv-field inv-field--derived">
+                        <span>Packet price ₹</span>
+                        <span class="inv-derived-value" id="v-packet-sp-{{ v.pk }}">₹{{ v.packet_selling_price }}</span>
+                        <span class="inv-field-hint">pack size × single SP</span>
+                      </div>
+                      <div class="inv-field inv-field--derived">
+                        <span>Original packet MRP ₹</span>
+                        <span class="inv-derived-value" id="v-packet-mrp-{{ v.pk }}">{% if v.packet_mrp_total %}₹{{ v.packet_mrp_total }}{% else %}—{% endif %}</span>
+                        <span class="inv-field-hint">pack size × single MRP</span>
+                      </div>
+                      <label class="inv-field"><span>Net quantity</span><input type="text" class="inv-input inv-net-qty" id="v-sv-{{ v.pk }}" inputmode="decimal" autocomplete="off" maxlength="14" title="Digits only; use Net quantity unit for ml, g, etc." placeholder="e.g. 200" value="{% if v.size_value %}{{ v.size_value }}{% endif %}" /></label>
+                      <label class="inv-field"><span>Net quantity unit</span><input type="text" class="inv-input" id="v-su-{{ v.pk }}" maxlength="20" value="{{ v.size_unit }}" placeholder="ml, g…" /></label>
+                      <label class="inv-field inv-field--check"><span>Active</span><input type="checkbox" id="v-active-{{ v.pk }}" {% if v.is_active %}checked{% endif %} /></label>
+                    </div>
+                    <div class="premium-variant-editor-stock">
+                      <span class="stock-section-label">Stock (packets)</span>
+                      <div class="stock-adj premium-stock-control">
+                        <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="−10" onclick="adjustVariantStock({{ product.pk }}, {{ v.pk }}, -10)">−−</button>
+                        <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="−1" onclick="adjustVariantStock({{ product.pk }}, {{ v.pk }}, -1)">−</button>
+                        <input type="number" class="stock-input premium-stock-input" id="stock-variant-{{ v.pk }}" min="0" value="{{ v.stock }}" aria-label="Variant stock packets" />
+                        <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="+1" onclick="adjustVariantStock({{ product.pk }}, {{ v.pk }}, 1)">＋</button>
+                        <button type="button" class="btn btn-outline btn-xs stock-adj-btn premium-stock-btn" title="+10" onclick="adjustVariantStock({{ product.pk }}, {{ v.pk }}, 10)">＋＋</button>
+                      </div>
+                      <span class="stock-unit">{{ product.unit }}</span>
+                    </div>
+                    <div class="premium-variant-editor-footer">
+                      <button type="button" class="btn btn-primary btn-xs" onclick="saveVariantEditor({{ product.pk }}, {{ v.pk }})">Save variant</button>
+                      <a href="{% url 'admin_product_edit' product.pk %}#variants-section" class="btn btn-outline btn-xs">Open form</a>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </td>
+            </tr>
+            {% endif %}
             {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
-
-    <div class="admin-quick-add">
-      <p>Need volume pricing tiers (bulk rates)? Use <a href="/django-admin/catalog/product/" target="_blank">Django Admin → Products ↗</a></p>
     </div>
 
   </div>
@@ -547,6 +777,161 @@ function adjustStock(productId, delta) {
       showToast((delta >= 0 ? '+' : '') + delta + ' → now ' + data.stock, 'success');
     } else showToast('Update failed', 'error');
   });
+}
+
+function toggleInventoryVariants(productId, btn) {
+  const nest = document.getElementById('variant-nest-' + productId);
+  if (!nest || !btn) return;
+  const isOpen = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+  nest.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+}
+
+/** Net quantity: digits and at most one decimal point, up to 2 decimal places (matches DB). */
+function sanitizeNetQtyInputValue(str) {
+  let s = String(str ?? '').replace(/[^\d.]/g, '');
+  const firstDot = s.indexOf('.');
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+    const [intp = '', frac = ''] = s.split('.');
+    s = intp + '.' + frac.slice(0, 2);
+  }
+  return s;
+}
+
+function normalizeNetQtyForSave(str) {
+  const trimmed = String(str ?? '').trim();
+  if (trimmed === '') return '';
+  const s = sanitizeNetQtyInputValue(trimmed);
+  if (s === '' || s === '.') return null;
+  const n = parseFloat(s);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return String(Math.round(n * 100) / 100);
+}
+
+function bindInventoryNetQtyInput(el) {
+  if (!el || el.dataset.netQtyBound === '1') return;
+  el.dataset.netQtyBound = '1';
+  el.addEventListener('keydown', (e) => {
+    if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+  });
+  el.addEventListener('input', () => {
+    const next = sanitizeNetQtyInputValue(el.value);
+    if (next !== el.value) el.value = next;
+  });
+}
+
+function formatVariantInr2(n) {
+  if (!Number.isFinite(n)) return '—';
+  return (
+    '₹' +
+    n.toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
+}
+
+/** Packet price = pack × single SP; packet MRP = pack × single MRP (read-only hints). */
+function updateVariantPacketDerived(variantId) {
+  const vid = String(variantId);
+  const packEl = document.getElementById('v-pack-' + vid);
+  const priceEl = document.getElementById('v-price-' + vid);
+  const mrpEl = document.getElementById('v-mrp-' + vid);
+  const outSp = document.getElementById('v-packet-sp-' + vid);
+  const outMrp = document.getElementById('v-packet-mrp-' + vid);
+  if (!outSp && !outMrp) return;
+  const pk = Math.max(1, parseInt(packEl && packEl.value, 10) || 1);
+  const sp = parseFloat(priceEl && priceEl.value);
+  const mrpRaw = mrpEl && String(mrpEl.value || '').trim();
+  const mrp = mrpRaw === '' ? NaN : parseFloat(mrpRaw);
+  if (outSp) outSp.textContent = formatVariantInr2(pk * (Number.isFinite(sp) ? sp : NaN));
+  if (outMrp) outMrp.textContent = Number.isFinite(mrp) ? formatVariantInr2(pk * mrp) : '—';
+}
+
+function applyVariantServerFields(variantId, v) {
+  if (!v) return;
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val != null ? String(val) : '';
+  };
+  set('v-name-' + variantId, v.name);
+  set('v-sku-' + variantId, v.sku);
+  set('v-pack-' + variantId, v.pack_size);
+  set('v-mrp-' + variantId, v.mrp);
+  set('v-price-' + variantId, v.price);
+  set('v-sv-' + variantId, v.size_value);
+  set('v-su-' + variantId, v.size_unit);
+  set('stock-variant-' + variantId, v.stock);
+  const ch = document.getElementById('v-active-' + variantId);
+  if (ch) ch.checked = !!v.is_active;
+  updateVariantPacketDerived(variantId);
+}
+
+function saveVariantEditor(productId, variantId) {
+  const stockEl = document.getElementById('stock-variant-' + variantId);
+  const stockRaw = stockEl ? parseInt(stockEl.value, 10) : 0;
+  const packRaw = parseInt(document.getElementById('v-pack-' + variantId).value, 10);
+  if (Number.isNaN(packRaw) || packRaw < 1) {
+    showToast('Pack size must be at least 1', 'error');
+    return;
+  }
+  const sizeNorm = normalizeNetQtyForSave(document.getElementById('v-sv-' + variantId).value);
+  if (sizeNorm === null) {
+    showToast('Net quantity must be a number only (no letters or symbols).', 'error');
+    return;
+  }
+  const body = {
+    product_id: productId,
+    variant_id: variantId,
+    name: document.getElementById('v-name-' + variantId).value,
+    sku: document.getElementById('v-sku-' + variantId).value,
+    pack_size: packRaw,
+    price: document.getElementById('v-price-' + variantId).value,
+    mrp: document.getElementById('v-mrp-' + variantId).value,
+    size_value: sizeNorm,
+    size_unit: document.getElementById('v-su-' + variantId).value,
+    stock: Number.isFinite(stockRaw) ? stockRaw : 0,
+    is_active: document.getElementById('v-active-' + variantId).checked,
+  };
+  fetch('{% url "admin_patch_variant" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify(body),
+  })
+    .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+    .then(({ ok, data }) => {
+      if (data.success) {
+        applyVariantServerFields(variantId, data.variant);
+        document.getElementById('stock-' + productId).value = data.product_stock;
+        refreshStockMeta(productId, data.product_stock);
+        showToast('Variant saved ✓', 'success');
+      } else {
+        showToast(data.error || (ok ? 'Save failed' : 'Save failed'), 'error');
+      }
+    })
+    .catch(() => showToast('Save failed', 'error'));
+}
+
+function adjustVariantStock(productId, variantId, delta) {
+  fetch('{% url "admin_update_stock" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+    body: JSON.stringify({product_id: productId, variant_id: variantId, delta: delta})
+  })
+  .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+  .then(({ ok, data }) => {
+    if (data.success) {
+      const vIn = document.getElementById('stock-variant-' + variantId);
+      if (vIn) vIn.value = data.variant_stock;
+      document.getElementById('stock-' + productId).value = data.stock;
+      refreshStockMeta(productId, data.stock);
+      showToast((delta >= 0 ? '+' : '') + delta + ' → ' + data.variant_stock + ' (total ' + data.stock + ')', 'success');
+    } else {
+      showToast(data.error || 'Update failed', 'error');
+    }
+  })
+  .catch(() => showToast('Update failed', 'error'));
 }
 
 function toggleActive(productId, isActive) {
@@ -593,11 +978,18 @@ function showToast(msg, type) {
 
 (function () {
   const searchInput = document.getElementById('inventory-search');
-  const rows = Array.from(document.querySelectorAll('#products-table tbody tr'));
+  const rows = Array.from(document.querySelectorAll('#products-table tbody tr.premium-product-row'));
   const simpleToggle = document.getElementById('simple-view-toggle');
   const table = document.getElementById('products-table');
   const inventoryCard = document.getElementById('premium-inventory-card');
   let filterTimer = null;
+
+  function collapseVariantNestForProduct(productId) {
+    const nest = document.getElementById('variant-nest-' + productId);
+    const btn = document.getElementById('inv-expand-' + productId);
+    if (nest) nest.setAttribute('aria-hidden', 'true');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
 
   function applyFilter() {
     const q = (searchInput?.value || '').trim().toLowerCase();
@@ -608,7 +1000,11 @@ function showToast(msg, type) {
     }
     rows.forEach((row) => {
       const text = row.dataset.filterText || '';
-      row.style.display = !q || text.includes(q) ? '' : 'none';
+      const match = !q || text.includes(q);
+      row.style.display = match ? '' : 'none';
+      const m = /^product-row-(\d+)$/.exec(row.id || '');
+      const productId = m ? m[1] : null;
+      if (productId && !match) collapseVariantNestForProduct(productId);
     });
   }
 
@@ -620,6 +1016,19 @@ function showToast(msg, type) {
   searchInput?.addEventListener('input', applyFilter);
   simpleToggle?.addEventListener('change', applyViewMode);
   applyViewMode();
+  document.querySelectorAll('input.inv-net-qty').forEach((el) => bindInventoryNetQtyInput(el));
+  document.querySelectorAll('.premium-variant-editor').forEach((box) => {
+    const m = /^variant-editor-(\d+)$/.exec(box.id || '');
+    if (!m) return;
+    const vid = m[1];
+    box.querySelectorAll('.js-variant-pack-calc').forEach((el) => {
+      if (el.dataset.packCalcBound === '1') return;
+      el.dataset.packCalcBound = '1';
+      el.addEventListener('input', () => updateVariantPacketDerived(vid));
+      el.addEventListener('change', () => updateVariantPacketDerived(vid));
+    });
+    updateVariantPacketDerived(vid);
+  });
 })();
 </script>
 {% endblock %}

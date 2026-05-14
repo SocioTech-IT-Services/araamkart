@@ -80,7 +80,7 @@
   {% endif %}
   <div class="product-premium-actions">
     <a href="{% url 'product_detail' product.pk %}" class="premium-card-action js-premium-ripple">View</a>
-    {% if user.is_authenticated and user.is_staff or user.is_admin %}
+    {% if user.is_authenticated and user.can_access_admin_panel %}
     <a href="{% url 'admin_product_edit' product.pk %}" class="premium-card-action premium-card-action--ghost js-premium-ripple">Edit</a>
     {% endif %}
   </div>

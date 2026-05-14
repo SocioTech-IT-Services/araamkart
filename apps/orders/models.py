@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.conf import settings
-from apps.catalog.models import Product
+from apps.catalog.models import Product, ProductVariant
 
 
 class Cart(models.Model):
@@ -32,6 +32,13 @@ class Cart(models.Model):
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items")
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product_variant = models.ForeignKey(
+        ProductVariant,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cart_items",
+    )
     quantity = models.PositiveIntegerField(default=1)
     packet_size = models.PositiveIntegerField(default=1)
 
@@ -39,6 +46,8 @@ class CartItem(models.Model):
     def effective_packet_size(self):
         if self.packet_size and self.packet_size > 0:
             return self.packet_size
+        if self.product_variant_id and self.product_variant.pack_size:
+            return int(self.product_variant.pack_size)
         if self.product.pack_quantity:
             return int(self.product.pack_quantity)
         return 1
@@ -48,11 +57,23 @@ class CartItem(models.Model):
         return self.quantity * self.effective_packet_size
 
     def unit_price(self):
-        return self.product.get_price_for_qty(self.quantity)
+        product = self.product
+        v = self.product_variant
+        if v and product.packet_price and product.pack_quantity:
+            return v.packet_selling_price
+        return product.get_price_for_qty(self.quantity)
 
     def original_unit_price(self):
         product = self.product
+        v = self.product_variant
         unit_price = self.unit_price() or Decimal("0")
+        if v and product.packet_price and product.pack_quantity:
+            pkt = v.packet_mrp_total
+            if pkt is not None:
+                return pkt
+            if product.single_product_price:
+                pk = max(1, int(v.pack_size or 1))
+                return Decimal(product.single_product_price) * Decimal(pk)
         if product.packet_price and product.pack_quantity and product.single_product_price:
             return Decimal(product.single_product_price) * Decimal(self.effective_packet_size)
         if product.single_product_price:
@@ -103,6 +124,18 @@ class Order(models.Model):
     total_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     notes = models.TextField(blank=True)
+    last_status_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="orders_delivery_updates",
+    )
+    cancellation_reason = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Filled when staff cancels from delivery ops (e.g. didn't pick up).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

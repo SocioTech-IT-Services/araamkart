@@ -129,7 +129,7 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Bump this (or set STATIC_CACHE_BUSTER in .env) when CSS/JS changes don’t show — browsers cache /static/ aggressively.
-STATIC_CACHE_BUSTER = config("STATIC_CACHE_BUSTER", default="20260530")
+STATIC_CACHE_BUSTER = config("STATIC_CACHE_BUSTER", default="20260617")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -151,6 +151,23 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="AaramKart <noreply@aa
 # ── App-specific ────────────────────────────────────────────────────────────
 ADMIN_EMAIL = config("ADMIN_EMAIL", default="admin@aaramkart.com")
 ADMIN_PHONE = config("ADMIN_PHONE", default="")
+
+
+def _delivery_only_staff_phones_set():
+    """10-digit mobiles that may use delivery ops only (no inventory / custom admin). Comma-separated in env."""
+    raw = config("DELIVERY_ONLY_STAFF_PHONES", default="9485317830")
+    out = set()
+    for chunk in raw.split(","):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        digits = "".join(c for c in chunk if c.isdigit())
+        if len(digits) >= 10:
+            out.add(digits[-10:])
+    return frozenset(out)
+
+
+DELIVERY_ONLY_STAFF_PHONES_SET = _delivery_only_staff_phones_set()
 FAST2SMS_API_KEY = config("FAST2SMS_API_KEY", default="")
 CALLMEBOT_API_KEY = config("CALLMEBOT_API_KEY", default="")
 CALLMEBOT_PHONE = config("CALLMEBOT_PHONE", default="")

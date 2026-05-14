@@ -8,6 +8,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib import messages
+from django.conf import settings
 from django.urls import reverse
 from django.views import View
 
@@ -72,7 +73,7 @@ def _normalize_phone_digits(phone_raw):
 # ── Auth Views ────────────────────────────────────────────────────────────────
 
 class LoginView(View):
-    """Single sign-in page and POST handler: redirect staff to admin dashboard, others to storefront (or next)."""
+    """Customer phone login: admins go to admin panel; delivery staff go to Delivery ops; shoppers go home."""
 
     template_name = "auth/login.html"
 
@@ -81,8 +82,10 @@ class LoginView(View):
             nxt = _safe_next(request.GET.get("next"))
             if nxt:
                 return redirect(nxt)
-            if request.user.is_staff or request.user.is_admin:
+            if getattr(request.user, "can_access_admin_panel", False):
                 return redirect("admin_dashboard")
+            if getattr(request.user, "can_use_delivery_ops", False):
+                return redirect("staff_delivery_panel")
             return redirect("home")
         ctx = {"next": _safe_next(request.GET.get("next")) or ""}
         return render(request, self.template_name, ctx)
@@ -111,6 +114,13 @@ class LoginView(View):
             messages.error(request, "Invalid password.")
             return _redirect_login_failed(request)
 
+        if getattr(user, "is_delivery_only_staff", False):
+            messages.error(
+                request,
+                "This number is for delivery staff only. Use Staff login or Admin login from the sign-in page.",
+            )
+            return redirect(reverse("staff_login"))
+
         display_name = user.full_name or user.phone or user.email or "there"
         next_ok = _safe_next(request.POST.get("next", ""))
         # Treat "/" as no deep link so staff still land on admin when signing in from the home page.
@@ -122,9 +132,12 @@ class LoginView(View):
             messages.success(request, f"Welcome back, {display_name}!")
             return redirect(next_ok)
 
-        if user.is_staff or user.is_admin:
+        if getattr(user, "can_access_admin_panel", False):
             messages.success(request, f"Welcome, {display_name}.")
             return redirect("admin_dashboard")
+        if getattr(user, "can_use_delivery_ops", False):
+            messages.success(request, f"Welcome, {display_name}.")
+            return redirect("staff_delivery_panel")
 
         messages.success(request, f"Welcome back, {display_name}!")
         return redirect("home")
@@ -154,6 +167,13 @@ class RegisterView(View):
             messages.error(
                 request,
                 "Enter a valid 10-digit mobile number (same one you will use to sign in).",
+            )
+            return render(request, self.template_name)
+
+        if norm_phone in getattr(settings, "DELIVERY_ONLY_STAFF_PHONES_SET", frozenset()):
+            messages.error(
+                request,
+                "This mobile number is reserved for delivery staff. If that is you, use Staff login or Admin login from the sign-in page.",
             )
             return render(request, self.template_name)
 
@@ -224,4 +244,100 @@ class ProfileView(View):
             return redirect(
                 reverse("login") + "?" + urlencode({"next": request.get_full_path()})
             )
-        return render(request, self.template_name, {"user": request.user})
+        from apps.orders.models import Order
+
+        qs = Order.objects.filter(user=request.user).order_by("-created_at")
+        recent_orders = list(qs[:8])
+        order_count = qs.count()
+        return render(
+            request,
+            self.template_name,
+            {
+                "user": request.user,
+                "recent_orders": recent_orders,
+                "order_count": order_count,
+            },
+        )
+
+
+def _resolve_user_from_identifier(raw_ident):
+    """Return User from email or 10-digit Indian phone, or None."""
+    ident = (raw_ident or "").strip()
+    if not ident:
+        return None
+    if "@" in ident:
+        return User.objects.filter(email__iexact=ident).first()
+    norm = _normalize_phone_digits(ident)
+    if len(norm) == 10:
+        return _get_user_by_normalized_phone(norm)
+    return None
+
+
+class StaffLoginView(View):
+    """
+    Dedicated staff/admin sign-in at /staff-login/ (separate from customer phone login).
+    POST: identifier (work email or phone), password, portal_role=staff|admin
+    """
+
+    template_name = "auth/staff_login.html"
+
+    def get(self, request):
+        if request.user.is_authenticated and getattr(request.user, "can_use_delivery_ops", False):
+            if getattr(request.user, "can_access_admin_panel", False):
+                return redirect("staff_dashboard")
+            return redirect("staff_delivery_panel")
+        raw_role = (request.GET.get("portal_role") or "").strip().lower()
+        portal_role = raw_role if raw_role in {"staff", "admin"} else "staff"
+        return render(request, self.template_name, {"portal_role": portal_role})
+
+    def post(self, request):
+        identifier = (request.POST.get("identifier") or "").strip()
+        password = request.POST.get("password") or ""
+        portal_role = (request.POST.get("portal_role") or "staff").strip().lower()
+        if portal_role not in {"staff", "admin"}:
+            portal_role = "staff"
+
+        ctx = {"portal_role": portal_role, "identifier": identifier}
+
+        if not identifier:
+            messages.error(request, "Enter your work email or phone.")
+            return render(request, self.template_name, ctx, status=400)
+        if not password:
+            messages.error(request, "Enter your password.")
+            return render(request, self.template_name, ctx, status=400)
+
+        user = _resolve_user_from_identifier(identifier)
+        if not user or not user.check_password(password):
+            messages.error(request, "Invalid email/phone or password.")
+            return render(request, self.template_name, ctx, status=401)
+
+        if not user.is_active:
+            messages.error(request, "This account is disabled.")
+            return render(request, self.template_name, ctx, status=403)
+
+        if not getattr(user, "can_use_delivery_ops", False):
+            messages.error(
+                request,
+                "This account does not have staff access. Use customer sign-in (phone) from the shop.",
+            )
+            return render(request, self.template_name, ctx, status=403)
+
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        display = user.full_name or user.email or user.phone or "there"
+
+        if portal_role == "admin" and not getattr(user, "can_access_admin_panel", False):
+            messages.warning(
+                request,
+                "This account only has delivery team access — opening Delivery ops.",
+            )
+            return redirect("staff_delivery_panel")
+
+        messages.success(request, f"Welcome, {display}.")
+
+        if portal_role == "admin":
+            return redirect("admin_dashboard_public")
+
+        if getattr(user, "can_use_delivery_ops", False) and not getattr(user, "can_access_admin_panel", False):
+            return redirect("staff_delivery_panel")
+
+        return redirect("staff_dashboard")

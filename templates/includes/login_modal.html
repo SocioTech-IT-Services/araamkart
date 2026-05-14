@@ -8,7 +8,7 @@
       <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="login-modal__logo" width="96" height="34" loading="lazy" />
     </div>
     <h2 id="login-modal-title" class="login-modal__title">Sign in</h2>
-    <p class="login-modal__subtitle">Use your <strong>phone</strong> and <strong>password</strong>. Staff go to the admin dashboard; shopkeepers return here.</p>
+    <p class="login-modal__subtitle">Use your <strong>phone</strong> and <strong>password</strong> to track orders and shop.</p>
 
     <article class="auth-card auth-card--panel auth-card--split login-modal__card login-modal__card--single">
       <form class="auth-form auth-form--compact" method="POST" action="{% url 'login' %}">
@@ -34,7 +34,12 @@
       </form>
 
       <footer class="auth-footer auth-footer--panel auth-footer--tight">
-        <p><a href="{% url 'register' %}">Register</a></p>
+        <hr class="login-modal__staff-divider" />
+        <nav class="auth-footer-links auth-footer-links--inline login-modal__footer-links" aria-label="Other sign-in options">
+          <a href="{% url 'register' %}">Register</a>
+          <a href="{% url 'staff_login' %}">Staff login</a>
+          <a href="{% url 'staff_login' %}?portal_role=admin">Admin login</a>
+        </nav>
       </footer>
     </article>
   </div>

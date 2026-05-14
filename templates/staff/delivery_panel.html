@@ -1,0 +1,366 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Delivery Status — AaramKart</title>
+  <link rel="stylesheet" href="{% static 'staff/delivery_panel.css' %}?v={{ STATIC_CACHE_BUSTER }}" />
+</head>
+<body class="delivery-dash-body">
+  <form style="display:none">{% csrf_token %}</form>
+  <div class="delivery-dash">
+    <header class="delivery-topbar delivery-glass">
+      <div class="delivery-brand">
+        <a href="{% url 'home' %}" class="delivery-brand-logo-link" title="AaramKart home">
+          <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="delivery-brand-logo" width="160" height="52">
+        </a>
+        <div>
+          <h1>Delivery Status</h1>
+          <span>B2B wholesale · Shillong · Staff only</span>
+        </div>
+      </div>
+      <div class="delivery-topbar__actions">
+        {% if request.user.can_access_admin_panel %}
+        <a class="delivery-link" href="{% url 'admin_orders' %}">Classic orders</a>
+        <a class="delivery-link" href="{% url 'admin_dashboard' %}">Dashboard</a>
+        {% endif %}
+        <a class="delivery-link" href="{% url 'home' %}">Storefront</a>
+        <a class="delivery-link" href="{% url 'profile' %}">My account</a>
+        {% if request.user.is_authenticated %}
+        <a class="delivery-link" href="{% url 'logout' %}">Logout</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="delivery-main">
+      <section class="delivery-cards" aria-label="Delivery status snapshot">
+        <article class="delivery-stat-card delivery-stat-card--confirmed">
+          <div class="delivery-stat-card__glow"></div>
+          <div class="delivery-stat-card__icon pulse" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <div class="delivery-stat-card__label">Order confirmed</div>
+          <div class="delivery-stat-card__value">{{ status_counts.confirmed }}</div>
+        </article>
+        <article class="delivery-stat-card delivery-stat-card--processing">
+          <div class="delivery-stat-card__glow"></div>
+          <div class="delivery-stat-card__icon pulse" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="delivery-stat-card__label">Processing</div>
+          <div class="delivery-stat-card__value">{{ status_counts.processing }}</div>
+        </article>
+        <article class="delivery-stat-card delivery-stat-card--shipped">
+          <div class="delivery-stat-card__glow"></div>
+          <div class="delivery-stat-card__icon pulse" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="delivery-stat-card__label">Shipped</div>
+          <div class="delivery-stat-card__value">{{ status_counts.shipped }}</div>
+        </article>
+        <article class="delivery-stat-card delivery-stat-card--delivered">
+          <div class="delivery-stat-card__glow"></div>
+          <div class="delivery-stat-card__icon pulse" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+          </div>
+          <div class="delivery-stat-card__label">DELIVERED</div>
+          <div class="delivery-stat-card__value">{{ status_counts.delivered }}</div>
+        </article>
+      </section>
+
+      <section class="delivery-glass delivery-table-wrap">
+        <div class="delivery-table-head">
+          <div>
+            <h2>Live orders</h2>
+            <p>Includes <strong>cancelled</strong> orders so you can move them back into the pipeline when you are ready to try again. Snapshot cards count the active queue only.</p>
+          </div>
+        </div>
+        {% if orders %}
+        <div class="delivery-table-scroll">
+          <table class="delivery-table" id="delivery-orders-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Business</th>
+                <th>Delivery status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in orders %}
+              <tr id="dash-row-{{ order.pk }}"
+                  data-order-id="{{ order.pk }}"
+                  data-status="{{ order.status }}"
+                  data-phone="{{ order.phone|default:''|escape }}">
+                <td><span class="delivery-oid">#{{ order.order_number }}</span></td>
+                <td>
+                  <div class="delivery-cust">{{ order.customer_name }}</div>
+                  <div class="delivery-biz">{{ order.phone }}</div>
+                </td>
+                <td><span class="delivery-biz">{{ order.business_name|truncatechars:28 }}</span></td>
+                <td>
+                  <div class="delivery-segments" role="group" aria-label="Delivery status for {{ order.order_number }}">
+                    {% for step, label in pipeline_labels %}
+                    <button type="button"
+                            class="delivery-seg{% if order.status == step or order.status == 'pending' and step == 'confirmed' %} is-active{% endif %}"
+                            data-step="{{ step }}"
+                            data-label="{{ label }}"
+                            {% if step == 'cancelled' and order.status == 'cancelled' %}disabled aria-disabled="true"{% endif %}>{{ label }}</button>
+                    {% endfor %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="delivery-empty">No orders to show.</p>
+        {% endif %}
+      </section>
+    </main>
+
+    <aside class="delivery-sidebar">
+      <div class="delivery-profile-card delivery-glass">
+        <h3>{{ staff_name }}</h3>
+        <p class="role">Staff profile · Delivery ops</p>
+        {% if staff_email %}
+        <p class="role" style="margin-top:-0.75rem">{{ staff_email }}</p>
+        {% endif %}
+        <div class="delivery-rings">
+          <div class="delivery-ring-row">
+            <div class="delivery-ring" style="--p: {{ ring_handled_pct }}; --ring-color: #1b7a38;">
+              <span>{{ ring_handled_pct }}%</span>
+            </div>
+            <div>
+              <strong>Orders touched today</strong>
+              <p>{{ handled_today }} updates attributed to you (rolling).</p>
+            </div>
+          </div>
+          <div class="delivery-ring-row">
+            <div class="delivery-ring" style="--p: {{ ring_speed_pct }}; --ring-color: #02254a;">
+              <span>{{ ring_speed_pct }}%</span>
+            </div>
+            <div>
+              <strong>Fulfilment pace</strong>
+              <p>{% if avg_delivery_hours %}Avg ~{{ avg_delivery_hours }}h from placement to delivered (your recent drops).{% else %}Complete a few deliveries to unlock your average lead time.{% endif %}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="delivery-glass delivery-sidebar-note">
+        Motion uses CSS layout transitions (Framer Motion–style easing) for lightweight server-rendered pages. Customer SMS uses Fast2SMS; WhatsApp uses CallMeBot when configured.
+      </div>
+    </aside>
+  </div>
+
+  <div id="delivery-toast" class="delivery-toast" role="status" aria-live="polite"></div>
+
+  <div id="delivery-cancel-modal" class="delivery-modal" hidden aria-hidden="true">
+    <div class="delivery-modal__backdrop" id="delivery-cancel-backdrop"></div>
+    <div class="delivery-modal__panel" role="dialog" aria-modal="true" aria-labelledby="delivery-cancel-title">
+      <h3 id="delivery-cancel-title" class="delivery-modal__title">Cancel this order?</h3>
+      <p class="delivery-modal__lead">Choose a reason. This updates the order to <strong>cancelled</strong> and saves it for reports.</p>
+      <label class="delivery-modal__label" for="delivery-cancel-reason">Reason</label>
+      <select id="delivery-cancel-reason" class="delivery-modal__select">
+        <option value="">Select a reason…</option>
+        <option value="Didn't pick up for call">Didn't pick up for call</option>
+        <option value="Customer not available">Customer not available</option>
+        <option value="Wrong address / unreachable">Wrong address / unreachable</option>
+        <option value="Other">Other</option>
+      </select>
+      <div class="delivery-modal__actions">
+        <button type="button" class="delivery-modal__btn delivery-modal__btn--ghost" id="delivery-cancel-dismiss">Back</button>
+        <button type="button" class="delivery-modal__btn delivery-modal__btn--danger" id="delivery-cancel-confirm">Confirm cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    const STATUS_URL = "{% url 'admin_update_order_status' %}";
+    const PIPELINE = ["confirmed", "processing", "shipped", "delivered", "cancelled"];
+    const modal = document.getElementById("delivery-cancel-modal");
+    const modalBackdrop = document.getElementById("delivery-cancel-backdrop");
+    const reasonSelect = document.getElementById("delivery-cancel-reason");
+    const btnDismiss = document.getElementById("delivery-cancel-dismiss");
+    const btnConfirm = document.getElementById("delivery-cancel-confirm");
+    let cancelTargetRow = null;
+
+    function getCookie(name) {
+      const m = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+      return m ? decodeURIComponent(m[2]) : "";
+    }
+
+    function toast(msg, ok) {
+      const el = document.getElementById("delivery-toast");
+      el.textContent = msg;
+      el.className = "delivery-toast show delivery-toast--" + (ok ? "ok" : "err");
+      clearTimeout(el._t);
+      el._t = setTimeout(function() { el.classList.remove("show"); }, 2600);
+    }
+
+    function resolvePipelineDisplay(status) {
+      if (status === "pending") return "confirmed";
+      return status;
+    }
+
+    function segmentActive(row, status) {
+      var disp = resolvePipelineDisplay(status);
+      row.querySelectorAll(".delivery-seg").forEach(function(btn) {
+        btn.classList.toggle("is-active", btn.getAttribute("data-step") === disp);
+      });
+    }
+
+    function setCancelSegDisabled(row, disabled) {
+      row.querySelectorAll('.delivery-seg[data-step="cancelled"]').forEach(function(b) {
+        b.disabled = !!disabled;
+        if (disabled) {
+          b.setAttribute("aria-disabled", "true");
+        } else {
+          b.removeAttribute("aria-disabled");
+        }
+      });
+    }
+
+    function openCancelModal(row) {
+      cancelTargetRow = row;
+      if (reasonSelect) reasonSelect.value = "";
+      if (modal) {
+        modal.hidden = false;
+        modal.setAttribute("aria-hidden", "false");
+      }
+    }
+
+    function closeCancelModal() {
+      cancelTargetRow = null;
+      if (reasonSelect) reasonSelect.value = "";
+      if (modal) {
+        modal.hidden = true;
+        modal.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    function phoneDigits(s) {
+      return (s || "").replace(/\D/g, "");
+    }
+
+    function postStatus(row, newStatus, extra) {
+      extra = extra || {};
+      const orderId = row.getAttribute("data-order-id");
+      const prev = row.getAttribute("data-status");
+      const storedPhone = (row.getAttribute("data-phone") || "").trim();
+      let deliveryPhone = "";
+      if (newStatus === "delivered") {
+        const storedDigits = phoneDigits(storedPhone);
+        if (storedDigits.length >= 10) {
+          deliveryPhone = storedPhone || storedDigits.slice(-10);
+        } else {
+          deliveryPhone = window.prompt("Add customer phone (10+ digits) to mark DELIVERED:", storedPhone);
+          if (deliveryPhone === null) {
+            segmentActive(row, prev);
+            row.classList.remove("is-busy");
+            return;
+          }
+          if (phoneDigits(deliveryPhone).length < 10) {
+            toast("Valid phone required for delivered.", false);
+            segmentActive(row, prev);
+            row.classList.remove("is-busy");
+            return;
+          }
+        }
+      }
+      var payload = {
+        order_id: parseInt(orderId, 10),
+        status: newStatus,
+        delivery_phone: deliveryPhone,
+      };
+      if (newStatus === "cancelled" && extra.cancellation_reason) {
+        payload.cancellation_reason = extra.cancellation_reason;
+      }
+      fetch(STATUS_URL, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success) {
+            row.setAttribute("data-status", newStatus);
+            if (deliveryPhone) row.setAttribute("data-phone", deliveryPhone.trim());
+            setCancelSegDisabled(row, newStatus === "cancelled");
+            if (newStatus === "cancelled") {
+              segmentActive(row, newStatus);
+              row.classList.remove("row-updated");
+              void row.offsetWidth;
+              row.classList.add("row-updated");
+              toast("Order cancelled — still listed; tap Confirm to put it back in the pipeline.", true);
+            } else {
+              segmentActive(row, newStatus);
+              row.classList.remove("row-updated");
+              void row.offsetWidth;
+              row.classList.add("row-updated");
+              toast("Status updated", true);
+            }
+          } else {
+            segmentActive(row, prev);
+            setCancelSegDisabled(row, prev === "cancelled");
+            toast(data.error || "Update failed", false);
+          }
+        })
+        .catch(function() {
+          segmentActive(row, prev);
+          setCancelSegDisabled(row, prev === "cancelled");
+          toast("Network error", false);
+        })
+        .finally(function() {
+          row.classList.remove("is-busy");
+        });
+    }
+
+    if (btnDismiss) btnDismiss.addEventListener("click", closeCancelModal);
+    if (modalBackdrop) modalBackdrop.addEventListener("click", closeCancelModal);
+    if (btnConfirm && reasonSelect) {
+      btnConfirm.addEventListener("click", function() {
+        var r = (reasonSelect.value || "").trim();
+        if (!r) {
+          toast("Select a cancellation reason.", false);
+          return;
+        }
+        if (!cancelTargetRow) return;
+        var row = cancelTargetRow;
+        closeCancelModal();
+        if (row.classList.contains("is-busy")) return;
+        row.classList.add("is-busy");
+        segmentActive(row, "cancelled");
+        postStatus(row, "cancelled", { cancellation_reason: r });
+      });
+    }
+
+    document.querySelectorAll("#delivery-orders-table tbody tr").forEach(function(row) {
+      row.querySelectorAll(".delivery-seg").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          if (row.classList.contains("is-busy")) return;
+          const step = btn.getAttribute("data-step");
+          const current = row.getAttribute("data-status");
+          if (step === current) return;
+          if (step === "cancelled") {
+            openCancelModal(row);
+            return;
+          }
+          row.classList.add("is-busy");
+          segmentActive(row, step);
+          postStatus(row, step);
+        });
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

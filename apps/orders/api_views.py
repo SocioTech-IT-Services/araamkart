@@ -148,9 +148,7 @@ class PlaceOrderAPIView(APIView):
                 unit_price=item.unit_price(),
                 line_savings=_money(line_savings),
             )
-            p = item.product
-            p.stock = max(0, p.stock - item.quantity)
-            p.save()
+            p.decrease_inventory_for_sale(item.quantity)
         items.delete()
         try:
             send_order_confirmation(order)
@@ -171,7 +169,7 @@ class AdminDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not (request.user.is_admin or request.user.is_staff):
+        if not getattr(request.user, "can_access_admin_panel", False):
             return Response({"error": "Admin only."}, status=403)
         non_cancelled = Order.objects.exclude(status="cancelled")
         total_sales = non_cancelled.aggregate(s=Sum("total_amount"))["s"] or 0

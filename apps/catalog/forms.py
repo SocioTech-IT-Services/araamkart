@@ -124,6 +124,9 @@ def build_auto_product_description(product, category=None, subcategory=None):
 class AdminProductForm(forms.ModelForm):
     """Single list price = first MOQ tier (min_qty=1). For extra tiers, use Django Admin."""
 
+    # Two-step UI hides rows with display:none; HTML5 required/min + reportValidity can block POST with no visible hint.
+    use_required_attribute = False
+
     unit_price = forms.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -322,6 +325,13 @@ class AdminProductForm(forms.ModelForm):
         if child and cat and child.category_id != cat.pk:
             raise ValidationError({"subcategory_child": "Sub-subcategory must belong to the selected category."})
         return cleaned
+
+    def clean_sku(self):
+        sku = self.cleaned_data.get("sku")
+        if sku is None:
+            return None
+        s = (sku or "").strip()
+        return s or None
 
     def save(self, commit=True):
         root = self.cleaned_data.get("subcategory_root")

@@ -4,6 +4,19 @@ from django.utils.text import slugify
 from decimal import Decimal
 
 
+def distribute_integer_delta(delta: int, n: int) -> list[int]:
+    """Split delta into n integers that sum to delta (used for inventory +/- across variants)."""
+    if n <= 0:
+        return []
+    sign = 1 if delta >= 0 else -1
+    ad = abs(delta)
+    q, r = divmod(ad, n)
+    parts = [sign * q] * n
+    for i in range(r):
+        parts[i] += sign
+    return parts
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, blank=True)
@@ -213,6 +226,44 @@ class Product(models.Model):
             return
         self.discount_percentage = (Decimal("1") - (Decimal(self.packet_price) / total_single)) * Decimal("100")
 
+    def refresh_stock_from_variants(self):
+        """
+        When ProductVariant rows exist, Product.stock is the sum of all variant stocks (packets).
+        Call after editing variants so Inventory & stock reflects totals.
+        """
+        from django.db.models import Sum
+
+        if not self.variants.exists():
+            return int(self.stock or 0)
+        total = self.variants.aggregate(s=Sum("stock"))["s"] or 0
+        total = max(0, int(total))
+        if self.stock != total:
+            self.stock = total
+            self.save(update_fields=["stock", "updated_at"])
+        return total
+
+    def decrease_inventory_for_sale(self, qty: int, variant=None) -> None:
+        """Subtract qty packets sold from a specific variant when given; else split across variants or Product.stock."""
+        qty = max(0, int(qty))
+        if qty <= 0:
+            return
+        if variant is not None:
+            if variant.product_id != self.pk:
+                return
+            new_s = max(0, int(variant.stock) - qty)
+            ProductVariant.objects.filter(pk=variant.pk).update(stock=new_s)
+            self.refresh_stock_from_variants()
+            return
+        qs = list(self.variants.all().order_by("pk"))
+        if qs:
+            for v, share in zip(qs, distribute_integer_delta(-qty, len(qs))):
+                new_s = max(0, int(v.stock) + share)
+                ProductVariant.objects.filter(pk=v.pk).update(stock=new_s)
+            self.refresh_stock_from_variants()
+            return
+        self.stock = max(0, int(self.stock or 0) - qty)
+        self.save(update_fields=["stock", "updated_at"])
+
     class Meta:
         ordering = ["name"]
 
@@ -293,7 +344,15 @@ class ProductVariant(models.Model):
     size_unit = models.CharField(max_length=20, blank=True, help_text="e.g. ml, g, kg, l")
     pack_size = models.PositiveIntegerField(default=1)
     sku = models.CharField(max_length=80, blank=True, unique=True, null=True)
+    """Per-piece selling price (single S.P) from inventory / admin variants."""
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    mrp = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="List/MRP for one packet (bundle MRP).",
+    )
     stock = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -301,6 +360,18 @@ class ProductVariant(models.Model):
     def __str__(self):
         label = self.name or "Default"
         return f"{self.product.name} — {label}"
+
+    @property
+    def packet_selling_price(self):
+        pk = max(1, int(self.pack_size or 1))
+        return (Decimal(self.price or 0) * Decimal(pk)).quantize(Decimal("0.01"))
+
+    @property
+    def packet_mrp_total(self):
+        if self.mrp is None:
+            return None
+        pk = max(1, int(self.pack_size or 1))
+        return (Decimal(self.mrp) * Decimal(pk)).quantize(Decimal("0.01"))
 
     class Meta:
         ordering = ["product__name", "id"]

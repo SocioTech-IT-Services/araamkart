@@ -48,6 +48,51 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email or self.phone or self.full_name
 
+    def normalized_phone_digits(self):
+        """Last 10 digits for Indian mobile, or empty if not enough digits."""
+        if not self.phone:
+            return ""
+        digits = "".join(c for c in self.phone if c.isdigit())
+        if len(digits) >= 10:
+            return digits[-10:]
+        return digits
+
+    @property
+    def is_delivery_only_staff(self):
+        """True when this account is limited to delivery ops (see settings.DELIVERY_ONLY_STAFF_PHONES_SET)."""
+        from django.conf import settings
+
+        n = self.normalized_phone_digits()
+        if len(n) != 10:
+            return False
+        return n in getattr(settings, "DELIVERY_ONLY_STAFF_PHONES_SET", frozenset())
+
+    @property
+    def can_use_delivery_ops(self):
+        """Delivery board + order status API: staff/admin/superuser, or delivery-only phones from settings."""
+        if not self.is_active:
+            return False
+        if self.is_superuser or self.is_admin or self.is_staff:
+            return True
+        return self.is_delivery_only_staff
+
+    @property
+    def can_access_admin_panel(self):
+        """
+        Custom admin (/orders/admin-panel/), inventory, product APIs.
+        Only superusers and users with is_admin. Plain is_staff (no is_admin) = delivery ops only.
+        Delivery-only phones (settings) never get this flag.
+        """
+        if not self.is_active:
+            return False
+        if self.is_superuser:
+            return True
+        if self.is_delivery_only_staff:
+            return False
+        if self.is_admin:
+            return True
+        return False
+
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
