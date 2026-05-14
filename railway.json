@@ -1,12 +1,7 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
-  "build": {
-    "builder": "RAILPACK"
-  },
   "deploy": {
-    "preDeployCommand": ["python", "manage.py", "migrate", "--noinput"],
-    "startCommand": "sh -c 'exec gunicorn aaramkart.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 2 --threads 4 --graceful-timeout 30 --timeout 120'",
     "healthcheckPath": "/_health/",
-    "healthcheckTimeout": 120
+    "healthcheckTimeout": 300
   }
 }
