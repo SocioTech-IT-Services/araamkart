@@ -211,6 +211,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
+# Production (Railway + HTTPS): set CSRF_TRUSTED_ORIGINS=https://your-service.up.railway.app
+_csrf_origins = config("CSRF_TRUSTED_ORIGINS", default="").strip()
+if _csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(",") if o.strip()]
+
 SESSION_COOKIE_AGE = 86400 * 7  # 7 days
 LOGIN_URL = "/auth/login/"
 LOGIN_REDIRECT_URL = "/"
