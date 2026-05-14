@@ -1,0 +1,6 @@
+# Nixpacks (Railway): libpq for Postgres drivers; explicit gunicorn start with migrate.
+[phases.setup]
+aptPkgs = ["libpq5"]
+
+[start]
+cmd = "sh -c 'python manage.py migrate --noinput && gunicorn aaramkart.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 4'"
