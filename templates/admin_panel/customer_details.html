@@ -1,0 +1,373 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+{% block title %}Customers details — AaramKart Admin{% endblock %}
+
+{% block admin_extra_head %}
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .customer-dash {
+    --cd-text: #0f172a;
+    --cd-muted: #64748b;
+    --cd-border: #e2e8f0;
+    --cd-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --cd-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--cd-font);
+    color: var(--cd-text);
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    margin: -1rem -1rem 0;
+    padding: 1.25rem 1rem 2.5rem;
+  }
+
+  .customer-dash__hero {
+    margin-bottom: 1.75rem;
+    max-width: 42rem;
+  }
+  .customer-dash__hero h1 {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--cd-text);
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+  }
+  .customer-dash__hero p {
+    margin: 0;
+    color: var(--cd-muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .customer-dash__search {
+    position: relative;
+    margin-bottom: 1.25rem;
+    max-width: 40rem;
+  }
+  .customer-dash__search svg {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--cd-muted);
+    pointer-events: none;
+  }
+  .customer-dash__search input {
+    width: 100%;
+    padding: 0.65rem 1rem 0.65rem 2.65rem;
+    border: 1px solid var(--cd-border);
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-family: inherit;
+    color: var(--cd-text);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .customer-dash__search input::placeholder {
+    color: #94a3b8;
+  }
+  .customer-dash__search:focus-within input {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  .customer-card.is-hidden {
+    display: none !important;
+  }
+  .customer-dash__search-empty {
+    display: none;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--cd-muted);
+    font-size: 0.9375rem;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px dashed var(--cd-border);
+  }
+  .customer-dash__search-empty.is-visible {
+    display: block;
+  }
+
+  .customer-dash__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .customer-card {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--cd-card-shadow);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    overflow: hidden;
+    transition: box-shadow 0.22s ease, border-color 0.2s ease;
+  }
+  .customer-card:hover {
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+    border-color: #e2e8f0;
+  }
+
+  .customer-card__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 1rem;
+    padding: 0.65rem 1rem 0.65rem 0;
+  }
+  .customer-bar__rail {
+    align-self: stretch;
+    width: 4px;
+    min-height: 3.25rem;
+    flex-shrink: 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .customer-card--segment-new .customer-bar__rail {
+    background: linear-gradient(180deg, #4f46e5, #7c3aed);
+  }
+  .customer-card--segment-active .customer-bar__rail {
+    background: linear-gradient(180deg, #10b981, #059669);
+  }
+  .customer-card--segment-idle .customer-bar__rail {
+    background: linear-gradient(180deg, #94a3b8, #64748b);
+  }
+
+  .customer-bar__identity {
+    flex: 0 1 auto;
+    min-width: min(100%, 11rem);
+  }
+  .customer-card__name {
+    margin: 0 0 0.25rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--cd-text);
+    line-height: 1.25;
+  }
+  .customer-card__pills { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .pill--new { background: rgba(79, 70, 229, 0.12); color: #4338ca; }
+  .pill--active { background: rgba(16, 185, 129, 0.12); color: #047857; }
+  .pill--idle { background: #f1f5f9; color: #475569; }
+
+  .customer-bar__stats {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    padding: 0 0.75rem;
+    border-left: 1px solid #f1f5f9;
+    border-right: 1px solid #f1f5f9;
+  }
+  .customer-card__stats-val {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--cd-text);
+    line-height: 1.15;
+  }
+  .customer-card__stats-meta { font-size: 0.6875rem; color: var(--cd-muted); margin-top: 0.1rem; }
+  .customer-card__order-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
+  .order-type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    padding: 0.22rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .order-type-pill--online {
+    background: rgba(37, 99, 235, 0.11);
+    color: #1d4ed8;
+  }
+  .order-type-pill--offline {
+    background: rgba(217, 119, 6, 0.12);
+    color: #b45309;
+  }
+
+  .customer-bar__details {
+    display: flex;
+    flex: 1 1 280px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 1.25rem;
+    min-width: 0;
+    padding: 0.15rem 0;
+  }
+  .customer-bar__field {
+    font-size: 0.75rem;
+    color: #334155;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .customer-bar__field .lbl {
+    color: var(--cd-muted);
+    font-weight: 500;
+    margin-right: 0.35rem;
+  }
+
+  .btn-history {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 0.5rem 1rem;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1e293b;
+    background: #fff;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.2s ease, transform 0.18s ease;
+  }
+  .btn-history:hover {
+    background: #1e293b;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(30, 41, 59, 0.22);
+    transform: scale(1.02);
+  }
+  .btn-history:active { transform: scale(0.98); }
+
+  .customer-dash__empty {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px dashed var(--cd-border);
+    color: var(--cd-muted);
+    box-shadow: var(--cd-card-shadow);
+  }
+
+  @media (max-width: 900px) {
+    .customer-bar__stats {
+      border-left: none;
+      border-right: none;
+      padding: 0.5rem 0;
+      width: 100%;
+      border-top: 1px solid #f1f5f9;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .customer-bar__details {
+      flex-basis: 100%;
+    }
+    .btn-history {
+      margin-left: 0;
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+{% endblock %}
+
+{% block admin_main %}
+<section class="page-section admin-section customer-dash">
+  <div class="section-container">
+    <header class="customer-dash__hero">
+      <h1>Customers</h1>
+      <p>Active accounts · {{ customers|length }} customer{{ customers|length|pluralize }}.</p>
+    </header>
+
+    {% if customers %}
+    <div class="customer-dash__search">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+      <label class="sr-only" for="customer-list-search">Search customers</label>
+      <input type="search" id="customer-list-search" placeholder="Search by name, email, phone, or business…" autocomplete="off" />
+    </div>
+    <p id="customer-search-empty" class="customer-dash__search-empty" role="status">No customers match your search.</p>
+    <div class="customer-dash__list" id="customer-dash-list">
+      {% for customer in customers %}
+      <article class="customer-card customer-card--segment-{{ customer.dashboard_segment }} js-customer-row"
+               data-search="{{ customer.full_name|lower }} {{ customer.email|default:''|lower }} {{ customer.phone|default:'' }} {{ customer.business_name|default:''|lower }}">
+        <div class="customer-card__bar">
+          <div class="customer-bar__rail" aria-hidden="true"></div>
+          <div class="customer-bar__identity">
+            <h2 class="customer-card__name">{{ customer.full_name }}</h2>
+            <div class="customer-card__pills">
+              {% if customer.dashboard_segment == "new" %}
+              <span class="pill pill--new">New</span>
+              {% elif customer.dashboard_segment == "active" %}
+              <span class="pill pill--active">Active</span>
+              {% else %}
+              <span class="pill pill--idle">Quiet</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="customer-bar__stats">
+            <div class="customer-card__stats-val">₹{{ customer.display_total_spent }}</div>
+            <div class="customer-card__stats-meta">{{ customer.display_order_count }} order{{ customer.display_order_count|pluralize }}</div>
+            <div class="customer-card__order-types" aria-label="Online and offline order counts">
+              <span class="order-type-pill order-type-pill--online">Online {{ customer.display_online_order_count }}</span>
+              <span class="order-type-pill order-type-pill--offline">Offline {{ customer.display_offline_order_count }}</span>
+            </div>
+          </div>
+          <div class="customer-bar__details">
+            <span class="customer-bar__field" title="{{ customer.email|default:'' }}"><span class="lbl">Email</span>{{ customer.email|default:"—" }}</span>
+            <span class="customer-bar__field" title="{{ customer.phone|default:'' }}"><span class="lbl">Phone</span>{{ customer.phone|default:"—" }}</span>
+            <span class="customer-bar__field" title="{{ customer.business_name|default:'' }}"><span class="lbl">Business</span>{{ customer.business_name|truncatechars:28|default:"—" }}</span>
+            <span class="customer-bar__field"><span class="lbl">Joined</span>{{ customer.date_joined|date:"d M Y" }}</span>
+            <span class="customer-bar__field"><span class="lbl">Last login</span>{% if customer.last_login %}{{ customer.last_login|date:"d M Y, H:i" }}{% else %}—{% endif %}</span>
+          </div>
+          <a href="{% url 'admin_customer_order_history' customer.pk %}" class="btn-history">
+            View order history
+          </a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="customer-dash__empty">No active user accounts yet.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock admin_main %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var input = document.getElementById("customer-list-search");
+  var cards = document.querySelectorAll(".js-customer-row");
+  var emptyEl = document.getElementById("customer-search-empty");
+  if (!input) return;
+  function apply() {
+    var q = (input.value || "").trim().toLowerCase();
+    var n = 0;
+    cards.forEach(function (card) {
+      var blob = (card.getAttribute("data-search") || "").toLowerCase();
+      var show = !q || blob.indexOf(q) !== -1;
+      card.classList.toggle("is-hidden", !show);
+      if (show) n++;
+    });
+    if (emptyEl) {
+      emptyEl.classList.toggle("is-visible", n === 0 && cards.length > 0);
+    }
+  }
+  input.addEventListener("input", apply);
+})();
+</script>
+{% endblock %}

@@ -8,117 +8,159 @@
     <div class="admin-header">
       <div>
         <h1>{{ title }}</h1>
-        <p class="admin-sub">{% if product %}Update images, price, stock, and availability.{% else %}Add photos (required for best results), price, and stock.{% endif %}</p>
+        <p>Version marker: MAY-06-9PM</p>
+        <p class="admin-sub">{% if product %}Update product details or images in a few easy steps.{% else %}LIVE BUILD: Add product in 2 steps (Identity + Variants).{% endif %}</p>
+      </div>
+      <div class="admin-header-actions admin-header-actions--form">
+        <a href="{% url 'admin_products' %}" class="btn btn-outline">← Back to inventory</a>
+        <button type="button" class="btn btn-outline" id="scroll-to-save">Jump to save ↓</button>
       </div>
     </div>
 
-    <div class="admin-section-card admin-form-card">
-      <form method="post" enctype="multipart/form-data" class="admin-product-form" id="admin-product-form">
+    <div class="admin-section-card admin-form-card admin-form-card--premium">
+      <div class="admin-premium-glow" aria-hidden="true"></div>
+      <div class="admin-progress-wrap" aria-label="Form completion progress">
+        <div class="admin-progress-bar"><div class="admin-progress-fill" id="admin-progress-fill"></div></div>
+        <span class="admin-progress-text" id="admin-progress-text">0% complete</span>
+      </div>
+      <div class="admin-easy-steps">
+        <div class="admin-easy-step is-active" data-step-target="identity"><span>1</span> Identity</div>
+        <div class="admin-easy-step" data-step-target="variants"><span>2</span> Product Variants &amp; Sizes</div>
+      </div>
+      <form method="post" enctype="multipart/form-data" class="admin-product-form" id="admin-product-form" novalidate>
         {% csrf_token %}
 
-        {% if form.non_field_errors %}
-        <div class="admin-form-errors">{{ form.non_field_errors }}</div>
+        {% if form.errors %}
+        <div class="admin-form-errors admin-form-errors--summary" id="admin-product-form-errors" role="alert" tabindex="-1">
+          <strong>Could not save — please review:</strong>
+          <ul>
+            {% for field in form %}
+              {% if field.errors %}
+                {% for err in field.errors %}
+                <li><span class="admin-error-field">{{ field.label }}</span>: {{ err }}</li>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            {% for err in form.non_field_errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+          </ul>
+        </div>
         {% endif %}
 
-        <fieldset class="admin-fieldset">
-          <legend>Photos</legend>
-          <div class="admin-form-grid">
-            <div class="form-group form-group-image">
-              <label for="id_image">{{ form.image.label }}</label>
-              <p class="form-hint-inline">Shown on category listings and as the default hero on the product page. JPG, PNG, WebP or GIF.</p>
-              {{ form.image }}
-              <div id="primary-image-preview" class="admin-preview-slot{% if product and product.image %} has-img{% endif %}">
-                {% if product and product.image %}
-                <img src="{{ product.image.url }}" alt="" width="160" height="160" class="admin-product-thumb" id="primary-preview-img" />
-                {% else %}
-                <span class="admin-preview-placeholder" id="primary-preview-placeholder">No image selected</span>
-                {% endif %}
-              </div>
-              {% if form.image.errors %}<span class="field-error">{{ form.image.errors.0 }}</span>{% endif %}
-            </div>
-
-            <div class="form-group form-group-wide">
-              <label for="id_gallery_images">Additional images</label>
-              <p class="form-hint-inline">Optional gallery — customers can browse these on the product page. Hold Ctrl/Cmd to pick several files.</p>
-              <input type="file"
-                     name="gallery_images"
-                     id="id_gallery_images"
-                     class="form-control file-input"
-                     accept="image/jpeg,image/png,image/webp,image/gif"
-                     multiple />
-            </div>
-          </div>
-        </fieldset>
-
-        <fieldset class="admin-fieldset">
-          <legend>Product details</legend>
-          <div class="admin-form-grid">
-          <div class="form-group">
+        <fieldset class="admin-fieldset admin-fieldset--animated admin-fieldset--glass">
+          <legend>Premium Minimal Form</legend>
+          <div class="admin-form-grid admin-form-grid--premium">
+          <div class="form-group premium-row premium-row-1 floating-field">
             <label for="id_category">Category</label>
             {{ form.category }}
             {% if form.category.errors %}<span class="field-error">{{ form.category.errors.0 }}</span>{% endif %}
           </div>
-          <div class="form-group">
-            <label for="id_name">Product name</label>
+          <div class="form-group premium-row premium-row-1 floating-field">
+            <label for="id_subcategory_root">Subcategory</label>
+            {{ form.subcategory_root }}
+            {% if form.subcategory_root.errors %}<span class="field-error">{{ form.subcategory_root.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group premium-row premium-row-1 floating-field">
+            <label for="id_subcategory_child">{{ form.subcategory_child.label }}</label>
+            {{ form.subcategory_child }}
+            {% if form.subcategory_child.help_text %}<span class="admin-field-hint">{{ form.subcategory_child.help_text }}</span>{% endif %}
+            {% if form.subcategory_child.errors %}<span class="field-error">{{ form.subcategory_child.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group premium-row premium-row-2 floating-field">
+            <label for="id_name">Product Name</label>
             {{ form.name }}
             {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
           </div>
-          <div class="form-group">
-            <label for="id_sku">SKU</label>
-            {{ form.sku }}
-            {% if form.sku.errors %}<span class="field-error">{{ form.sku.errors.0 }}</span>{% endif %}
-          </div>
-          <div class="form-group">
+          <div class="form-group premium-row premium-row-2 floating-field">
             <label for="id_brand">Brand</label>
             {{ form.brand }}
             {% if form.brand.errors %}<span class="field-error">{{ form.brand.errors.0 }}</span>{% endif %}
           </div>
-          <div class="form-group">
-            <label for="id_brand_obj">Brand (master)</label>
-            {{ form.brand_obj }}
-            {% if form.brand_obj.errors %}<span class="field-error">{{ form.brand_obj.errors.0 }}</span>{% endif %}
-          </div>
-          <div class="form-group">
-            <label for="id_subcategory">Subcategory</label>
-            {{ form.subcategory }}
-            {% if form.subcategory.errors %}<span class="field-error">{{ form.subcategory.errors.0 }}</span>{% endif %}
-          </div>
-          <div class="form-group form-group-wide">
+          <div class="form-group form-group-wide premium-row premium-row-3 floating-field">
             <label for="id_description">Description</label>
             {{ form.description }}
+            <span class="admin-field-hint">Auto-updates from product details until you type your own description.</span>
           </div>
-          <div class="form-group">
-            <label for="id_unit_price">Unit price (₹)</label>
-            {{ form.unit_price }}
-            <small class="form-hint-inline">{{ form.unit_price.help_text }}</small>
-            {% if form.unit_price.errors %}<span class="field-error">{{ form.unit_price.errors.0 }}</span>{% endif %}
+          <div class="form-group premium-row premium-row-2 floating-field">
+            <label for="id_image">{{ form.image.label }}</label>
+            <div class="upload-dropzone" data-input-id="id_image"><span class="upload-icon" aria-hidden="true">⤴</span><span>Drag & drop primary image or click</span></div>
+            <div class="native-file-input">{{ form.image }}</div>
+            {% if form.image.errors %}<span class="field-error">{{ form.image.errors.0 }}</span>{% endif %}
           </div>
-          <div class="form-group">
-            <label for="id_stock">Stock</label>
-            {{ form.stock }}
-            {% if form.stock.errors %}<span class="field-error">{{ form.stock.errors.0 }}</span>{% endif %}
+          <div class="form-group premium-row premium-row-2 floating-field">
+            <label for="id_gallery_images">Additional Images</label>
+            <div class="upload-dropzone" data-input-id="id_gallery_images"><span class="upload-icon" aria-hidden="true">⤴</span><span>Drag & drop additional images or click</span></div>
+            <div class="native-file-input"><input type="file"
+                   name="gallery_images"
+                   id="id_gallery_images"
+                   class="form-control file-input"
+                   accept="image/jpeg,image/png,image/webp,image/gif"
+                   multiple /></div>
           </div>
-          <div class="form-group">
-            <label for="id_moq">Minimum order qty (MOQ)</label>
-            {{ form.moq }}
+          <div class="form-group premium-row premium-row-3 floating-field">
+            <label for="id_sku">SKU</label>
+            {{ form.sku }}
+            {% if form.sku.errors %}<span class="field-error">{{ form.sku.errors.0 }}</span>{% endif %}
           </div>
-          <div class="form-group">
-            <label for="id_unit">Unit</label>
-            {{ form.unit }}
-          </div>
-          <div class="form-group form-group-check">
-            <label class="check-label">
-              {{ form.is_active }} <span>Active (visible on storefront)</span>
+          <div class="form-group premium-row premium-row-3 form-group-check">
+            <label class="check-label check-label--switch">
+              <span>Active status</span>
+              <span class="switch-wrap">{{ form.is_active }}<span class="switch-slider"></span></span>
             </label>
+          </div>
+          <div class="form-group form-group-wide premium-row premium-row-6">
+            <div class="variants-section" id="variants-section">
+              <div class="variants-head">
+                <h3>Product Variants &amp; Sizes</h3>
+                <span class="total-stock-badge" id="variants-total-stock">Total Stock: 0 packets</span>
+              </div>
+              <div class="variant-head-row" aria-hidden="true">
+                <span>Net qty #</span>
+                <span>Unit</span>
+                <span>Single MRP</span>
+                <span>Single S.P</span>
+                <span>Items qty P.Packet</span>
+                <span>Original Packet Price</span>
+                <span>Packet Price</span>
+                <span>Stock</span>
+                <span>Discount</span>
+                <span>Delete</span>
+              </div>
+              <div class="variants-list" id="variants-list"></div>
+              <button type="button" class="btn btn-variant-add" id="add-variant-btn">＋ Add Another Size/Variant</button>
+              <input type="hidden" name="variants_json" id="variants-json" value="[]">
+            </div>
           </div>
           </div>
         </fieldset>
 
         <div class="admin-form-actions">
+          <button type="reset" class="btn btn-outline">Reset form</button>
           <a href="{% url 'admin_products' %}" class="btn btn-outline">Cancel</a>
-          <button type="submit" class="btn btn-primary">Save product</button>
+          <button type="button" class="btn btn-outline" data-step-nav="-1">Back</button>
+          <button type="button" class="btn btn-outline" data-step-nav="1">Next</button>
+        </div>
+
+        <div class="admin-sticky-footer">
+          <button type="submit" class="btn btn-primary btn-premium-submit" id="save-product-btn-sticky">
+            <span class="save-btn-label">Save Product</span>
+            <span class="save-spinner" aria-hidden="true"></span>
+            <span class="save-checkmark" aria-hidden="true">✓</span>
+          </button>
         </div>
       </form>
+
+      {% if product %}
+      <div class="admin-danger-zone">
+        <h3>Delete this product</h3>
+        <p>This permanently removes <strong>{{ product.name }}</strong> from your catalog.</p>
+        <form method="post" action="{% url 'admin_product_delete' product.pk %}" onsubmit="return confirm('Delete {{ product.name|escapejs }} permanently?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline btn-danger-outline">Delete product</button>
+        </form>
+      </div>
+      {% endif %}
 
       {% if product and gallery_images %}
       <div class="admin-gallery-existing admin-gallery-existing--below-form">
@@ -144,6 +186,18 @@
 
 {% block extra_scripts %}
 <script>
+(function () {
+  var jumpBtn = document.getElementById('scroll-to-save');
+  var saveBtn = document.getElementById('save-product-btn-sticky');
+  if (jumpBtn && saveBtn) {
+    jumpBtn.addEventListener('click', function () {
+      saveBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      saveBtn.classList.add('pulse-once');
+      setTimeout(function () { saveBtn.classList.remove('pulse-once'); }, 700);
+    });
+  }
+})();
+
 (function () {
   var inp = document.querySelector('.admin-primary-image-input');
   var previewWrap = document.getElementById('primary-image-preview');
@@ -172,32 +226,430 @@
   });
 })();
 
+
+(function () {
+  var form = document.getElementById('admin-product-form');
+  var saveBtn = document.getElementById('save-product-btn-sticky');
+  if (!form || !saveBtn) return;
+  window.addEventListener('pageshow', function () {
+    saveBtn.disabled = false;
+    saveBtn.classList.remove('is-saving');
+  });
+  form.addEventListener('submit', function () {
+    saveBtn.classList.add('is-saving');
+    saveBtn.disabled = true;
+  });
+})();
+
+
+(function () {
+  var fields = document.querySelectorAll('.floating-field input, .floating-field select, .floating-field textarea');
+  function refreshState(input) {
+    var wrap = input.closest('.floating-field');
+    if (!wrap) return;
+    var hasValue = !!String(input.value || '').trim();
+    wrap.classList.toggle('has-value', hasValue);
+  }
+  fields.forEach(function (input) {
+    refreshState(input);
+    input.addEventListener('input', function () { refreshState(input); });
+    input.addEventListener('change', function () { refreshState(input); });
+  });
+})();
+
 (function () {
   var categorySelect = document.getElementById('id_category');
-  var subcategorySelect = document.getElementById('id_subcategory');
-  if (!categorySelect || !subcategorySelect) return;
+  var rootSelect = document.getElementById('id_subcategory_root');
+  var childSelect = document.getElementById('id_subcategory_child');
+  if (!categorySelect || !rootSelect || !childSelect) return;
 
-  function refillSubcategories(items) {
-    var current = subcategorySelect.value;
-    subcategorySelect.innerHTML = '<option value="">---------</option>';
-    items.forEach(function (it) {
+  function refillSelect(select, items, keepValue) {
+    var current = keepValue !== undefined && keepValue !== null ? String(keepValue) : String(select.value || '');
+    select.innerHTML = '<option value="">---------</option>';
+    (items || []).forEach(function (it) {
       var opt = document.createElement('option');
       opt.value = it.id;
       opt.textContent = it.name;
-      if (String(it.id) === String(current)) opt.selected = true;
-      subcategorySelect.appendChild(opt);
+      if (String(it.id) === current) opt.selected = true;
+      select.appendChild(opt);
+    });
+    if (window.refreshAutoDescription) setTimeout(window.refreshAutoDescription, 0);
+  }
+
+  function fetchRoots() {
+    if (!categorySelect.value) {
+      refillSelect(rootSelect, []);
+      refillSelect(childSelect, []);
+      return;
+    }
+    fetch('{% url "subcategories_api" %}?category_id=' + encodeURIComponent(categorySelect.value) + '&roots_only=1')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        refillSelect(rootSelect, data.subcategories || []);
+        refillSelect(childSelect, []);
+      });
+  }
+
+  function fetchChildren() {
+    if (!categorySelect.value || !rootSelect.value) {
+      refillSelect(childSelect, []);
+      return;
+    }
+    fetch('{% url "subcategories_api" %}?category_id=' + encodeURIComponent(categorySelect.value)
+      + '&parent_id=' + encodeURIComponent(rootSelect.value))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        refillSelect(childSelect, data.subcategories || []);
+      });
+  }
+
+  categorySelect.addEventListener('change', fetchRoots);
+  rootSelect.addEventListener('change', fetchChildren);
+})();
+
+(function () {
+  var description = document.getElementById('id_description');
+  if (!description) return;
+
+  var previousAuto = '';
+  var manualDescription = String(description.value || '').trim() !== '';
+
+  function selectedText(select) {
+    if (!select || !select.options || select.selectedIndex < 0) return '';
+    return (select.options[select.selectedIndex].textContent || '').trim();
+  }
+
+  function money(value) {
+    var n = parseFloat(value || '0');
+    return n > 0 && isFinite(n) ? '₹' + n.toFixed(2) : '';
+  }
+
+  function firstVariantRow() {
+    return document.querySelector('#variants-list .variant-row');
+  }
+
+  function makeDescription() {
+    var name = (document.getElementById('id_name') || {}).value || '';
+    var brand = (document.getElementById('id_brand') || {}).value || '';
+    var category = selectedText(document.getElementById('id_category'));
+    var root = selectedText(document.getElementById('id_subcategory_root'));
+    var child = selectedText(document.getElementById('id_subcategory_child'));
+    var subcategory = child && child !== '---------' ? child : (root && root !== '---------' ? root : '');
+    var row = firstVariantRow();
+    var title = [brand.trim(), name.trim()].filter(Boolean).join(' ') || name.trim() || 'This product';
+    var parts = [title + ' is available'];
+    if (category && subcategory) parts.push('under ' + category + ' > ' + subcategory + '.');
+    else if (category) parts.push('under ' + category + '.');
+    else parts.push('in the AaramKart catalog.');
+
+    var details = [];
+    if (row) {
+      var netQty = (row.querySelector('.variant-net-qty') || {}).value || '';
+      var netUnit = (row.querySelector('.variant-net-unit') || {}).value || '';
+      var singleMrp = (row.querySelector('.variant-single-mrp') || {}).value || '';
+      var singleSp = (row.querySelector('.variant-single-sp') || {}).value || '';
+      var packQty = (row.querySelector('.variant-pack-qty') || {}).value || '';
+      var packetPrice = (row.querySelector('.variant-packet-price') || {}).value || '';
+      var stockPackets = (row.querySelector('.variant-stock') || {}).value || '';
+      if (netQty && netUnit) details.push('Net quantity: ' + netQty + ' ' + netUnit);
+      if (packQty) details.push('Items per packet: ' + packQty);
+      if (money(singleMrp)) details.push('Single MRP: ' + money(singleMrp));
+      if (money(singleSp)) details.push('Single S.P: ' + money(singleSp));
+      if (money(packetPrice)) details.push('Packet price: ' + money(packetPrice));
+      if (stockPackets) details.push('Stock: ' + stockPackets + ' packets');
+    }
+    if (details.length) parts.push(details.join('. ') + '.');
+    return parts.join(' ');
+  }
+
+  function refreshDescription() {
+    if (manualDescription) return;
+    previousAuto = makeDescription();
+    description.value = previousAuto;
+    description.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  description.addEventListener('input', function () {
+    var current = String(description.value || '').trim();
+    if (current && current !== String(previousAuto || '').trim()) {
+      manualDescription = true;
+    }
+    if (!current) {
+      manualDescription = false;
+      refreshDescription();
+    }
+  });
+
+  ['id_name', 'id_brand', 'id_category', 'id_subcategory_root', 'id_subcategory_child'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', refreshDescription);
+    el.addEventListener('change', function () { setTimeout(refreshDescription, 0); });
+  });
+
+  document.addEventListener('input', function (event) {
+    if (event.target && event.target.closest && event.target.closest('#variants-list')) {
+      refreshDescription();
+    }
+  });
+  document.addEventListener('change', function (event) {
+    if (event.target && event.target.closest && event.target.closest('#variants-list')) {
+      refreshDescription();
+    }
+  });
+
+  window.refreshAutoDescription = refreshDescription;
+  refreshDescription();
+})();
+
+(function () {
+  var steps = ['identity', 'variants'];
+  var index = 0;
+  var navPills = Array.from(document.querySelectorAll('.admin-easy-step[data-step-target]'));
+  var navBtns = Array.from(document.querySelectorAll('[data-step-nav]'));
+  var rows = Array.from(document.querySelectorAll('.admin-form-grid--premium .premium-row'));
+  var progressFill = document.getElementById('admin-progress-fill');
+  var progressText = document.getElementById('admin-progress-text');
+
+  function rowsForStep(step) {
+    if (step === 'identity') {
+      return rows.filter(function (r) {
+        return r.classList.contains('premium-row-1') || r.classList.contains('premium-row-2') || r.classList.contains('premium-row-3');
+      });
+    }
+    return rows.filter(function (r) { return !!r.querySelector('.variants-section'); });
+  }
+
+  function showStep(step) {
+    rows.forEach(function (r) { r.style.display = 'none'; });
+    rowsForStep(step).forEach(function (r) {
+      r.style.display = '';
+      r.classList.add('step-visible');
+      setTimeout(function () { r.classList.remove('step-visible'); }, 340);
+    });
+    navPills.forEach(function (p) { p.classList.toggle('is-active', p.dataset.stepTarget === step); });
+  }
+
+  navPills.forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      index = Math.max(0, steps.indexOf(pill.dataset.stepTarget));
+      showStep(steps[index]);
+    });
+  });
+  navBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      index = Math.max(0, Math.min(steps.length - 1, index + parseInt(btn.dataset.stepNav, 10)));
+      showStep(steps[index]);
+    });
+  });
+
+  function bindDropzone(zone) {
+    var input = document.getElementById(zone.dataset.inputId);
+    if (!input) return;
+    zone.addEventListener('click', function () { input.click(); });
+    ['dragenter', 'dragover'].forEach(function (evt) {
+      zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.add('is-dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(function (evt) {
+      zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.remove('is-dragover'); });
+    });
+    zone.addEventListener('drop', function (e) {
+      if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+      input.files = e.dataTransfer.files;
+      zone.querySelector('span:last-child').textContent = e.dataTransfer.files.length + ' file(s) selected';
+    });
+    input.addEventListener('change', function () {
+      if (input.files && input.files.length) zone.querySelector('span:last-child').textContent = input.files.length + ' file(s) selected';
+    });
+  }
+  document.querySelectorAll('.upload-dropzone').forEach(bindDropzone);
+
+  var requiredSelectors = ['#id_category', '#id_name', '#id_brand', '#id_sku'];
+  var requiredInputs = requiredSelectors.map(function (s) { return document.querySelector(s); }).filter(Boolean);
+  function updateProgress() {
+    var done = requiredInputs.filter(function (el) { return String(el.value || '').trim() !== ''; }).length;
+    var percent = requiredInputs.length ? Math.round((done / requiredInputs.length) * 100) : 0;
+    if (progressFill) progressFill.style.width = percent + '%';
+    if (progressText) progressText.textContent = percent + '% complete';
+  }
+  requiredInputs.forEach(function (el) { el.addEventListener('input', updateProgress); el.addEventListener('change', updateProgress); });
+  updateProgress();
+
+  document.querySelectorAll('.floating-field input, .floating-field select, .floating-field textarea').forEach(function (el) {
+    var icon = document.createElement('span');
+    icon.className = 'field-status-icon';
+    var wrap = el.closest('.floating-field');
+    if (wrap) wrap.appendChild(icon);
+    function validate() {
+      var has = String(el.value || '').trim() !== '';
+      if (!wrap) return;
+      wrap.classList.remove('is-valid', 'is-invalid');
+      if (has) wrap.classList.add('is-valid');
+      if (el.required && !has) wrap.classList.add('is-invalid');
+    }
+    el.addEventListener('input', validate);
+    el.addEventListener('blur', validate);
+    validate();
+  });
+
+  showStep(steps[index]);
+})();
+</script>
+<template id="variant-row-template">
+  <div class="variant-row">
+    <input type="text" class="variant-input variant-net-qty" inputmode="decimal" autocomplete="off" maxlength="14" placeholder="Numbers only" title="Digits and decimal only; choose unit separately" />
+    <select class="variant-input variant-net-unit">
+      <option value="">Unit</option>
+      <option value="ml">ml</option>
+      <option value="g">g</option>
+      <option value="pieces">pieces</option>
+    </select>
+    <input type="number" class="variant-input variant-single-mrp" min="0.01" step="0.01" placeholder="Single MRP" />
+    <input type="number" class="variant-input variant-single-sp" min="0.01" step="0.01" placeholder="Single S.P" />
+    <input type="number" class="variant-input variant-pack-qty" min="1" step="1" value="1" placeholder="Items qty P.Packet" />
+    <input type="number" class="variant-input variant-original-packet-price" min="0.01" step="0.01" readonly placeholder="Original Packet Price" />
+    <input type="number" class="variant-input variant-packet-price" min="0.01" step="0.01" readonly placeholder="Packet Price" />
+    <input type="number" class="variant-input variant-stock" min="0" step="1" placeholder="Stock (Packets)" />
+    <input type="number" class="variant-input variant-discount" readonly placeholder="Discount %" />
+    <button type="button" class="variant-delete" title="Delete variant">🗑</button>
+  </div>
+</template>
+<script>
+(function () {
+  var list = document.getElementById('variants-list');
+  var addBtn = document.getElementById('add-variant-btn');
+  var tpl = document.getElementById('variant-row-template');
+  var totalBadge = document.getElementById('variants-total-stock');
+  var hiddenJson = document.getElementById('variants-json');
+  var form = document.getElementById('admin-product-form');
+  var stockInput = document.getElementById('id_stock');
+  if (!list || !addBtn || !tpl || !totalBadge || !hiddenJson || !form) return;
+
+  function sanitizeNetQtyValue(str) {
+    var s = String(str || '').replace(/[^\d.]/g, '');
+    var d = s.indexOf('.');
+    if (d !== -1) {
+      s = s.slice(0, d + 1) + s.slice(d + 1).replace(/\./g, '');
+      var parts = s.split('.');
+      s = parts[0] + '.' + (parts[1] || '').slice(0, 2);
+    }
+    return s;
+  }
+
+  function parseNetQuantityForRow(row) {
+    var el = row.querySelector('.variant-net-qty');
+    var raw = String((el && el.value) || '').trim();
+    if (raw === '') return 0;
+    var s = sanitizeNetQtyValue(raw);
+    var n = parseFloat(s);
+    return isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  function bindNetQtyInput(el) {
+    if (!el || el.getAttribute('data-net-qty-bound') === '1') return;
+    el.setAttribute('data-net-qty-bound', '1');
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '-') e.preventDefault();
+    });
+    el.addEventListener('input', function () {
+      var next = sanitizeNetQtyValue(el.value);
+      if (next !== el.value) el.value = next;
     });
   }
 
-  categorySelect.addEventListener('change', function () {
-    if (!categorySelect.value) {
-      refillSubcategories([]);
-      return;
+  function calcDiscount(row) {
+    var single = parseFloat(row.querySelector('.variant-single-mrp').value || '0');
+    var singleSp = parseFloat(row.querySelector('.variant-single-sp').value || '0');
+    var qty = parseFloat(row.querySelector('.variant-pack-qty').value || '0');
+    var packetOut = row.querySelector('.variant-packet-price');
+    var packet = singleSp * qty;
+    var out = row.querySelector('.variant-discount');
+    var originalOut = row.querySelector('.variant-original-packet-price');
+    var originalPacket = single * qty;
+    if (originalOut) {
+      originalOut.value = single > 0 && qty > 0 && isFinite(originalPacket) ? originalPacket.toFixed(2) : '';
     }
-    fetch('{% url "subcategories_api" %}?category_id=' + encodeURIComponent(categorySelect.value))
-      .then(function (r) { return r.json(); })
-      .then(function (data) { refillSubcategories(data.subcategories || []); });
-  });
+    if (packetOut) {
+      packetOut.value = singleSp > 0 && qty > 0 && isFinite(packet) ? packet.toFixed(2) : '';
+    }
+    if (single <= 0 || qty <= 0 || packet <= 0) {
+      out.value = '';
+      return 0;
+    }
+    var discount = (1 - (packet / (single * qty))) * 100;
+    out.value = isFinite(discount) ? discount.toFixed(2) : '';
+    return isFinite(discount) ? discount : 0;
+  }
+
+  function collectRows() {
+    return Array.from(list.querySelectorAll('.variant-row')).map(function (row) {
+      return {
+        net_quantity: parseNetQuantityForRow(row),
+        net_quantity_unit: row.querySelector('.variant-net-unit').value || '',
+        single_mrp: parseFloat(row.querySelector('.variant-single-mrp').value || '0') || 0,
+        single_sp: parseFloat(row.querySelector('.variant-single-sp').value || '0') || 0,
+        packet_qty: parseInt(row.querySelector('.variant-pack-qty').value || '0', 10) || 0,
+        original_packet_price: parseFloat(row.querySelector('.variant-original-packet-price').value || '0') || 0,
+        packet_price: parseFloat(row.querySelector('.variant-packet-price').value || '0') || 0,
+        stock_packets: parseInt(row.querySelector('.variant-stock').value || '0', 10) || 0,
+        discount_percent: parseFloat(row.querySelector('.variant-discount').value || '0') || 0,
+      };
+    }).filter(function (v) { return v.net_quantity || v.net_quantity_unit || v.single_mrp || v.single_sp || v.packet_price || v.stock_packets; });
+  }
+
+  function recalcAll() {
+    var totalStock = 0;
+    Array.from(list.querySelectorAll('.variant-row')).forEach(function (row) {
+      calcDiscount(row);
+      totalStock += parseInt(row.querySelector('.variant-stock').value || '0', 10) || 0;
+    });
+    totalBadge.textContent = 'Total Stock: ' + totalStock + ' packets';
+    if (stockInput) stockInput.value = totalStock;
+    hiddenJson.value = JSON.stringify(collectRows());
+  }
+
+  function bindRow(row) {
+    row.querySelectorAll('input').forEach(function (input) {
+      input.addEventListener('input', recalcAll);
+    });
+    var nq = row.querySelector('.variant-net-qty');
+    if (nq) bindNetQtyInput(nq);
+    row.querySelector('.variant-delete').addEventListener('click', function () {
+      row.remove();
+      recalcAll();
+    });
+  }
+
+  window.addVariantRow = function () {
+    var row = tpl.content.firstElementChild.cloneNode(true);
+    row.classList.add('is-entering');
+    list.appendChild(row);
+    bindRow(row);
+    requestAnimationFrame(function () { row.classList.remove('is-entering'); });
+    recalcAll();
+    if (window.refreshAutoDescription) window.refreshAutoDescription();
+  };
+
+  addBtn.addEventListener('click', window.addVariantRow);
+  form.addEventListener(
+    'submit',
+    function () {
+      hiddenJson.value = JSON.stringify(collectRows());
+    },
+    true
+  );
+  recalcAll();
+})();
+</script>
+<script>
+(function () {
+  var el = document.getElementById('admin-product-form-errors');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    try {
+      el.focus();
+    } catch (e) {}
+  }
 })();
 </script>
 {% endblock %}

@@ -2,13 +2,18 @@
 from django.urls import path
 from .views import (
     cart_view, add_to_cart, update_cart, remove_from_cart,
-    checkout_view, order_success, order_history, order_detail,
-    admin_dashboard, admin_products, admin_orders,
+    checkout_view, order_success, order_quotation, order_history, order_detail,
+    reorder_from_order,
+    admin_dashboard, admin_products, admin_orders, admin_customer_details,
+    admin_customer_order_history,
+    admin_offline_order,
+    admin_offline_product_search,
     admin_product_add, admin_product_edit, admin_product_delete,
     admin_bulk_import_products,
     admin_gallery_image_delete,
     admin_order_detail,
-    admin_update_order_status, admin_update_stock,
+    admin_order_delete,
+    admin_update_order_status, admin_update_stock, admin_patch_variant,
     admin_toggle_product_active,
 )
 
@@ -21,8 +26,10 @@ urlpatterns = [
     # Checkout & Orders
     path("checkout/", checkout_view, name="checkout"),
     path("success/<str:order_number>/", order_success, name="order_success"),
+    path("success/<str:order_number>/quotation/", order_quotation, name="order_quotation"),
     path("history/", order_history, name="order_history"),
     path("detail/<str:order_number>/", order_detail, name="order_detail"),
+    path("detail/<str:order_number>/reorder/", reorder_from_order, name="order_reorder"),
     # Admin Panel
     path("admin-panel/", admin_dashboard, name="admin_dashboard"),
     path("admin-panel/products/", admin_products, name="admin_products"),
@@ -36,8 +43,18 @@ urlpatterns = [
         name="admin_gallery_image_delete",
     ),
     path("admin-panel/products/update-stock/", admin_update_stock, name="admin_update_stock"),
+    path("admin-panel/products/patch-variant/", admin_patch_variant, name="admin_patch_variant"),
     path("admin-panel/products/toggle-active/", admin_toggle_product_active, name="admin_toggle_product_active"),
     path("admin-panel/orders/", admin_orders, name="admin_orders"),
+    path("admin-panel/customers/", admin_customer_details, name="admin_customer_details"),
+    path(
+        "admin-panel/customers/<int:user_id>/orders/",
+        admin_customer_order_history,
+        name="admin_customer_order_history",
+    ),
+    path("admin-panel/orders/offline/new/", admin_offline_order, name="admin_offline_order"),
+    path("admin-panel/orders/offline/search-products/", admin_offline_product_search, name="admin_offline_product_search"),
     path("admin-panel/orders/update-status/", admin_update_order_status, name="admin_update_order_status"),
+    path("admin-panel/orders/<str:order_number>/delete/", admin_order_delete, name="admin_order_delete"),
     path("admin-panel/orders/<str:order_number>/", admin_order_detail, name="admin_order_detail"),
 ]

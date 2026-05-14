@@ -69,7 +69,11 @@
       </form>
 
       <div class="auth-footer">
-        <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+        <nav class="auth-footer-links auth-footer-links--inline" aria-label="Sign in options">
+          <a href="{% url 'login' %}">Login here</a>
+          <a href="{% url 'staff_login' %}">Staff login</a>
+          <a href="{% url 'staff_login' %}?portal_role=admin">Admin login</a>
+        </nav>
       </div>
     </div>
   </div>

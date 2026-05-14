@@ -1,79 +1,46 @@
 {% load static %}
-{# Login modal — customer (shopkeeper) vs admin. Forms POST to /auth/login/ #}
+{# Single sign-in — same as /auth/login/; redirect after success is role-based in LoginView #}
 <div id="login-modal" class="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" aria-hidden="true" hidden>
   <div class="login-modal__backdrop js-login-modal-close" tabindex="-1"></div>
-  <div class="login-modal__dialog">
+  <div class="login-modal__dialog login-modal__dialog--single">
     <button type="button" class="login-modal__close js-login-modal-close" aria-label="Close sign in">&times;</button>
     <div class="login-modal__brand">
-      <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="login-modal__logo" width="160" height="56" loading="lazy" />
+      <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="login-modal__logo" width="96" height="34" loading="lazy" />
     </div>
     <h2 id="login-modal-title" class="login-modal__title">Sign in</h2>
-    <p class="login-modal__subtitle">Choose <strong>customer login</strong> (shopkeeper) or <strong>admin login</strong> below.</p>
+    <p class="login-modal__subtitle">Use your <strong>phone</strong> and <strong>password</strong> to track orders and shop.</p>
 
-    <div class="auth-dual-grid auth-dual-grid--half login-modal__grid">
-      <article class="auth-card auth-card--panel auth-card--split auth-card--half login-modal__card">
-        <div class="auth-panel-badge auth-panel-badge--shop">Customer</div>
-        <h3 class="auth-panel-title">Shopkeeper</h3>
-        <p class="auth-panel-desc">Order wholesale — phone &amp; password. (Email is collected when you register.)</p>
-
-        <form class="auth-form auth-form--compact" method="POST" action="{% url 'login' %}">
-          {% csrf_token %}
-          <input type="hidden" name="login_mode" value="shopkeeper" />
-          <input type="hidden" name="next" value="/" class="login-modal-next" />
-          <div class="form-group">
-            <label for="modal-phone-shop">Phone</label>
-            <div class="input-with-prefix">
-              <span class="input-prefix">+91</span>
-              <input type="tel" id="modal-phone-shop" name="phone" placeholder="9876543210"
-                     maxlength="10" pattern="[0-9]{10}" required autocomplete="tel" />
-            </div>
+    <article class="auth-card auth-card--panel auth-card--split login-modal__card login-modal__card--single">
+      <form class="auth-form auth-form--compact" method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="/" class="login-modal-next" />
+        <div class="form-group">
+          <label for="modal-phone">Phone</label>
+          <div class="input-with-prefix">
+            <span class="input-prefix">+91</span>
+            <input type="tel" id="modal-phone" name="phone" placeholder="9876543210"
+                   maxlength="10" pattern="[0-9]{10}" required autocomplete="tel" />
           </div>
-          <div class="form-group">
-            <label for="modal-password-shop">Password</label>
-            <div class="input-with-toggle">
-              <input type="password" id="modal-password-shop" name="password" placeholder="••••••••"
-                     required autocomplete="current-password" />
-              <button type="button" class="toggle-password" onclick="togglePassword('modal-password-shop')" tabindex="-1" aria-label="Show password">👁</button>
-            </div>
+        </div>
+        <div class="form-group">
+          <label for="modal-password">Password</label>
+          <div class="input-with-toggle">
+            <input type="password" id="modal-password" name="password" placeholder="••••••••"
+                   required autocomplete="current-password" />
+            <button type="button" class="toggle-password" onclick="togglePassword('modal-password')" tabindex="-1" aria-label="Show password">👁</button>
           </div>
-          <button type="submit" class="btn btn-primary btn-full">Sign in</button>
-        </form>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Sign in</button>
+      </form>
 
-        <footer class="auth-footer auth-footer--panel auth-footer--tight">
-          <p>New? <a href="{% url 'register' %}">Register</a></p>
-        </footer>
-      </article>
-
-      <article class="auth-card auth-card--panel auth-card--admin-panel auth-card--split auth-card--half login-modal__card">
-        <div class="auth-panel-badge auth-panel-badge--admin">Admin</div>
-        <h3 class="auth-panel-title">Dashboard</h3>
-        <p class="auth-panel-desc">Staff only.</p>
-
-        <form class="auth-form auth-form--compact" method="POST" action="{% url 'login' %}">
-          {% csrf_token %}
-          <input type="hidden" name="login_mode" value="admin" />
-          <input type="hidden" name="next" value="/" class="login-modal-next" />
-          <div class="form-group">
-            <label for="modal-phone-admin">Phone</label>
-            <div class="input-with-prefix">
-              <span class="input-prefix">+91</span>
-              <input type="tel" id="modal-phone-admin" name="phone" placeholder="9876543210"
-                     maxlength="10" pattern="[0-9]{10}" required autocomplete="tel" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="modal-password-admin">Password</label>
-            <div class="input-with-toggle">
-              <input type="password" id="modal-password-admin" name="password" placeholder="••••••••"
-                     required autocomplete="current-password" />
-              <button type="button" class="toggle-password" onclick="togglePassword('modal-password-admin')" tabindex="-1" aria-label="Show password">👁</button>
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary btn-full btn-admin-submit">Admin sign in</button>
-        </form>
-
-        <p class="auth-panel-footnote">Requires staff access on your account.</p>
-      </article>
-    </div>
+      <footer class="auth-footer auth-footer--panel auth-footer--tight">
+        <hr class="login-modal__staff-divider" />
+        <nav class="auth-footer-links auth-footer-links--inline login-modal__footer-links" aria-label="Other sign-in options">
+          <a href="{% url 'register' %}">Register</a>
+          <a href="{% url 'staff_login' %}">Staff login</a>
+          <a href="{% url 'staff_login' %}?portal_role=admin">Admin login</a>
+        </nav>
+      </footer>
+    </article>
   </div>
 </div>

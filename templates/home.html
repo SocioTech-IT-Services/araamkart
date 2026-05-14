@@ -11,9 +11,6 @@
       <h1 class="hero-idea-title">Aapka Aaram,<br><span class="hero-idea-accent">Hamara Kaam</span></h1>
       <p class="hero-idea-lead">Daily needs, great savings and free, fast delivery at your doorstep.</p>
       <a href="{% url 'category_detail' 'grocery-bulk-items' %}" class="btn btn-hero-cta">Shop Now →</a>
-      <div class="hero-slider-dots" aria-hidden="true">
-        <span></span><span class="is-active"></span><span></span>
-      </div>
     </div>
     <div class="hero-idea-visual hero-visual-middle">
       <figure class="hero-visual-middle__card">
@@ -67,34 +64,68 @@
       <div class="title-line"></div>
     </div>
 
-    <div class="cat-grid-idea">
-      {% for category in categories %}
-      <article class="cat-card-idea">
-        <a href="{% url 'category_detail' category.slug %}" class="cat-card-idea-link">
-          <div class="cat-circle">
-            {% if category.slug == 'personal-care-hygiene' %}
-              <img src="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&amp;q=80" alt="">
-            {% elif category.slug == 'grocery-bulk-items' %}
-              <img src="https://images.unsplash.com/photo-1586201375756-840068be8d8b?w=400&amp;q=80" alt="">
-            {% elif category.slug == 'household-essentials' %}
-              <img src="https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400&amp;q=80" alt="">
-            {% elif category.slug == 'stationery' %}
-              <img src="https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=400&amp;q=80" alt="">
-            {% elif category.slug == 'baby-care' %}
-              <img src="https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&amp;q=80" alt="">
-            {% elif category.slug == 'electronics-utility' %}
-              <img src="https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&amp;q=80" alt="">
-            {% elif category.slug == 'daily-essentials' %}
-              <img src="https://images.unsplash.com/photo-1584479898061-157f85007197?w=400&amp;q=80" alt="">
-            {% else %}
-              <span class="cat-emoji-fallback">{{ category.icon }}</span>
-            {% endif %}
-          </div>
-          <h3>{{ category.name }}</h3>
-          <span class="cat-shop-now">Shop Now →</span>
-        </a>
-      </article>
-      {% endfor %}
+    <div class="cat-slider-wrap" aria-label="Category slider">
+      <button type="button" class="cat-slider-arrow cat-slider-arrow--left" aria-label="Scroll categories left">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <button type="button" class="cat-slider-arrow cat-slider-arrow--right" aria-label="Scroll categories right">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+      <div class="cat-slider-track">
+        <div class="cat-grid-idea">
+          {% for category in categories %}
+          <article class="cat-card-idea">
+            <a href="{% url 'category_detail' category.slug %}" class="cat-card-idea-link">
+              <div class="cat-circle">
+                {% if category.generated_image %}
+                  <img src="{% static category.generated_image %}" alt="{{ category.name }}" width="280" height="280" loading="lazy" decoding="async">
+                {% else %}
+                  <span class="cat-emoji-fallback">{{ category.icon }}</span>
+                {% endif %}
+              </div>
+              <h3>{{ category.name }}</h3>
+              <span class="cat-shop-now">Shop Now →</span>
+            </a>
+          </article>
+          {% endfor %}
+        </div>
+        <div class="cat-grid-idea" aria-hidden="true">
+          {% for category in categories %}
+          <article class="cat-card-idea">
+            <a href="{% url 'category_detail' category.slug %}" class="cat-card-idea-link" tabindex="-1">
+              <div class="cat-circle">
+                {% if category.generated_image %}
+                  <img src="{% static category.generated_image %}" alt="{{ category.name }}" width="280" height="280" loading="lazy" decoding="async">
+                {% else %}
+                  <span class="cat-emoji-fallback">{{ category.icon }}</span>
+                {% endif %}
+              </div>
+              <h3>{{ category.name }}</h3>
+              <span class="cat-shop-now">Shop Now →</span>
+            </a>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="conversion-trust-section" aria-labelledby="most-selling-title">
+  <div class="nav-container">
+    <div class="conversion-head">
+      <h2 id="most-selling-title">Most selling items</h2>
+    </div>
+    <div class="most-selling-carousel-wrap">
+      <button type="button" class="most-selling-arrow most-selling-arrow--left" aria-label="Scroll most selling left">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div class="most-selling-carousel" id="most-selling-carousel" aria-live="polite">
+        <div class="most-selling-track" id="most-selling-track"></div>
+      </div>
+      <button type="button" class="most-selling-arrow most-selling-arrow--right" aria-label="Scroll most selling right">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
     </div>
   </div>
 </section>
@@ -131,6 +162,18 @@
   </div>
 </section>
 
+<section class="trusted-reviews-section" aria-labelledby="trusted-reviews-title">
+  <div class="nav-container">
+    <div class="conversion-head">
+      <h2 id="trusted-reviews-title">Trusted Partner Reviews</h2>
+      <p>Verified shopkeepers across Shillong trust AaramKart for reliable wholesale supply.</p>
+    </div>
+    <div class="trusted-reviews-slider">
+      <div class="trusted-reviews-grid" id="trusted-reviews-grid" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
 <section class="why-band">
   <div class="nav-container why-band-inner">
     <div class="why-band-head">
@@ -153,15 +196,15 @@
         <span>Secure Payments</span>
       </li>
       <li>
-        <span class="wb-ic wb-ic--support" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <span>24/7 Customer Support</span>
+        <span class="wb-ic wb-ic--support" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 18H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="18" r="2" stroke="currentColor" stroke-width="2"/></svg></span>
+        <span>Free Delivery</span>
       </li>
     </ul>
     <a href="{% url 'register' %}" class="btn btn-learn-more">Learn More</a>
   </div>
 </section>
 
-<a href="https://wa.me/919774365127" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="WhatsApp">
+<a href="https://wa.me/919863645127" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="WhatsApp">
   <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
 </a>
 {% endblock %}

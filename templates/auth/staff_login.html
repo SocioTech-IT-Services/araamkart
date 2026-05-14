@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Staff &amp; admin sign-in — AaramKart{% endblock %}
+{% block meta_description %}Team sign-in for AaramKart operations. Customers should use the main shop sign-in with phone.{% endblock %}
+
+{% block content %}
+<section class="page-section staff-login-page">
+  <div class="section-container narrow">
+    <div class="staff-login-card">
+      <a class="staff-login-card__back" href="{% url 'login' %}">← Back to customer sign-in</a>
+
+      <div class="staff-login-card__brand">
+        <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="staff-login-card__logo" width="200" height="72" loading="eager" />
+      </div>
+
+      <h1>Staff &amp; admin</h1>
+      <p class="staff-login-lead">Use your <strong>work email</strong> or <strong>work phone</strong> and password. This page is separate from shopkeeper phone login.</p>
+
+      <form method="post" action="{% url 'staff_login' %}" id="staff-login-form">
+        {% csrf_token %}
+        <input type="hidden" name="portal_role" id="staff-login-role" value="{{ portal_role|default:'staff' }}" />
+
+        <div class="staff-login-tabs" role="tablist" aria-label="Login type">
+          <button type="button" class="staff-login-tab{% if portal_role|default:'staff' != 'admin' %} is-active{% endif %}" data-role="staff" id="tab-staff">Staff login</button>
+          <button type="button" class="staff-login-tab{% if portal_role == 'admin' %} is-active{% endif %}" data-role="admin" id="tab-admin">Admin login</button>
+        </div>
+
+        <div class="staff-login-field">
+          <label for="staff-login-identifier" id="staff-login-id-label">Work phone (10 digits)</label>
+          <input type="text" name="identifier" id="staff-login-identifier" value="{{ identifier|default:'' }}"
+                 autocomplete="username" required />
+        </div>
+        <div class="staff-login-field">
+          <label for="staff-login-password">Password</label>
+          <input type="password" name="password" id="staff-login-password" autocomplete="current-password" required />
+        </div>
+        <p class="staff-login-forgot">
+          <a href="mailto:aaramkartshillong@gmail.com?subject=AaramKart%20staff%20password%20reset">Forgot password?</a>
+        </p>
+        <button type="submit" class="staff-login-submit" id="staff-login-submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+  const roleInput = document.getElementById('staff-login-role');
+  const idInput = document.getElementById('staff-login-identifier');
+  const idLabel = document.getElementById('staff-login-id-label');
+  const tabs = document.querySelectorAll('.staff-login-tab');
+  const form = document.getElementById('staff-login-form');
+  const submit = document.getElementById('staff-login-submit');
+
+  function setTab(role) {
+    if (!roleInput || !idInput || !idLabel) return;
+    roleInput.value = role;
+    tabs.forEach(function(t) {
+      t.classList.toggle('is-active', t.getAttribute('data-role') === role);
+    });
+    if (role === 'admin') {
+      idLabel.textContent = 'Work email';
+      idInput.placeholder = 'you@company.com';
+      idInput.setAttribute('inputmode', 'email');
+      idInput.removeAttribute('maxlength');
+    } else {
+      idLabel.textContent = 'Work phone (10 digits)';
+      idInput.placeholder = '9876543210';
+      idInput.setAttribute('inputmode', 'numeric');
+      idInput.setAttribute('maxlength', '15');
+    }
+  }
+
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() { setTab(tab.getAttribute('data-role') || 'staff'); });
+  });
+
+  var initial = roleInput && roleInput.value === 'admin' ? 'admin' : 'staff';
+  setTab(initial);
+
+  if (form && submit) {
+    form.addEventListener('submit', function() {
+      submit.disabled = true;
+    });
+  }
+})();
+</script>
+{% endblock %}

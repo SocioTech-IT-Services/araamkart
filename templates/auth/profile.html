@@ -1,28 +1,270 @@
 {% extends 'base.html' %}
-{% block title %}My Profile — AaramKart{% endblock %}
+{% block title %}My account — AaramKart{% endblock %}
+{% block extra_head %}
+<style>
+  .profile-premium-wrap {
+    min-height: calc(100vh - 220px);
+    padding: 1.25rem 0 2rem;
+    background:
+      radial-gradient(1200px 450px at 8% -10%, rgba(11, 44, 90, 0.2), transparent 60%),
+      radial-gradient(900px 400px at 92% 0%, rgba(63, 174, 42, 0.2), transparent 58%),
+      linear-gradient(180deg, #f4f8fc 0%, #edf4f9 50%, #f7fbff 100%);
+  }
+  .profile-glass-card {
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 24px 55px rgba(11, 44, 90, 0.15);
+    padding: 1.35rem;
+    animation: profileFadeUp 0.55s ease both;
+  }
+  @keyframes profileFadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 1.1rem;
+  }
+  .profile-title {
+    margin: 0;
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #0b2c5a;
+  }
+  .profile-btn {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .profile-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(11, 44, 90, 0.22);
+  }
+  .profile-main {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+  .profile-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.65rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #0b2c5a 0%, #3fae2a 100%);
+    box-shadow: 0 14px 28px rgba(11, 44, 90, 0.25);
+  }
+  .profile-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.68rem 0.25rem;
+    border-bottom: 1px solid rgba(11, 44, 90, 0.08);
+  }
+  .profile-row:last-child { border-bottom: 0; }
+  .profile-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #0b2c5a;
+    font-weight: 700;
+  }
+  .profile-value {
+    color: #0f172a;
+    font-weight: 600;
+    text-align: right;
+  }
+  .verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.62rem;
+    border-radius: 999px;
+    background: rgba(63, 174, 42, 0.18);
+    color: #166534;
+    border: 1px solid rgba(63, 174, 42, 0.35);
+    font-weight: 700;
+  }
+  .unverified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.62rem;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.18);
+    color: #92400e;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    font-weight: 700;
+  }
+  .profile-ic { width: 16px; height: 16px; stroke-width: 2.2; color: #0b2c5a; }
+  .profile-orders-card {
+    margin-top: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 18px 45px rgba(11, 44, 90, 0.12);
+    padding: 1.2rem 1.35rem;
+    animation: profileFadeUp 0.55s ease 0.08s both;
+  }
+  .profile-orders-card h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0b2c5a;
+  }
+  .profile-orders-meta {
+    font-size: 0.88rem;
+    color: #475569;
+    margin-bottom: 0.85rem;
+  }
+  .profile-orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .profile-orders-table th {
+    text-align: left;
+    padding: 0.45rem 0.35rem;
+    color: #64748b;
+    font-weight: 700;
+    border-bottom: 1px solid rgba(11, 44, 90, 0.1);
+  }
+  .profile-orders-table td {
+    padding: 0.55rem 0.35rem;
+    border-bottom: 1px solid rgba(11, 44, 90, 0.06);
+    color: #0f172a;
+  }
+  .profile-orders-table a {
+    color: #0b2c5a;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .profile-orders-table a:hover {
+    text-decoration: underline;
+    color: #3fae2a;
+  }
+  @media (max-width: 768px) {
+    .profile-main { grid-template-columns: 1fr; }
+    .profile-avatar { margin: 0 auto; }
+    .profile-row { flex-direction: column; align-items: flex-start; }
+    .profile-value { text-align: left; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="page-section">
+<section class="page-section profile-premium-wrap">
   <div class="section-container narrow">
-    <div class="page-header">
-      <h1>My Profile</h1>
-      <a href="{% url 'order_history' %}" class="btn btn-outline">View Orders</a>
+    <div class="profile-glass-card">
+      <div class="profile-header">
+        <h1 class="profile-title">My account</h1>
+        <a href="{% url 'order_history' %}" class="btn btn-outline profile-btn">View all orders</a>
+      </div>
+      <div class="profile-main">
+        <div class="profile-avatar">{% if user.full_name %}{{ user.full_name|slice:":1"|upper }}{% elif user.email %}{{ user.email|slice:":1"|upper }}{% elif user.phone %}{{ user.phone|slice:":1" }}{% else %}?{% endif %}</div>
+        <div class="profile-details">
+          <div class="profile-row">
+            <span class="profile-label">
+              <svg class="profile-ic" viewBox="0 0 24 24" fill="none"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+              Full name
+            </span>
+            <span class="profile-value">{{ user.full_name|default:"—" }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">
+              <svg class="profile-ic" viewBox="0 0 24 24" fill="none"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+              Business / shop
+            </span>
+            <span class="profile-value">{{ user.business_name|default:"—" }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">
+              <svg class="profile-ic" viewBox="0 0 24 24" fill="none"><path d="M22 16.92V20a2 2 0 0 1-2.18 2A19.86 19.86 0 0 1 2 4.18 2 2 0 0 1 4 2h3.09a2 2 0 0 1 2 1.72l.46 2.76a2 2 0 0 1-.57 1.76l-1.25 1.24a16 16 0 0 0 6.89 6.9l1.24-1.25a2 2 0 0 1 1.76-.57l2.76.46a2 2 0 0 1 1.72 2z"/></svg>
+              Phone
+            </span>
+            <span class="profile-value">{{ user.phone|default:"—" }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">
+              <svg class="profile-ic" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+              Email
+            </span>
+            <span class="profile-value">{{ user.email|default:"—" }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">
+              <svg class="profile-ic" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Delivery address
+            </span>
+            <span class="profile-value">{{ user.address|default:"—" }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">
+              <svg class="profile-ic" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12s4.03-9 9-9 9 4.03 9 9z"/></svg>
+              Account status
+            </span>
+            <span class="profile-value">
+              {% if user.is_verified %}
+              <span class="verified-badge">Verified</span>
+              {% else %}
+              <span class="unverified-badge">Unverified</span>
+              {% endif %}
+            </span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">
+              <svg class="profile-ic" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              Member since
+            </span>
+            <span class="profile-value">{{ user.date_joined|date:"d M Y" }}</span>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="profile-card">
-      <div class="profile-avatar">{{ user.full_name|first|upper }}</div>
-      <div class="profile-details">
-        <table class="detail-table">
-          <tr><th>Name</th><td>{{ user.full_name }}</td></tr>
-          {% if user.business_name %}<tr><th>Business</th><td>{{ user.business_name }}</td></tr>{% endif %}
-          {% if user.email %}<tr><th>Email</th><td>{{ user.email }}</td></tr>{% endif %}
-          {% if user.phone %}<tr><th>Phone</th><td>{{ user.phone }}</td></tr>{% endif %}
-          <tr><th>Account Status</th><td>
-            {% if user.is_verified %}<span class="badge badge-green">Verified ✓</span>
-            {% else %}<span class="badge badge-yellow">Pending Verification</span>{% endif %}
-          </td></tr>
-          <tr><th>Member Since</th><td>{{ user.date_joined|date:"d M Y" }}</td></tr>
+
+    <div class="profile-orders-card">
+      <h2>Your orders</h2>
+      <p class="profile-orders-meta">You have <strong>{{ order_count }}</strong> order{{ order_count|pluralize }} on AaramKart. Open any row for full details, invoice-style view, and reorder.</p>
+      {% if recent_orders %}
+      <div style="overflow-x:auto">
+        <table class="profile-orders-table">
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Placed</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in recent_orders %}
+            <tr>
+              <td>#{{ o.order_number }}</td>
+              <td>{{ o.created_at|date:"d M Y, H:i" }}</td>
+              <td>₹{{ o.total_amount }}</td>
+              <td>{{ o.get_status_display }}</td>
+              <td><a href="{% url 'order_detail' o.order_number %}">View</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
         </table>
       </div>
+      {% else %}
+      <p class="profile-orders-meta" style="margin-bottom:0">No orders yet. <a href="{% url 'home' %}">Browse catalog</a> and build your bulk cart.</p>
+      {% endif %}
     </div>
   </div>
 </section>

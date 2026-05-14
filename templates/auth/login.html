@@ -1,14 +1,63 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Sign In — AaramKart{% endblock %}
-{% block meta_description %}Sign in is available from the site header.{% endblock %}
+{% block meta_description %}Sign in to AaramKart — shopkeepers and staff use the same login; you are sent to the right place automatically.{% endblock %}
+
 {% block content %}
-{# GET /auth/login/ redirects in the view; this is only a fallback if someone hits POST errors without redirect. #}
-<section class="page-section" style="padding: 2rem 1rem;">
-  <div class="section-container narrow" style="text-align: center; max-width: 36rem; margin: 0 auto;">
-    <p style="color: var(--text-muted); margin-bottom: 1rem;">Sign in opens in a popup. Use <strong>Sign in</strong> in the top bar, or open it here:</p>
-    <p><button type="button" class="btn btn-primary nav-login-trigger">Open sign in</button></p>
-    <p style="margin-top: 1.25rem;"><a href="{% url 'home' %}">← Back to home</a></p>
+<section class="auth-page auth-page--wide">
+  <div class="auth-container">
+    <div class="auth-card auth-card-wide">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <img src="{% static 'img/logo.jpeg' %}" alt="AaramKart" class="auth-logo-img" width="200" height="80" />
+        </div>
+        <h1>Sign In</h1>
+        <p>One account for wholesale ordering and admin. After sign-in, we open <strong>your dashboard</strong> (admin) or <strong>the storefront</strong> (customer).</p>
+      </div>
+
+      {% if messages %}
+      <div class="auth-messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <form class="auth-form" method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next|default:'' }}" />
+
+        <div class="form-group">
+          <label for="login-phone">Phone</label>
+          <div class="input-with-prefix">
+            <span class="input-prefix">+91</span>
+            <input type="tel" id="login-phone" name="phone" placeholder="9876543210"
+                   maxlength="10" pattern="[0-9]{10}" inputmode="numeric" required
+                   autocomplete="tel" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <div class="input-with-toggle">
+            <input type="password" id="login-password" name="password" placeholder="••••••••"
+                   required autocomplete="current-password" />
+            <button type="button" class="toggle-password" onclick="togglePassword('login-password')" tabindex="-1" aria-label="Show password">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">Sign in</button>
+      </form>
+
+      <div class="auth-footer">
+        <nav class="auth-footer-links auth-footer-links--inline" aria-label="Other sign-in options">
+          <a href="{% url 'register' %}">Register</a>
+          <a href="{% url 'staff_login' %}">Staff login</a>
+          <a href="{% url 'staff_login' %}?portal_role=admin">Admin login</a>
+        </nav>
+        <p><a href="{% url 'home' %}">← Back to home</a></p>
+      </div>
+    </div>
   </div>
 </section>
 {% endblock %}

@@ -22,6 +22,14 @@ pip install -r requirements.txt
 Copy `.env.example` to `.env` and fill in your settings (or use defaults for testing).
 
 ### 3. Database Setup
+Create a PostgreSQL database and set `DATABASE_URL` in `.env`, for example:
+
+```bash
+DATABASE_URL=postgres://postgres:password@localhost:5432/aaramkart
+```
+
+Then run migrations:
+
 ```bash
 python manage.py migrate
 ```

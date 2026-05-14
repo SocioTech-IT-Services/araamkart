@@ -1,8 +1,8 @@
 """
 AaramKart Django Settings
 """
-import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -68,21 +68,64 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "aaramkart.wsgi.application"
 
-if os.environ.get("DATABASE_URL"):
-    import dj_database_url
-    DATABASES = {
-        "default": dj_database_url.config(default=os.environ.get("DATABASE_URL"), conn_max_age=600)
-    }
-else:
+# Database: PostgreSQL only (no SQLite in this project).
+# Railway/Render set DATABASE_URL in the environment; decouple reads it. .env works locally.
+# Tables live wherever DATABASE_URL points if set; otherwise POSTGRES_* (default localhost:5432).
+# Supabase: paste the Postgres URI into DATABASE_URL or SUPABASE_DATABASE_URL (same value).
+DATABASE_URL = (
+    config("DATABASE_URL", default="").strip()
+    or config("SUPABASE_DATABASE_URL", default="").strip()
+    or config("SUPABASE_DB_URL", default="").strip()
+)
+
+if DATABASE_URL:
+    parsed_db = urlparse(DATABASE_URL)
+    db_options = {}
+    query = parse_qs(parsed_db.query)
+    if query.get("sslmode"):
+        db_options["sslmode"] = query["sslmode"][0]
+
+    db_host = parsed_db.hostname or ""
+    db_port = str(parsed_db.port or "")
+    if not db_port:
+        db_port = "5432"
+
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": parsed_db.path.lstrip("/") or "postgres",
+            "USER": unquote(parsed_db.username or ""),
+            "PASSWORD": unquote(parsed_db.password or ""),
+            "HOST": db_host,
+            "PORT": db_port,
+            "OPTIONS": db_options,
+            "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
         }
     }
 
-AUTH_USER_MODEL = "users.User"
+    # Supabase (managed Postgres): TLS is required; transaction pooler uses port 6543 (PgBouncer).
+    _host_lc = db_host.lower()
+    if "supabase" in _host_lc:
+        DATABASES["default"].setdefault("OPTIONS", {}).setdefault("sslmode", "require")
+    if db_port == "6543":
+        DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("POSTGRES_DB", default="aaramkart"),
+            "USER": config("POSTGRES_USER", default="postgres"),
+            "PASSWORD": config("POSTGRES_PASSWORD", default=""),
+            "HOST": config("POSTGRES_HOST", default="localhost"),
+            "PORT": config("POSTGRES_PORT", default="5432"),
+            "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
+        }
+    }
+    _postg_host = (DATABASES["default"].get("HOST") or "").lower()
+    if "supabase" in _postg_host:
+        DATABASES["default"].setdefault("OPTIONS", {})["sslmode"] = "require"
 
+AUTH_USER_MODEL = "users.User"
 AUTHENTICATION_BACKENDS = [
     "apps.users.backends.EmailOrPhoneBackend",
     "django.contrib.auth.backends.ModelBackend",
@@ -101,10 +144,13 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+    ("product-images", BASE_DIR / "product image"),
+]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Bump this (or set STATIC_CACHE_BUSTER in .env) when CSS/JS changes don’t show — browsers cache /static/ aggressively.
-STATIC_CACHE_BUSTER = config("STATIC_CACHE_BUSTER", default="20260517")
+STATIC_CACHE_BUSTER = config("STATIC_CACHE_BUSTER", default="20260618")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -126,6 +172,23 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="AaramKart <noreply@aa
 # ── App-specific ────────────────────────────────────────────────────────────
 ADMIN_EMAIL = config("ADMIN_EMAIL", default="admin@aaramkart.com")
 ADMIN_PHONE = config("ADMIN_PHONE", default="")
+
+
+def _delivery_only_staff_phones_set():
+    """10-digit mobiles that may use delivery ops only (no inventory / custom admin). Comma-separated in env."""
+    raw = config("DELIVERY_ONLY_STAFF_PHONES", default="9485317830")
+    out = set()
+    for chunk in raw.split(","):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        digits = "".join(c for c in chunk if c.isdigit())
+        if len(digits) >= 10:
+            out.add(digits[-10:])
+    return frozenset(out)
+
+
+DELIVERY_ONLY_STAFF_PHONES_SET = _delivery_only_staff_phones_set()
 FAST2SMS_API_KEY = config("FAST2SMS_API_KEY", default="")
 CALLMEBOT_API_KEY = config("CALLMEBOT_API_KEY", default="")
 CALLMEBOT_PHONE = config("CALLMEBOT_PHONE", default="")

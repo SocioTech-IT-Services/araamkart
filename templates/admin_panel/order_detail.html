@@ -1,80 +1,343 @@
 {% extends 'admin_panel/base.html' %}
 {% block title %}Order #{{ order.order_number }} — Admin{% endblock %}
 
-{% block admin_main %}
-<section class="page-section admin-section">
-  <div class="section-container narrow">
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .glass-card {
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.06);
+  }
+  .stagger {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    animation: reveal 0.45s ease forwards;
+  }
+  @keyframes reveal {
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+  .action-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .action-shimmer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.42), transparent);
+    transition: transform 0.35s ease;
+  }
+  .action-shimmer:hover::before {
+    transform: translateX(120%);
+  }
+  .step-dot-live {
+    animation: breathe 1.5s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+    50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  }
+  .delete-modal {
+    display: none;
+  }
+  .delete-modal.is-open {
+    display: flex;
+  }
+</style>
+{% endblock %}
 
-    <nav class="breadcrumb">
+{% block admin_main %}
+<section class="page-section admin-section bg-slate-50/70">
+  <div class="section-container narrow text-slate-900">
+    <nav class="breadcrumb mb-3">
       <a href="{% url 'admin_orders' %}">All orders</a> / <span>#{{ order.order_number }}</span>
     </nav>
 
-    <div class="order-detail-card">
-      <div class="order-detail-header">
+    <div class="glass-card rounded-2xl p-4 md:p-5 stagger" style="animation-delay:0.1s;">
+      <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1>Order #{{ order.order_number }}</h1>
-          <p class="order-date">Placed on {{ order.created_at|date:"d M Y, H:i" }}</p>
+          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Order #{{ order.order_number }}</h1>
+          <p class="text-sm text-slate-500">Placed on {{ order.created_at|date:"d M Y, H:i" }}</p>
         </div>
-        <span class="status-pill status-{{ order.status }} status-lg">{{ order.get_status_display }}</span>
-      </div>
-
-      <div class="status-timeline">
-        {% for s, label in status_choices %}
-        <div class="timeline-step {% if order.status == s %}active{% elif order.status == 'cancelled' %}cancelled{% endif %}">
-          <div class="timeline-dot"></div>
-          <span>{{ label }}</span>
-        </div>
-        {% endfor %}
-      </div>
-
-      <div class="order-detail-grid">
-        <div class="order-detail-section">
-          <h3>Customer</h3>
-          <table class="detail-table">
-            <tr><th>Name</th><td>{{ order.customer_name }}</td></tr>
-            <tr><th>Business</th><td>{{ order.business_name|default:"—" }}</td></tr>
-            <tr><th>Phone</th><td>{{ order.phone }}</td></tr>
-            {% if order.email %}<tr><th>Email</th><td>{{ order.email }}</td></tr>{% endif %}
-          </table>
-        </div>
-        <div class="order-detail-section">
-          <h3>Delivery</h3>
-          <p>{{ order.address }}</p>
-          {% if order.city %}<p>{{ order.city }}{% if order.pincode %} — {{ order.pincode }}{% endif %}</p>{% endif %}
-          <p><strong>Payment:</strong> Cash on Delivery</p>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="window.print()" class="action-shimmer rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Print Invoice</button>
+          <a href="mailto:{{ order.email|default:'' }}" class="action-shimmer rounded-xl border border-blue-300 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-700">Email Customer</a>
+          <a href="{% url 'admin_orders' %}" class="action-shimmer rounded-xl border border-violet-300 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-700">Edit Order</a>
+          <button type="button" id="open-delete-order-modal" class="action-shimmer rounded-xl border border-rose-300 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-700">Delete</button>
         </div>
       </div>
 
-      <h3>Items</h3>
-      <table class="items-table">
-        <thead>
-          <tr><th>Product</th><th>Brand</th><th>Qty</th><th>Unit price</th><th>Line total</th></tr>
-        </thead>
-        <tbody>
+      <div class="mt-5 stagger" style="animation-delay:0.2s;" data-current-status="{{ order.status }}">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {% if order.status == 'delivered' %}bg-emerald-500/15 text-emerald-700{% elif order.status == 'pending' %}bg-amber-500/15 text-amber-700{% elif order.status == 'cancelled' %}bg-rose-500/15 text-rose-700{% else %}bg-blue-500/15 text-blue-700{% endif %}">{{ order.get_status_display }}</span>
+          {% if order.status == 'cancelled' %}
+          <span class="text-xs text-rose-600">Order cancelled, workflow closed.</span>
+          {% endif %}
+        </div>
+        <div id="status-stepper" class="grid grid-cols-5 gap-2">
+          <div class="step-item rounded-xl border border-slate-200 bg-white p-2 text-center text-xs" data-step="pending">
+            <div class="step-dot mx-auto mb-1 h-3 w-3 rounded-full bg-slate-300"></div>
+            Pending
+          </div>
+          <div class="step-item rounded-xl border border-slate-200 bg-white p-2 text-center text-xs" data-step="confirmed">
+            <div class="step-dot mx-auto mb-1 h-3 w-3 rounded-full bg-slate-300"></div>
+            Confirmed
+          </div>
+          <div class="step-item rounded-xl border border-slate-200 bg-white p-2 text-center text-xs" data-step="processing">
+            <div class="step-dot mx-auto mb-1 h-3 w-3 rounded-full bg-slate-300"></div>
+            Processing
+          </div>
+          <div class="step-item rounded-xl border border-slate-200 bg-white p-2 text-center text-xs" data-step="shipped">
+            <div class="step-dot mx-auto mb-1 h-3 w-3 rounded-full bg-slate-300"></div>
+            Shipped
+          </div>
+          <div class="step-item rounded-xl border border-slate-200 bg-white p-2 text-center text-xs" data-step="delivered">
+            <div class="step-dot mx-auto mb-1 h-3 w-3 rounded-full bg-slate-300"></div>
+            Delivered
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3 stagger" style="animation-delay:0.3s;">
+        <div class="glass-card rounded-2xl p-4">
+          <div class="mb-2 flex items-center gap-2 text-sm font-semibold"><i data-lucide="user" class="h-4 w-4 text-indigo-600"></i>Customer</div>
+          <div class="space-y-1 text-sm">
+            <p><span class="text-slate-500">Name:</span> {{ order.customer_name }}</p>
+            <p><span class="text-slate-500">Business:</span> {{ order.business_name|default:"—" }}</p>
+            <div class="flex items-center gap-2">
+              <p><span class="text-slate-500">Phone:</span> <span id="order-phone">{{ order.phone }}</span></p>
+              <button type="button" id="copy-phone-btn" class="rounded-md border border-slate-200 px-2 py-1 text-xs hover:bg-slate-100">Copy</button>
+            </div>
+            {% if order.email %}<p><span class="text-slate-500">Email:</span> {{ order.email }}</p>{% endif %}
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-4">
+          <div class="mb-2 flex items-center gap-2 text-sm font-semibold"><i data-lucide="truck" class="h-4 w-4 text-emerald-600"></i>Delivery</div>
+          <div class="space-y-1 text-sm">
+            <p>{{ order.address }}</p>
+            {% if order.city %}<p>{{ order.city }}{% if order.pincode %} — {{ order.pincode }}{% endif %}</p>{% endif %}
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-4">
+          <div class="mb-2 flex items-center gap-2 text-sm font-semibold"><i data-lucide="wallet" class="h-4 w-4 text-blue-600"></i>Payment</div>
+          <div class="space-y-1 text-sm">
+            <p><span class="text-slate-500">Method:</span> {{ order.payment_method|default:"Cash on Delivery"|upper }}</p>
+            <p><span class="text-slate-500">Status:</span> {{ order.get_status_display }}</p>
+            <div class="mt-2 rounded-xl bg-indigo-50 px-3 py-2">
+              <div class="text-xs text-slate-500">Order Total</div>
+              <div class="text-2xl font-extrabold text-indigo-700">₹{{ order.total_amount }}</div>
+            </div>
+            <div class="mt-2 rounded-xl bg-emerald-50 px-3 py-2">
+              <div class="text-xs text-slate-500">Customer Savings</div>
+              <div class="text-xl font-extrabold text-emerald-700">₹{{ order.total_savings }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 glass-card rounded-2xl p-4 stagger" style="animation-delay:0.4s;">
+        <div class="mb-3 text-sm font-semibold">Items</div>
+        <div class="space-y-2">
           {% for item in order.items.all %}
-          <tr>
-            <td>{{ item.product_name }}</td>
-            <td>{{ item.brand }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>₹{{ item.unit_price }}</td>
-            <td>₹{{ item.line_total }}</td>
-          </tr>
+          <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="h-11 w-11 rounded-lg bg-slate-100 overflow-hidden">
+                {% if item.product and item.product.image %}
+                <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}" class="h-full w-full object-cover" />
+                {% endif %}
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold truncate">{{ item.product_name }}</p>
+                <p class="text-xs text-slate-500">{{ item.brand }}</p>
+              </div>
+            </div>
+            <div class="text-sm text-right">
+              <p>Qty:
+                <span class="font-semibold">
+                  {% if item.packet_size > 1 %}
+                  {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+                  {% else %}
+                  {{ item.quantity }}
+                  {% endif %}
+                </span>
+              </p>
+              <p>Unit: ₹{{ item.unit_price }}</p>
+              <p class="font-semibold text-indigo-700">Line: ₹{{ item.line_total }}</p>
+            </div>
+          </div>
           {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr class="total-row">
-            <td colspan="4"><strong>Order total</strong></td>
-            <td><strong>₹{{ order.total_amount }}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
+        </div>
+      </div>
 
       {% if order.notes %}
-      <div class="order-notes">
+      <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
         <strong>Notes:</strong> {{ order.notes }}
+      </div>
+      {% endif %}
+
+      {% if order.status != 'delivered' and order.status != 'cancelled' %}
+      <div class="mt-4 flex justify-end">
+        <button type="button" id="mark-delivered-btn" data-order-id="{{ order.id }}"
+                data-default-phone="{{ order.phone|default:''|escape }}"
+                class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Finalize / Mark Delivered</button>
       </div>
       {% endif %}
     </div>
   </div>
 </section>
+
+<div id="delivery-phone-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="delivery-phone-title">
+  <div class="glass-card w-full max-w-md rounded-2xl p-5 shadow-2xl">
+    <h2 id="delivery-phone-title" class="text-lg font-bold text-slate-900">Confirm customer phone</h2>
+    <p class="mt-1 text-sm text-slate-600">Enter the number you will use to call the customer and confirm delivery.</p>
+    <label for="delivery-phone-input" class="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</label>
+    <input type="tel" id="delivery-phone-input" autocomplete="tel"
+           class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+    <p id="delivery-phone-err" class="mt-2 hidden text-sm text-rose-600">Enter at least 10 digits.</p>
+    <div class="mt-5 flex flex-wrap justify-end gap-2">
+      <button type="button" id="delivery-phone-cancel" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+      <button type="button" id="delivery-phone-confirm" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Mark delivered</button>
+    </div>
+  </div>
+</div>
+
+<div id="delete-order-modal" class="delete-modal fixed inset-0 z-50 items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-order-title">
+  <div class="glass-card w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+    <h2 id="delete-order-title" class="text-lg font-bold text-slate-900">Delete order #{{ order.order_number }}?</h2>
+    <p class="mt-1 text-sm text-slate-600">Enter your admin login password to permanently delete this order.</p>
+    <form method="post" action="{% url 'admin_order_delete' order.order_number %}" class="mt-4">
+      {% csrf_token %}
+      <label for="detail-delete-password" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Admin password</label>
+      <input type="password" id="detail-delete-password" name="admin_password" autocomplete="current-password" required
+             class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100" />
+      <div class="mt-5 flex flex-wrap justify-end gap-2">
+        <button type="button" id="cancel-delete-order" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+        <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500">Delete permanently</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock admin_main %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const stepOrder = ["pending", "confirmed", "processing", "shipped", "delivered"];
+    const current = "{{ order.status }}";
+    const currentIdx = stepOrder.indexOf(current);
+    document.querySelectorAll("#status-stepper .step-item").forEach(function (el) {
+      const step = el.getAttribute("data-step");
+      const idx = stepOrder.indexOf(step);
+      const dot = el.querySelector(".step-dot");
+      if (idx < currentIdx && current !== "cancelled") {
+        el.classList.add("border-emerald-300", "bg-emerald-50", "text-emerald-700");
+        if (dot) dot.classList.add("bg-emerald-500");
+      } else if (idx === currentIdx && current !== "cancelled") {
+        el.classList.add("border-emerald-400", "bg-emerald-100", "text-emerald-800");
+        if (dot) dot.classList.add("bg-emerald-600", "step-dot-live");
+      } else {
+        if (dot) dot.classList.add("bg-slate-300");
+      }
+    });
+
+    const copyBtn = document.getElementById("copy-phone-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function () {
+        const phone = (document.getElementById("order-phone") || {}).textContent || "";
+        navigator.clipboard.writeText(phone.trim());
+        copyBtn.textContent = "Copied";
+        setTimeout(function () { copyBtn.textContent = "Copy"; }, 1200);
+      });
+    }
+
+    const deleteModal = document.getElementById("delete-order-modal");
+    const openDeleteBtn = document.getElementById("open-delete-order-modal");
+    const cancelDeleteBtn = document.getElementById("cancel-delete-order");
+    const deletePassword = document.getElementById("detail-delete-password");
+    if (deleteModal && openDeleteBtn && cancelDeleteBtn) {
+      openDeleteBtn.addEventListener("click", function () {
+        deleteModal.classList.add("is-open");
+        if (deletePassword) {
+          deletePassword.value = "";
+          deletePassword.focus();
+        }
+      });
+      cancelDeleteBtn.addEventListener("click", function () {
+        deleteModal.classList.remove("is-open");
+      });
+      deleteModal.addEventListener("click", function (event) {
+        if (event.target === deleteModal) deleteModal.classList.remove("is-open");
+      });
+    }
+
+    function getCookie(name) {
+      const m = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+      return m ? m[2] : "";
+    }
+    const modal = document.getElementById("delivery-phone-modal");
+    const phoneInput = document.getElementById("delivery-phone-input");
+    const phoneErr = document.getElementById("delivery-phone-err");
+    const deliveredBtn = document.getElementById("mark-delivered-btn");
+    if (deliveredBtn && modal && phoneInput) {
+      deliveredBtn.addEventListener("click", function () {
+        phoneInput.value = deliveredBtn.getAttribute("data-default-phone") || "";
+        phoneErr.classList.add("hidden");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        phoneInput.focus();
+      });
+      document.getElementById("delivery-phone-cancel").addEventListener("click", function () {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      });
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) {
+          modal.classList.add("hidden");
+          modal.classList.remove("flex");
+        }
+      });
+      document.getElementById("delivery-phone-confirm").addEventListener("click", function () {
+        const raw = (phoneInput.value || "").trim();
+        const digits = raw.replace(/\D/g, "");
+        if (digits.length < 10) {
+          phoneErr.classList.remove("hidden");
+          return;
+        }
+        phoneErr.classList.add("hidden");
+        const orderId = deliveredBtn.getAttribute("data-order-id");
+        fetch('{% url "admin_update_order_status" %}', {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            status: "delivered",
+            delivery_phone: raw
+          })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) window.location.reload();
+          else {
+            phoneErr.textContent = data.error || "Could not update.";
+            phoneErr.classList.remove("hidden");
+          }
+        })
+        .catch(function () {
+          phoneErr.textContent = "Network error. Try again.";
+          phoneErr.classList.remove("hidden");
+        });
+      });
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  })();
+</script>
+{% endblock %}

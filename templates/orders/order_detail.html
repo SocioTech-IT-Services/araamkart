@@ -1,61 +1,270 @@
 {% extends 'base.html' %}
 {% block title %}Order #{{ order.order_number }} — AaramKart{% endblock %}
 
+{% block extra_head %}
+<style>
+  .order-detail-premium {
+    background: #f8f9fa;
+  }
+  .order-detail-premium * {
+    font-family: "Inter", "Montserrat", "Segoe UI", Arial, sans-serif;
+  }
+  .od-shell {
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+    padding: 1rem;
+  }
+  .od-head {
+    display: flex;
+    justify-content: space-between;
+    gap: .8rem;
+    align-items: flex-start;
+    margin-bottom: .8rem;
+  }
+  .od-id {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.35rem;
+    font-weight: 900;
+  }
+  .od-date {
+    margin: .2rem 0 0;
+    color: #64748b;
+    font-size: .84rem;
+    font-weight: 600;
+  }
+  .od-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .5rem;
+  }
+  .od-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    border-radius: 10px;
+    min-height: 40px;
+    padding: .5rem .8rem;
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 800;
+    transition: all .3s ease;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .od-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, .12);
+  }
+  .od-btn-invoice {
+    background: #0056b3;
+    color: #fff;
+    border: 1px solid #0056b3;
+  }
+  .od-btn-reorder {
+    background: #fff;
+    color: #0056b3;
+    border: 2px solid #0056b3;
+  }
+  .od-btn-support {
+    background: transparent;
+    color: #334155;
+    border: 1px solid #d1d5db;
+  }
+  .od-stepper {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: .45rem;
+    margin-bottom: 1rem;
+  }
+  .od-step {
+    text-align: center;
+    border-radius: 12px;
+    border: 1px solid #dbe3ee;
+    padding: .4rem .32rem;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: .75rem;
+    font-weight: 700;
+  }
+  .od-step.is-complete {
+    background: #dcfce7;
+    color: #14532d;
+    border-color: #86efac;
+  }
+  .od-step.is-current {
+    background: #d4edda;
+    color: #166534;
+    border-color: #4ade80;
+  }
+  .od-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+  .od-card {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .06);
+    padding: .85rem;
+  }
+  .od-card h3 {
+    margin: 0 0 .58rem;
+    color: #0f172a;
+    font-size: .95rem;
+    font-weight: 800;
+  }
+  .od-kv { display: grid; gap: .35rem; }
+  .od-kv-row { display: grid; grid-template-columns: 92px 1fr; gap: .55rem; }
+  .od-kv-label { color: #64748b; font-size: .8rem; font-weight: 700; }
+  .od-kv-value { color: #1e293b; font-size: .84rem; font-weight: 700; }
+  .od-status-chip {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: .14rem .5rem;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: .72rem;
+    font-weight: 800;
+  }
+  .od-items-card { margin-top: .85rem; }
+  .od-items-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border-radius: 10px;
+  }
+  .od-items-table th, .od-items-table td {
+    border: 0;
+    border-bottom: 1px solid #e5e7eb;
+    padding: .58rem .5rem;
+    text-align: left;
+    font-size: .82rem;
+  }
+  .od-items-table th {
+    color: #475569;
+    font-weight: 800;
+    font-size: .76rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    background: #f8fafc;
+  }
+  .od-items-table tbody tr:nth-child(even) {
+    background: #fcfdff;
+  }
+  .od-items-table td:last-child, .od-items-table th:last-child { text-align: right; }
+  .od-item-name {
+    display: flex;
+    align-items: center;
+    gap: .48rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .od-item-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid #dbe4ef;
+    background: linear-gradient(135deg, #eef2ff, #f8fafc);
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    font-size: .68rem;
+    font-weight: 800;
+  }
+  @media (max-width: 860px) {
+    .od-head { flex-direction: column; }
+    .od-actions { justify-content: flex-start; }
+    .od-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .od-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="page-section">
+<section class="page-section order-detail-premium">
   <div class="section-container narrow">
     <nav class="breadcrumb">
       <a href="{% url 'order_history' %}">My Orders</a> / <span>#{{ order.order_number }}</span>
     </nav>
 
-    <div class="order-detail-card">
-      <div class="order-detail-header">
+    <div class="od-shell">
+      <div class="od-head">
         <div>
-          <h1>Order #{{ order.order_number }}</h1>
-          <p class="order-date">Placed on {{ order.created_at|date:"d M Y, H:i" }}</p>
+          <h1 class="od-id">Order #{{ order.order_number }}</h1>
+          <p class="od-date">Placed on {{ order.created_at|date:"d M Y, H:i" }}</p>
         </div>
-        <span class="status-pill status-{{ order.status }} status-lg">{{ order.get_status_display }}</span>
+        <div class="od-actions">
+          <a href="{% url 'order_quotation' order.order_number %}?download=1" class="od-btn od-btn-invoice" target="_blank" rel="noopener">📄 Download Invoice</a>
+          <form method="post" action="{% url 'order_reorder' order.order_number %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="od-btn od-btn-reorder">Reorder</button>
+          </form>
+          <a href="https://wa.me/919863645127?text={{ 'Need help with order '|add:order.order_number|urlencode }}" class="od-btn od-btn-support" target="_blank" rel="noopener">Help / Support</a>
+        </div>
       </div>
 
-      <!-- Status Timeline -->
-      <div class="status-timeline">
+      <div class="od-stepper">
+        {% with current=order.status %}
         {% for s, label in order.STATUS_CHOICES %}
-        <div class="timeline-step {% if order.status == s %}active{% elif order.status == 'cancelled' %}cancelled{% endif %}">
-          <div class="timeline-dot"></div>
-          <span>{{ label }}</span>
+        <div class="od-step {% if s == current %}is-current{% elif current == 'delivered' and s != 'cancelled' %}is-complete{% elif current == 'shipped' and s == 'pending' or current == 'shipped' and s == 'confirmed' or current == 'shipped' and s == 'processing' %}is-complete{% elif current == 'processing' and s == 'pending' or current == 'processing' and s == 'confirmed' %}is-complete{% elif current == 'confirmed' and s == 'pending' %}is-complete{% endif %}">
+          {{ label }}
         </div>
         {% endfor %}
+        {% endwith %}
       </div>
 
-      <div class="order-detail-grid">
-        <div class="order-detail-section">
+      <div class="od-grid">
+        <div class="od-card">
           <h3>Customer Details</h3>
-          <table class="detail-table">
-            <tr><th>Name</th><td>{{ order.customer_name }}</td></tr>
-            <tr><th>Business</th><td>{{ order.business_name|default:"—" }}</td></tr>
-            <tr><th>Phone</th><td>{{ order.phone }}</td></tr>
-            {% if order.email %}<tr><th>Email</th><td>{{ order.email }}</td></tr>{% endif %}
-          </table>
+          <div class="od-kv">
+            <div class="od-kv-row"><span class="od-kv-label">Name</span><span class="od-kv-value">{{ order.customer_name|title }}</span></div>
+            <div class="od-kv-row"><span class="od-kv-label">Business</span><span class="od-kv-value">{{ order.business_name|default:"—"|title }}</span></div>
+            <div class="od-kv-row"><span class="od-kv-label">Phone</span><span class="od-kv-value">{{ order.phone }}</span></div>
+            {% if order.email %}<div class="od-kv-row"><span class="od-kv-label">Email</span><span class="od-kv-value">{{ order.email }}</span></div>{% endif %}
+          </div>
         </div>
-        <div class="order-detail-section">
+        <div class="od-card">
           <h3>Delivery Address</h3>
-          <p>{{ order.address }}</p>
-          {% if order.city %}<p>{{ order.city }}{% if order.pincode %} — {{ order.pincode }}{% endif %}</p>{% endif %}
-          <p><strong>Payment:</strong> Cash on Delivery</p>
+          <div class="od-kv">
+            <div class="od-kv-row"><span class="od-kv-label">Address</span><span class="od-kv-value">{{ order.address|title }}</span></div>
+            {% if order.city %}<div class="od-kv-row"><span class="od-kv-label">City</span><span class="od-kv-value">{{ order.city|title }}{% if order.pincode %} — {{ order.pincode }}{% endif %}</span></div>{% endif %}
+            <div class="od-kv-row"><span class="od-kv-label">Payment</span><span class="od-status-chip">Cash on Delivery</span></div>
+          </div>
         </div>
       </div>
 
+      <div class="od-card od-items-card">
       <h3>Items Ordered</h3>
-      <table class="items-table">
+      <table class="od-items-table">
         <thead>
           <tr><th>Product</th><th>Brand</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
         </thead>
         <tbody>
           {% for item in order.items.all %}
           <tr>
-            <td>{{ item.product_name }}</td>
+            <td>
+              <span class="od-item-name">
+                <span class="od-item-thumb">IMG</span>
+                <span>{{ item.product_name|title }}</span>
+              </span>
+            </td>
             <td>{{ item.brand }}</td>
-            <td>{{ item.quantity }}</td>
+            <td>
+              {% if item.packet_size > 1 %}
+              {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+              {% else %}
+              {{ item.quantity }}
+              {% endif %}
+            </td>
             <td>₹{{ item.unit_price }}</td>
             <td>₹{{ item.line_total }}</td>
           </tr>
@@ -68,6 +277,7 @@
           </tr>
         </tfoot>
       </table>
+      </div>
 
       {% if order.notes %}
       <div class="order-notes">

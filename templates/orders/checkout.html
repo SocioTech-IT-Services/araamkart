@@ -1,117 +1,338 @@
 {% extends 'base.html' %}
 {% block title %}Checkout — AaramKart{% endblock %}
 
+{% block extra_head %}
+<style>
+  .checkout-premium { background: #f8fafc; }
+  .checkout-wrap { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr); gap: 1.25rem; }
+  .checkout-form { display: flex; flex-direction: column; gap: 1rem; }
+  .checkout-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    padding: 1rem;
+    animation: checkoutFadeUp .45s ease both;
+  }
+  .checkout-card:nth-child(1) { animation-delay: .04s; }
+  .checkout-card:nth-child(2) { animation-delay: .1s; }
+  .checkout-card:nth-child(3) { animation-delay: .16s; }
+  .checkout-card:nth-child(4) { animation-delay: .22s; }
+  @keyframes checkoutFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .checkout-card h3 { margin: 0 0 .9rem; color: #0f172a; font-size: 1rem; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+  .form-grid-single { display: grid; grid-template-columns: 1fr; gap: .8rem; }
+  .field-float { position: relative; }
+  .field-float input,
+  .field-float textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: #fff;
+    padding: .95rem .85rem .55rem .85rem;
+    color: #0f172a;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .field-float.has-icon input,
+  .field-float.has-icon textarea { padding-left: 2.2rem; }
+  .field-float input:focus,
+  .field-float textarea:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16,185,129,.16);
+  }
+  .field-float label {
+    position: absolute;
+    left: .8rem;
+    top: .72rem;
+    color: #64748b;
+    font-size: .84rem;
+    transition: all .18s ease;
+    pointer-events: none;
+    background: #fff;
+    padding: 0 .2rem;
+  }
+  .field-float.has-icon label { left: 2.05rem; }
+  .field-float input:focus + label,
+  .field-float input:not(:placeholder-shown) + label,
+  .field-float textarea:focus + label,
+  .field-float textarea:not(:placeholder-shown) + label {
+    top: -.45rem;
+    left: .65rem;
+    font-size: .72rem;
+    color: #10b981;
+  }
+  .field-float.has-icon input:focus + label,
+  .field-float.has-icon input:not(:placeholder-shown) + label,
+  .field-float.has-icon textarea:focus + label,
+  .field-float.has-icon textarea:not(:placeholder-shown) + label { left: .65rem; }
+  .field-icon {
+    position: absolute;
+    left: .75rem;
+    top: .9rem;
+    color: #10b981;
+    width: 1rem;
+    height: 1rem;
+    pointer-events: none;
+  }
+  .payment-chip {
+    border: 1px solid #dbe7f8;
+    background: linear-gradient(180deg, #f8fbff, #fff);
+    border-radius: 12px;
+    padding: .85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .checkout-summary {
+    position: sticky;
+    top: 90px;
+    align-self: start;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    padding: 1rem;
+  }
+  .summary-item { display: grid; grid-template-columns: 52px minmax(0,1fr) auto; gap: .6rem; align-items: center; padding: .45rem 0; }
+  .summary-item img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; border: none; background: transparent; box-shadow: none; }
+  .summary-item-ph { width: 52px; height: 52px; border-radius: 10px; border: none; display: grid; place-items: center; color: #64748b; background: transparent; }
+  .summary-item-name { margin: 0; font-weight: 700; color: #0f172a; line-height: 1.25; font-size: .9rem; }
+  .summary-item-qty { margin: .1rem 0 0; color: #64748b; font-size: .78rem; }
+  .summary-item-total { text-align: right; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; }
+  .summary-line { display: flex; justify-content: space-between; align-items: center; margin: .45rem 0; color: #334155; }
+  .summary-line .val { font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; }
+  .summary-line.discount .val { color: #059669; }
+  .summary-line.total { margin-top: .55rem; font-size: 1.06rem; }
+  .summary-line.total .val { font-size: 1.34rem; }
+  .summary-line.saved {
+    margin-top: .65rem;
+    padding: .6rem .7rem;
+    border-radius: 12px;
+    background: #ecfdf5;
+    border: 1px solid rgba(16,185,129,.24);
+    color: #047857;
+    font-weight: 900;
+  }
+  .summary-line.saved span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+  }
+  .summary-line.saved svg { width: 1rem; height: 1rem; }
+  .summary-line.saved .val {
+    color: #27ae60;
+    animation: checkoutSavingsPulse .7s ease both;
+  }
+  @keyframes checkoutSavingsPulse {
+    0% { transform: scale(.96); opacity: .82; }
+    55% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .checkout-breakdown {
+    margin-top: .55rem;
+    border: 1px solid #dbe7f8;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f8fbff;
+  }
+  .checkout-breakdown summary {
+    list-style: none;
+    cursor: pointer;
+    padding: .58rem .7rem;
+    color: #0f172a;
+    font-weight: 800;
+  }
+  .checkout-breakdown summary::-webkit-details-marker { display: none; }
+  .checkout-breakdown__body { padding: 0 .7rem .65rem; font-size: .84rem; }
+  .trust-box {
+    margin-top: .85rem;
+    padding: .75rem;
+    border-radius: 12px;
+    border: 1px solid #fde68a;
+    background: linear-gradient(180deg, #fffdf3, #fff7d8);
+    display: grid;
+    gap: .35rem;
+    font-size: .8rem;
+    color: #7c5a10;
+    font-weight: 700;
+  }
+  #place-order-btn {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+    font-weight: 800;
+    padding: .95rem 1rem;
+    width: 100%;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  #place-order-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.48) 50%, transparent 100%);
+    animation: placeShimmer 3s linear infinite;
+  }
+  @keyframes placeShimmer { 0% { left: -120%; } 100% { left: 170%; } }
+  #place-order-btn:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 0 0 4px rgba(16,185,129,.16), 0 14px 30px rgba(16,185,129,.34);
+    animation: placePulse .95s ease-in-out infinite;
+  }
+  @keyframes placePulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.05); } }
+  @media (max-width: 980px) {
+    .checkout-wrap { grid-template-columns: 1fr; }
+    .checkout-summary { position: static; }
+  }
+  @media (max-width: 720px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="page-section">
+<section class="page-section checkout-premium">
   <div class="section-container">
     <h1 class="page-title">Checkout</h1>
+    <div class="checkout-wrap">
+      <form method="POST" action="{% url 'checkout' %}" id="checkout-form" class="checkout-form">
+        {% csrf_token %}
 
-    <div class="checkout-layout">
-      <!-- ── CUSTOMER FORM ── -->
-      <div class="checkout-form-wrap">
-        <form method="POST" action="{% url 'checkout' %}" id="checkout-form">
-          {% csrf_token %}
-
-          <div class="form-section">
-            <h3 class="form-section-title">📋 Business Details</h3>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="co-name">Full Name *</label>
-                <input type="text" id="co-name" name="customer_name"
-                       value="{{ user.full_name }}" required placeholder="Rajesh Kumar" />
-              </div>
-              <div class="form-group">
-                <label for="co-business">Business Name</label>
-                <input type="text" id="co-business" name="business_name"
-                       value="{{ user.business_name }}" placeholder="Kumar General Store" />
-              </div>
+        <div class="checkout-card">
+          <h3>Business Details</h3>
+          <div class="form-grid">
+            <div class="field-float">
+              <input type="text" id="co-name" name="customer_name" value="{{ user.full_name }}" required placeholder=" " />
+              <label for="co-name">Full Name *</label>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="co-phone">Phone Number *</label>
-                <input type="tel" id="co-phone" name="phone"
-                       value="{{ user.phone }}" required placeholder="+91 9876543210" />
-              </div>
-              <div class="form-group">
-                <label for="co-email">Email</label>
-                <input type="email" id="co-email" name="email"
-                       value="{{ user.email }}" placeholder="for order confirmation" />
-              </div>
+            <div class="field-float">
+              <input type="text" id="co-business" name="business_name" value="{{ user.business_name }}" placeholder=" " />
+              <label for="co-business">Business Name</label>
             </div>
           </div>
-
-          <div class="form-section">
-            <h3 class="form-section-title">📍 Delivery Address</h3>
-            <div class="form-group">
-              <label for="co-address">Full Address *</label>
-              <textarea id="co-address" name="address" rows="3" required
-                        placeholder="Shop No., Street, Area...">{{ user.address }}</textarea>
+          <div class="form-grid" style="margin-top:.8rem;">
+            <div class="field-float">
+              <input type="tel" id="co-phone" name="phone" value="{{ user.phone }}" required placeholder=" " />
+              <label for="co-phone">Phone Number *</label>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="co-city">City</label>
-                <input type="text" id="co-city" name="city" placeholder="Mumbai" />
-              </div>
-              <div class="form-group">
-                <label for="co-pincode">PIN Code</label>
-                <input type="text" id="co-pincode" name="pincode" placeholder="400001" maxlength="6" pattern="[0-9]{6}" />
-              </div>
+            <div class="field-float">
+              <input type="email" id="co-email" name="email" value="{{ user.email }}" placeholder=" " />
+              <label for="co-email">Email</label>
             </div>
           </div>
+        </div>
 
-          <div class="form-section">
-            <h3 class="form-section-title">💳 Payment Method</h3>
-            <div class="payment-options">
-              <label class="payment-option selected" for="pay-cod">
-                <input type="radio" id="pay-cod" name="payment" value="cod" checked />
-                <div class="payment-icon">💵</div>
-                <div class="payment-info">
-                  <strong>Cash on Delivery</strong>
-                  <small>Pay when your order arrives</small>
-                </div>
-                <span class="payment-check">✓</span>
-              </label>
+        <div class="checkout-card">
+          <h3>Delivery Address</h3>
+          <div class="form-grid">
+            <div class="field-float has-icon">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7 7-12a7 7 0 1 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="10" r="2.8"/></svg>
+              <input type="text" id="co-street" name="street_locality" required placeholder=" " />
+              <label for="co-street">Street / Locality *</label>
+            </div>
+            <div class="field-float has-icon">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7 7-12a7 7 0 1 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="10" r="2.8"/></svg>
+              <input type="text" id="co-landmark" name="landmark" placeholder=" " />
+              <label for="co-landmark">Landmark</label>
             </div>
           </div>
-
-          <div class="form-group">
-            <label for="co-notes">Order Notes (optional)</label>
-            <textarea id="co-notes" name="notes" rows="2"
-                      placeholder="Special instructions, delivery time preference..."></textarea>
+          <div class="form-grid-single" style="margin-top:.8rem;">
+            <div class="field-float has-icon">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-7 7-12a7 7 0 1 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="10" r="2.8"/></svg>
+              <textarea id="co-address" name="address" rows="3" required placeholder=" ">{{ user.address }}</textarea>
+              <label for="co-address">Address Details *</label>
+            </div>
           </div>
+          <div class="form-grid" style="margin-top:.8rem;">
+            <div class="field-float">
+              <input type="text" id="co-city" name="city" placeholder=" " />
+              <label for="co-city">City</label>
+            </div>
+            <div class="field-float">
+              <input type="text" id="co-pincode" name="pincode" maxlength="6" pattern="[0-9]{6}" placeholder=" " />
+              <label for="co-pincode">PIN Code</label>
+            </div>
+          </div>
+        </div>
 
-          <button type="submit" class="btn btn-primary btn-lg btn-full" id="place-order-btn">
-            ✅ Place Order
-          </button>
-        </form>
-      </div>
+        <div class="checkout-card">
+          <h3>Payment Method</h3>
+          <div class="payment-chip">
+            <div>
+              <strong>Cash on Delivery</strong>
+              <div style="font-size:.82rem;color:#64748b;">Pay when your order arrives</div>
+            </div>
+            <span style="color:#059669;font-weight:800;">Active</span>
+          </div>
+        </div>
 
-      <!-- ── ORDER SUMMARY ── -->
-      <div class="checkout-summary">
-        <h3>Order Summary</h3>
+        <div class="checkout-card">
+          <h3>Order Notes</h3>
+          <div class="field-float">
+            <textarea id="co-notes" name="notes" rows="2" placeholder=" "></textarea>
+            <label for="co-notes">Special instructions (optional)</label>
+          </div>
+          <div style="margin-top:.9rem;">
+            <button type="submit" id="place-order-btn">Place Order</button>
+          </div>
+        </div>
+      </form>
+
+      <aside class="checkout-summary">
+        <h3 style="margin:0 0 .6rem;">Order Summary</h3>
         {% for item in items %}
-        <div class="checkout-item">
-          <div class="checkout-item-info">
-            <span class="checkout-item-name">{{ item.product.name }}</span>
-            <span class="checkout-item-qty">× {{ item.quantity }} {{ item.product.unit }}</span>
+        <div class="summary-item">
+          {% if item.product.image %}
+          <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" />
+          {% else %}
+          <div class="summary-item-ph">IMG</div>
+          {% endif %}
+          <div>
+            <p class="summary-item-name">{{ item.product.name }}</p>
+            <p class="summary-item-qty">
+              {% if item.packet_mode %}
+              Qty: {{ item.quantity }} Packets ({{ item.total_pieces }} Pcs)
+              {% else %}
+              Qty: {{ item.quantity }} {{ item.product.unit }}
+              {% endif %}
+            </p>
           </div>
-          <span class="checkout-item-total">₹{{ item.line_total }}</span>
+          <div class="summary-item-total">{% if item.locked_line_total %}₹{{ item.locked_line_total }}{% else %}₹{{ item.line_total }}{% endif %}</div>
         </div>
         {% endfor %}
         <hr class="summary-divider" />
-        <div class="summary-row">
-          <span>Delivery</span><span class="free-delivery">FREE</span>
+        <div class="summary-line"><span>Subtotal</span><span class="val">₹{{ original_total }}</span></div>
+        <div class="summary-line saved">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Z"/><path d="M16 7V5a2 2 0 0 0-2-2H6"/><circle cx="16" cy="13" r="1"/></svg>
+            Total Savings
+          </span>
+          <span class="val">-₹{{ total_savings }}</span>
         </div>
-        <div class="summary-row total-row">
-          <strong>Total</strong>
-          <strong>₹{{ total }}</strong>
-        </div>
-        <div class="cod-notice">
-          🤝 Pay ₹{{ total }} in cash at delivery
-        </div>
-      </div>
-    </div>
+        <div class="summary-line"><span>Delivery</span><span class="val">FREE</span></div>
+        <div class="summary-line"><span>Payment</span><span class="val">Cash on Delivery</span></div>
+        <div class="summary-line total"><strong>Total Payable</strong><strong class="val">₹{{ total }}</strong></div>
+        <details class="checkout-breakdown">
+          <summary>Price Breakdown</summary>
+          <div class="checkout-breakdown__body">
+            <div class="summary-line"><span>Original MRP total</span><span class="val">₹{{ original_total }}</span></div>
+            <div class="summary-line discount"><span>Bulk Discount Applied</span><span class="val">-₹{{ total_savings }}</span></div>
+            <div class="summary-line"><span>Locked checkout amount</span><span class="val">₹{{ total }}</span></div>
+          </div>
+        </details>
 
+        <div class="trust-box">
+          <span>Verified Genuine Products</span>
+          <span>Free Delivery in Shillong</span>
+        </div>
+      </aside>
+    </div>
   </div>
 </section>
 {% endblock %}

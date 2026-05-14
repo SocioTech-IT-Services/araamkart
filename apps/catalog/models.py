@@ -1,6 +1,20 @@
 """Catalog app models — Category, SubCategory, Brand, Product, Variants, Pricing"""
 from django.db import models
 from django.utils.text import slugify
+from decimal import Decimal
+
+
+def distribute_integer_delta(delta: int, n: int) -> list[int]:
+    """Split delta into n integers that sum to delta (used for inventory +/- across variants)."""
+    if n <= 0:
+        return []
+    sign = 1 if delta >= 0 else -1
+    ad = abs(delta)
+    q, r = divmod(ad, n)
+    parts = [sign * q] * n
+    for i in range(r):
+        parts[i] += sign
+    return parts
 
 
 class Category(models.Model):
@@ -26,22 +40,64 @@ class Category(models.Model):
 
 class SubCategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="subcategories")
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
     name = models.CharField(max_length=120)
     slug = models.SlugField(blank=True)
     is_active = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
 
+    def _unique_slug_base(self):
+        base = slugify(self.name)[:95] or "item"
+        slug = base
+        n = 2
+        qs = SubCategory.objects.filter(category=self.category, parent=self.parent, slug=slug)
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        while qs.exists():
+            slug = f"{base}-{n}"
+            n += 1
+            qs = SubCategory.objects.filter(category=self.category, parent=self.parent, slug=slug)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+        return slug
+
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = self._unique_slug_base()
         super().save(*args, **kwargs)
+
+    def ancestor_chain(self):
+        """Root → … → self (for breadcrumbs)."""
+        chain = []
+        node = self
+        while node:
+            chain.append(node)
+            node = node.parent
+        return list(reversed(chain))
 
     def __str__(self):
         return f"{self.category.name} / {self.name}"
 
     class Meta:
         ordering = ["category__order", "order", "name"]
-        unique_together = [("category", "slug")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["category", "slug"],
+                condition=models.Q(parent__isnull=True),
+                name="catalog_subcat_root_slug",
+            ),
+            models.UniqueConstraint(
+                fields=["category", "parent", "slug"],
+                condition=models.Q(parent__isnull=False),
+                name="catalog_subcat_nested_slug",
+            ),
+        ]
         verbose_name = "Subcategory"
         verbose_name_plural = "Subcategories"
 
@@ -64,6 +120,12 @@ class Brand(models.Model):
 
 
 class Product(models.Model):
+    NET_QUANTITY_UNIT_CHOICES = [
+        ("ml", "ml"),
+        ("g", "g"),
+        ("pieces", "pieces"),
+    ]
+
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products")
     subcategory = models.ForeignKey(
         SubCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
@@ -79,6 +141,45 @@ class Product(models.Model):
     stock = models.PositiveIntegerField(default=0)
     moq = models.PositiveIntegerField(default=1, help_text="Minimum Order Quantity")
     unit = models.CharField(max_length=30, default="pcs", help_text="e.g. pcs, kg, box, carton")
+    pack_quantity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Number of single items in one packet/bundle",
+    )
+    single_product_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Price of one item if bought separately",
+    )
+    packet_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Actual packet/bundle selling price",
+    )
+    net_quantity_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Numeric net quantity for one packet/unit",
+    )
+    net_quantity_unit = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=NET_QUANTITY_UNIT_CHOICES,
+        help_text="Unit for net quantity",
+    )
+    discount_percentage = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Computed bundle savings percentage",
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -89,11 +190,23 @@ class Product(models.Model):
     @property
     def base_price(self):
         """Return lowest tier price (MOQ tier)."""
+        # Packet pricing takes precedence across the storefront.
+        if self.packet_price and self.pack_quantity:
+            try:
+                return Decimal(self.packet_price)
+            except Exception:
+                pass
         tier = self.pricing_tiers.order_by("min_qty").first()
         return tier.unit_price if tier else None
 
     def get_price_for_qty(self, qty):
         """Return unit price for a given quantity."""
+        # Packet-priced products store cart quantities and stock as packet counts.
+        if self.packet_price and self.pack_quantity:
+            try:
+                return Decimal(self.packet_price)
+            except Exception:
+                pass
         applicable = (
             self.pricing_tiers.filter(min_qty__lte=qty)
             .order_by("-min_qty")
@@ -103,8 +216,96 @@ class Product(models.Model):
             return applicable.unit_price
         return self.base_price
 
+    def sync_discount_from_pack_pricing(self):
+        if not (self.pack_quantity and self.single_product_price and self.packet_price):
+            self.discount_percentage = None
+            return
+        total_single = Decimal(self.single_product_price) * Decimal(self.pack_quantity)
+        if total_single <= 0:
+            self.discount_percentage = None
+            return
+        self.discount_percentage = (Decimal("1") - (Decimal(self.packet_price) / total_single)) * Decimal("100")
+
+    def refresh_stock_from_variants(self):
+        """
+        When ProductVariant rows exist, Product.stock is the sum of all variant stocks (packets).
+        Call after editing variants so Inventory & stock reflects totals.
+        """
+        from django.db.models import Sum
+
+        if not self.variants.exists():
+            return int(self.stock or 0)
+        total = self.variants.aggregate(s=Sum("stock"))["s"] or 0
+        total = max(0, int(total))
+        if self.stock != total:
+            self.stock = total
+            self.save(update_fields=["stock", "updated_at"])
+        return total
+
+    def decrease_inventory_for_sale(self, qty: int, variant=None) -> None:
+        """Subtract qty packets sold from a specific variant when given; else split across variants or Product.stock."""
+        qty = max(0, int(qty))
+        if qty <= 0:
+            return
+        if variant is not None:
+            if variant.product_id != self.pk:
+                return
+            new_s = max(0, int(variant.stock) - qty)
+            ProductVariant.objects.filter(pk=variant.pk).update(stock=new_s)
+            self.refresh_stock_from_variants()
+            return
+        qs = list(self.variants.all().order_by("pk"))
+        if qs:
+            for v, share in zip(qs, distribute_integer_delta(-qty, len(qs))):
+                new_s = max(0, int(v.stock) + share)
+                ProductVariant.objects.filter(pk=v.pk).update(stock=new_s)
+            self.refresh_stock_from_variants()
+            return
+        self.stock = max(0, int(self.stock or 0) - qty)
+        self.save(update_fields=["stock", "updated_at"])
+
     class Meta:
         ordering = ["name"]
+
+
+class ProductPlacement(models.Model):
+    """
+    Extra category/subcategory paths where the same Product appears (one SKU / one inventory row).
+    Product.category / Product.subcategory remain the canonical storefront defaults;
+    placements list every browse path including additional categories.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="placements",
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="product_placements",
+    )
+    subcategory = models.ForeignKey(
+        SubCategory,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="product_placements",
+    )
+
+    class Meta:
+        verbose_name = "product placement"
+        verbose_name_plural = "product placements"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "category", "subcategory"],
+                name="catalog_productplacement_unique_cat_sub",
+            ),
+        ]
+
+    def __str__(self):
+        sub = f" / {self.subcategory.name}" if self.subcategory_id else ""
+        return f"{self.product_id} → {self.category.name}{sub}"
 
 
 class ProductImage(models.Model):
@@ -143,7 +344,15 @@ class ProductVariant(models.Model):
     size_unit = models.CharField(max_length=20, blank=True, help_text="e.g. ml, g, kg, l")
     pack_size = models.PositiveIntegerField(default=1)
     sku = models.CharField(max_length=80, blank=True, unique=True, null=True)
+    """Per-piece selling price (single S.P) from inventory / admin variants."""
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    mrp = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="List/MRP for one packet (bundle MRP).",
+    )
     stock = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -151,6 +360,18 @@ class ProductVariant(models.Model):
     def __str__(self):
         label = self.name or "Default"
         return f"{self.product.name} — {label}"
+
+    @property
+    def packet_selling_price(self):
+        pk = max(1, int(self.pack_size or 1))
+        return (Decimal(self.price or 0) * Decimal(pk)).quantize(Decimal("0.01"))
+
+    @property
+    def packet_mrp_total(self):
+        if self.mrp is None:
+            return None
+        pk = max(1, int(self.pack_size or 1))
+        return (Decimal(self.mrp) * Decimal(pk)).quantize(Decimal("0.01"))
 
     class Meta:
         ordering = ["product__name", "id"]

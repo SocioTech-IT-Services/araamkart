@@ -22,7 +22,7 @@ admin.site.login_form = EmailOrPhoneAdminAuthenticationForm
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ("email", "phone", "full_name", "business_name", "is_verified", "is_admin", "date_joined")
+    list_display = ("full_name", "phone", "account_status", "date_joined", "email", "is_admin")
     list_filter = ("is_admin", "is_verified", "is_active")
     search_fields = ("email", "phone", "full_name", "business_name")
     ordering = ("-date_joined",)
@@ -39,6 +39,10 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
     readonly_fields = ("date_joined", "last_login")
+
+    @admin.display(ordering="is_verified", description="Account Status")
+    def account_status(self, obj):
+        return "Verified" if obj.is_verified else "Unverified"
 
 
 @admin.register(OTPRecord)
