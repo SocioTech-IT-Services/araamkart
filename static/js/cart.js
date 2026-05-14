@@ -20,6 +20,26 @@ function fmtMoneyInr(n) {
     return x.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function revealPdpPremium() {
+    const root = document.querySelector('.product-page-premium.pdp-b2b-wholesale');
+    if (!root) return;
+    window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+            root.classList.add('pdp--hydrated');
+        });
+    });
+}
+
+function triggerPdpAddToCartSuccess() {
+    document.querySelectorAll('#add-to-cart-btn, #sticky-add-to-cart-btn').forEach((btn) => {
+        if (!btn || !btn.classList.contains('btn-cart-premium')) return;
+        btn.classList.add('is-success-state');
+        window.setTimeout(() => {
+            btn.classList.remove('is-success-state');
+        }, 1600);
+    });
+}
+
 function initProductPage(tiers, productId, moq, stock, packetPricingOpts, variantsList, defaultVariantId) {
     currentPricingTiers = tiers;
     currentProductId = productId;
@@ -63,6 +83,7 @@ function initProductPage(tiers, productId, moq, stock, packetPricingOpts, varian
     bindTierCards();
     updateStockMeter();
     syncStickyTotal();
+    revealPdpPremium();
 }
 
 function applyVariantToPacketPricing(v) {
@@ -360,6 +381,7 @@ async function handleAddToCart() {
         const data = await response.json();
         if (data.success) {
             showToast(data.message, 'success');
+            triggerPdpAddToCartSuccess();
             const badge = document.querySelector('.cart-count-badge');
             if (badge && data.cart_count != null) badge.textContent = String(data.cart_count);
             const totalEl = document.querySelector('.cart-count-badge')?.closest('.cart-meta-item')?.querySelector('.meta-value');
@@ -574,23 +596,13 @@ async function removeCartItem(itemId) {
                     window.setTimeout(() => row.remove(), 260);
                 }
                 updateCartSummaryTotals(data);
-                document.getElementById('cart-badge').textContent = data.cart_count;
-                showToast('✓ Item removed successfully.', 'success');
-                if (data.cart_count === 0) {
-                    try {
-                        sessionStorage.setItem('akCartRemovedToast', '✓ Item removed successfully.');
-                    } catch (_) {
-                        /* private mode */
-                    }
-                    window.setTimeout(() => location.reload(), 900); // Show empty state after animation and toast.
-                }
-                return true;
+                const badge = document.getElementById('cart-badge');
+                if (badge) badge.textContent = data.cart_count;
+                return { ok: true, cartEmpty: data.cart_count === 0 };
             }
-            showToast('Failed to remove item.', 'error');
-            return false;
+            return { ok: false, errorMessage: 'Failed to remove item.' };
         } catch (err) {
-            showToast('Failed to remove item.', 'error');
-            return false;
+            return { ok: false, errorMessage: 'Failed to remove item.' };
         }
     });
 }
@@ -632,17 +644,35 @@ function confirmCartRemoval(onConfirmAsync) {
             cancelBtn.disabled = true;
             if (spinner) spinner.style.display = 'inline-block';
             if (confirmLabel) confirmLabel.textContent = 'Removing...';
-            await new Promise((r) => window.setTimeout(r, 400));
-            const ok = typeof onConfirmAsync === 'function' ? await onConfirmAsync() : true;
+            await new Promise((r) => window.setTimeout(r, 120));
+            const raw = typeof onConfirmAsync === 'function' ? await onConfirmAsync() : true;
+            const ok = raw === true || (raw && raw.ok === true);
+            const cartEmpty = raw && raw.cartEmpty === true;
+            const errorMessage = raw && raw.errorMessage;
             loading = false;
             if (ok) {
                 close(true);
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        showToast('Successfully removed from cart.', 'success', {
+                            snack: true,
+                            replace: true,
+                            dismissMs: cartEmpty ? 2600 : 4200,
+                        });
+                        if (cartEmpty) {
+                            window.setTimeout(() => location.reload(), 2200);
+                        }
+                    });
+                });
             } else {
                 confirmBtn.classList.remove('is-loading');
                 confirmBtn.disabled = false;
                 cancelBtn.disabled = false;
                 if (spinner) spinner.style.display = 'none';
                 if (confirmLabel) confirmLabel.textContent = 'Remove';
+                if (errorMessage) {
+                    showToast(errorMessage, 'error', { snack: true, replace: true });
+                }
             }
         };
         const onCancel = () => close(false);
@@ -712,16 +742,6 @@ function updateLineSavings(itemId, value) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    try {
-        const pendingToast = sessionStorage.getItem('akCartRemovedToast');
-        if (pendingToast) {
-            sessionStorage.removeItem('akCartRemovedToast');
-            showToast(pendingToast, 'success');
-        }
-    } catch (_) {
-        /* private mode */
-    }
-
     document.querySelectorAll('.qty-input[id^="qty-"]').forEach((input) => {
         const itemId = input.id.replace('qty-', '');
         toggleQtyButtons(itemId);

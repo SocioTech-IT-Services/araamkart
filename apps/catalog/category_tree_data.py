@@ -132,7 +132,6 @@ def seed_subcategories(apps, schema_editor) -> None:
                 "Dishwasher bar",
                 "Dishwasher gel",
                 "Clothes detergent",
-                "Naphthalin balls",
                 "Insence sticks",
             ],
         ),
@@ -162,6 +161,7 @@ def seed_subcategories(apps, schema_editor) -> None:
         "Toilet paper",
         "Bulb",
         "Drawing pin",
+        "Naphthalin balls",
     ]
 
     baby_flat = [

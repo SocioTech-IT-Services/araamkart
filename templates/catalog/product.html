@@ -3,8 +3,20 @@
 {% block title %}{{ product.name }} — {{ product.brand }} | AaramKart{% endblock %}
 
 {% block content %}
-<section class="page-section product-page-premium" aria-label="Product details">
+<section class="page-section product-page-premium pdp-b2b-wholesale" aria-label="Product details">
   <div class="section-container">
+
+    <div class="pdp-premium-boot" aria-hidden="true">
+      <div class="pdp-premium-boot__grid">
+        <div class="pdp-shimmer pdp-shimmer--hero"></div>
+        <div class="pdp-premium-boot__aside">
+          <div class="pdp-shimmer pdp-shimmer--line"></div>
+          <div class="pdp-shimmer pdp-shimmer--line pdp-shimmer--short"></div>
+          <div class="pdp-shimmer pdp-shimmer--line"></div>
+          <div class="pdp-shimmer pdp-shimmer--price"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Breadcrumb -->
     <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -21,10 +33,29 @@
       <span>{{ product.name }}</span>
     </nav>
 
+    <div class="pdp-flash-ticker" role="status" aria-live="polite">
+      <div class="pdp-flash-ticker__inner">
+        <span class="pdp-flash-ticker__dot" aria-hidden="true"></span>
+        <div class="pdp-flash-ticker__viewport">
+        <div class="pdp-flash-ticker__track">
+          <span>Wholesale pricing · Verified supply · Shillong delivery · GST-ready invoicing</span>
+          <span class="pdp-flash-ticker__dup" aria-hidden="true">Wholesale pricing · Verified supply · Shillong delivery · GST-ready invoicing</span>
+        </div>
+        </div>
+      </div>
+    </div>
+
     <div class="product-detail-layout">
       <!-- ── IMAGE ── -->
       <div class="product-detail-image">
         <div class="product-hero-media" id="product-hero-media">
+          {% if product.stock > 40 %}
+          <span class="pdp-hero-ribbon pdp-hero-ribbon--gold">Best seller</span>
+          {% elif product.pricing_tiers.count > 1 %}
+          <span class="pdp-hero-ribbon pdp-hero-ribbon--slate">Bulk favorite</span>
+          {% else %}
+          <span class="pdp-hero-ribbon">Wholesale ready</span>
+          {% endif %}
           {% if product.image %}
           <img src="{{ product.image.url }}" alt="{{ product.name }}" id="main-product-img" class="product-hero-media-item" />
           {% elif gallery_images %}
@@ -218,11 +249,17 @@
             <button class="btn btn-primary btn-lg btn-full btn-cart-premium js-product-action-ripple" id="add-to-cart-btn"
                     data-product-id="{{ product.pk }}" data-moq="{{ product.moq }}" data-stock="{{ product.stock }}"
                     {% if default_variant_id %}data-default-variant-id="{{ default_variant_id }}"{% endif %}>
+              <span class="pdp-btn-fill-layer" aria-hidden="true"></span>
+              <span class="pdp-btn-success-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="btn-cart-premium__front">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="18" height="18">
                 <path d="M6.5 6.5h14l-1.6 7.2a2 2 0 0 1-2 1.56H9.2a2 2 0 0 1-1.96-1.62L5.8 4.5H3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M10 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM17 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="currentColor" />
               </svg>
               Add to Cart <span id="add-to-cart-btn-price"></span>
+              </span>
             </button>
             <a href="{% url 'cart' %}" class="btn btn-lg btn-full btn-go-cart-premium js-product-action-ripple">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="18" height="18">
@@ -252,7 +289,7 @@
     {% if related %}
     <div class="related-section">
       <h2 class="section-title">More from {{ product.category.name }}</h2>
-      <div class="products-grid" id="products-grid-related">
+      <div class="products-grid products-grid--pdp-b2b" id="products-grid-related">
         {% for rp in related %}
         {% include "catalog/_product_card.html" with product=rp card_id_prefix="related" show_stock_badge=False %}
         {% endfor %}
@@ -264,7 +301,7 @@
 </section>
 {% if user.is_authenticated and product.stock > 0 %}
   {% if not use_packet_pricing or packets_available > 0 and can_order_packets %}
-<div class="mobile-sticky-cart-bar" id="mobile-sticky-cart-bar">
+<div class="mobile-sticky-cart-bar mobile-sticky-cart-bar--b2b" id="mobile-sticky-cart-bar">
   <div class="mobile-sticky-cart-meta">
     <span class="mobile-sticky-cart-total" id="sticky-preview-price">₹0</span>
     {% if use_packet_pricing %}
@@ -273,7 +310,13 @@
     <small>{{ product.moq }}+ {{ product.unit }} minimum</small>
     {% endif %}
   </div>
-  <button class="btn btn-primary btn-cart-premium" id="sticky-add-to-cart-btn" type="button">Add to Cart</button>
+  <button class="btn btn-primary btn-cart-premium js-product-action-ripple" id="sticky-add-to-cart-btn" type="button">
+    <span class="pdp-btn-fill-layer" aria-hidden="true"></span>
+    <span class="pdp-btn-success-check" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="btn-cart-premium__front">Add to Cart</span>
+  </button>
 </div>
   {% endif %}
 {% endif %}

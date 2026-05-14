@@ -1,11 +1,19 @@
 {% comment %}
-  Premium product card — expects: product, card_id_prefix, show_stock_badge (optional, default true)
+  Premium product card — expects: product, card_id_prefix, show_stock_badge (optional, default true),
+  compact_listing (optional): smaller category grid — no cart / no View; Edit still for admins.
 {% endcomment %}
-<div class="product-card-shell premium-product-card-shell"
+<div class="product-card-shell premium-product-card-shell product-card-shell--b2b-premium"
      data-product-card
      data-product-search="{{ product.name|lower }} {{ product.brand_obj.name|default:product.brand|lower }} {% if product.subcategory %}{{ product.subcategory.name|lower }}{% endif %} {% if product.category %}{{ product.category.name|lower }}{% endif %}">
   <a href="{% url 'product_detail' product.pk %}" class="product-card" id="{{ card_id_prefix }}-{{ product.pk }}">
     <div class="product-img-wrap">
+      {% if product.stock > 35 %}
+      <span class="product-card-ribbon product-card-ribbon--best" aria-hidden="true">Best seller</span>
+      {% elif product.pricing_tiers.count > 1 %}
+      <span class="product-card-ribbon product-card-ribbon--bulk" aria-hidden="true">Bulk favorite</span>
+      {% else %}
+      <span class="product-card-ribbon" aria-hidden="true">Wholesale</span>
+      {% endif %}
       {% if product.image %}
       <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy" />
       {% else %}
@@ -60,7 +68,7 @@
       </div>
     </div>
   </a>
-  {% if user.is_authenticated %}
+  {% if user.is_authenticated and not compact_listing %}
   <div
     class="product-bulk-bar"
     data-product-id="{{ product.pk }}"
@@ -70,18 +78,22 @@
     data-pack-qty="{{ product.pack_quantity|default:0 }}"
     data-packet-mode="{% if product.packet_price and product.pack_quantity %}1{% else %}0{% endif %}"
   >
-    <button type="button" class="btn-bulk-add js-bulk-add js-premium-ripple" {% if product.stock == 0 %}disabled{% endif %}>Add to Cart</button>
-    <div class="bulk-qty-controls js-bulk-qty" aria-live="polite">
+    <button type="button" class="btn-bulk-add btn-bulk-add--b2b js-bulk-add js-premium-ripple" {% if product.stock == 0 %}disabled{% endif %}>Add to Cart</button>
+    <div class="bulk-qty-controls bulk-qty-controls--b2b js-bulk-qty" aria-live="polite">
       <button type="button" class="bulk-qty-btn js-bulk-dec" aria-label="Decrease quantity">−</button>
       <span class="bulk-qty-val js-bulk-val">{% if product.packet_price and product.pack_quantity %}1{% else %}{{ product.moq }}{% endif %}</span>
       <button type="button" class="bulk-qty-btn js-bulk-inc" aria-label="Increase quantity">+</button>
     </div>
   </div>
   {% endif %}
+  {% if not compact_listing or user.is_authenticated and user.can_access_admin_panel %}
   <div class="product-premium-actions">
+    {% if not compact_listing %}
     <a href="{% url 'product_detail' product.pk %}" class="premium-card-action js-premium-ripple">View</a>
+    {% endif %}
     {% if user.is_authenticated and user.can_access_admin_panel %}
     <a href="{% url 'admin_product_edit' product.pk %}" class="premium-card-action premium-card-action--ghost js-premium-ripple">Edit</a>
     {% endif %}
   </div>
+  {% endif %}
 </div>

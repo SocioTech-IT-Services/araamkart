@@ -918,19 +918,40 @@ function initBulkAddGrid() {
     });
 }
 
-function showToast(message, type = 'success') {
+function showToast(message, type = 'success', opts = {}) {
+    const snack = Boolean(opts.snack);
+    const replace = opts.replace !== false && snack;
+    const dismissMs = typeof opts.dismissMs === 'number' ? opts.dismissMs : snack ? 4200 : 4000;
+
     const container = document.getElementById('messages-container') || createMessagesContainer();
+    if (replace) {
+        container.querySelectorAll('.alert[data-ak-toast]').forEach((el) => el.remove());
+    }
+    container.classList.toggle('messages-container--snack', snack);
+
     const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
+    alert.className = `alert alert-${type}${snack ? ' alert-toast-snack' : ''}`;
+    alert.dataset.akToast = '1';
+    alert.setAttribute('role', 'status');
+    alert.setAttribute('aria-live', 'polite');
     alert.innerHTML = `
         <span>${message}</span>
-        <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
+        <button type="button" class="alert-close" aria-label="Dismiss" onclick="this.parentElement.remove()">×</button>
     `;
     container.appendChild(alert);
 
-    setTimeout(() => {
+    const hide = () => {
         alert.style.opacity = '0';
-        alert.style.transform = 'translateX(20px)';
-        setTimeout(() => alert.remove(), 300);
-    }, 4000);
+        alert.style.transform = snack ? 'translateX(110%)' : 'translateX(20px)';
+        setTimeout(() => {
+            alert.remove();
+            if (snack && !container.querySelector('.alert[data-ak-toast]')) {
+                container.classList.remove('messages-container--snack');
+            }
+        }, 280);
+    };
+    const t = setTimeout(hide, dismissMs);
+    alert.addEventListener('click', (e) => {
+        if (e.target.closest('.alert-close')) clearTimeout(t);
+    });
 }
