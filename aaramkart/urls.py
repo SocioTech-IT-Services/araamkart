@@ -1,5 +1,6 @@
 """AaramKart URL Configuration"""
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import path, include
 from django.views.generic import RedirectView
 from django.conf import settings
@@ -11,7 +12,14 @@ admin.site.site_header = "AaramKart administration"
 admin.site.site_title = "AaramKart Admin"
 admin.site.index_title = "Store administration"
 
+
+def _health(_request):
+    """Plain 200 for Railway / load balancer probes (no DB hit)."""
+    return HttpResponse("ok", content_type="text/plain")
+
+
 urlpatterns = [
+    path("_health/", _health),
     path("django-admin/", admin.site.urls),
     path("staff-login/", StaffLoginView.as_view(), name="staff_login"),
     path(
