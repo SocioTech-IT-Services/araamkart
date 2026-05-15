@@ -1,11 +1,20 @@
 """
 AaramKart Django Settings
 """
+import os
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Railway sets these; used for hosts / CSRF / CORS without manual copy-paste.
+_railway_public = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
+_is_railway = bool(
+    os.environ.get("RAILWAY_ENVIRONMENT")
+    or os.environ.get("RAILWAY_PROJECT_ID")
+    or os.environ.get("RAILWAY_SERVICE_ID")
+)
 
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-aaramkart-dev-key-change-in-production")
 DEBUG = config("DEBUG", default=True, cast=bool)
@@ -15,7 +24,10 @@ _hosts_from_env = [h.strip() for h in config("ALLOWED_HOSTS", default="localhost
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = _hosts_from_env or ["localhost", "127.0.0.1"]
+    _prod_hosts = list(_hosts_from_env) or ["localhost", "127.0.0.1"]
+    if _railway_public and _railway_public not in _prod_hosts:
+        _prod_hosts.append(_railway_public)
+    ALLOWED_HOSTS = _prod_hosts
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -70,11 +82,14 @@ TEMPLATES = [
 WSGI_APPLICATION = "aaramkart.wsgi.application"
 
 # Database: PostgreSQL only (no SQLite in this project).
-# Railway/Render set DATABASE_URL in the environment; decouple reads it. .env works locally.
+# Prefer OS env first so Railway linked DATABASE_URL wins over an empty DATABASE_URL= line in .env.
 # Tables live wherever DATABASE_URL points if set; otherwise POSTGRES_* (default localhost:5432).
 # Supabase: paste the Postgres URI into DATABASE_URL or SUPABASE_DATABASE_URL (same value).
 DATABASE_URL = (
-    config("DATABASE_URL", default="").strip()
+    os.environ.get("DATABASE_URL", "").strip()
+    or os.environ.get("SUPABASE_DATABASE_URL", "").strip()
+    or os.environ.get("SUPABASE_DB_URL", "").strip()
+    or config("DATABASE_URL", default="").strip()
     or config("SUPABASE_DATABASE_URL", default="").strip()
     or config("SUPABASE_DB_URL", default="").strip()
 )
@@ -104,9 +119,9 @@ if DATABASE_URL:
         }
     }
 
-    # Supabase (managed Postgres): TLS is required; transaction pooler uses port 6543 (PgBouncer).
+    # Supabase / Railway public proxy: TLS required unless URI already sets sslmode.
     _host_lc = db_host.lower()
-    if "supabase" in _host_lc:
+    if "supabase" in _host_lc or "rlwy.net" in _host_lc:
         DATABASES["default"].setdefault("OPTIONS", {}).setdefault("sslmode", "require")
     if db_port == "6543":
         DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
@@ -211,11 +226,25 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
+if _railway_public:
+    _rh = f"https://{_railway_public}"
+    if _rh not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS = [*CORS_ALLOWED_ORIGINS, _rh]
 
-# Production (Railway + HTTPS): set CSRF_TRUSTED_ORIGINS=https://your-service.up.railway.app
+# Production (Railway + HTTPS): CSRF_TRUSTED_ORIGINS or auto from RAILWAY_PUBLIC_DOMAIN when DEBUG=False.
 _csrf_origins = config("CSRF_TRUSTED_ORIGINS", default="").strip()
-if _csrf_origins:
-    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(",") if o.strip()]
+_csrf_list = [o.strip() for o in _csrf_origins.split(",") if o.strip()] if _csrf_origins else []
+if not DEBUG and _railway_public:
+    _auto_csrf = f"https://{_railway_public}"
+    if _auto_csrf not in _csrf_list:
+        _csrf_list.append(_auto_csrf)
+if _csrf_list:
+    CSRF_TRUSTED_ORIGINS = _csrf_list
+
+# Behind Railway's HTTPS edge: trust X-Forwarded-Proto so Django sees secure requests.
+if not DEBUG and _is_railway:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
 
 SESSION_COOKIE_AGE = 86400 * 7  # 7 days
 LOGIN_URL = "/auth/login/"

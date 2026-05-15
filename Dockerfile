@@ -16,5 +16,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-# Railway injects PORT at runtime (often 8080). Middleware answers /_health/ before DB session.
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn aaramkart.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 2 --threads 4 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -"]
+# Migrations run in Railway preDeploy (see railway.json) so this process binds quickly for health checks.
+# gthread is required when using --threads (sync worker ignores / may reject --threads on some gunicorn versions).
+CMD ["sh", "-c", "exec gunicorn aaramkart.wsgi:application --bind 0.0.0.0:${PORT:-8080} --worker-class gthread --workers 2 --threads 4 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -"]
